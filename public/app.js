@@ -9,7 +9,7 @@
   ];
 
   const authShell = document.getElementById('auth-shell');
-  const appShell = document.getElementById('app-shell');
+  const appLayout = document.getElementById('app-layout');
 
   const loginForm = document.getElementById('login-form');
   const signupForm = document.getElementById('signup-form');
@@ -18,6 +18,12 @@
   const authTabs = document.querySelectorAll('.auth-tab');
   const googleBtn = document.getElementById('google-btn');
 
+  const sidebarList = document.getElementById('sidebar-list');
+  const newSessionBtn = document.getElementById('new-session-btn');
+  const newTutorBtn = document.getElementById('new-tutor-btn');
+
+  const chatTitleHeading = document.getElementById('chat-title-heading');
+  const chatTitleSub = document.getElementById('chat-title-sub');
   const chatLog = document.getElementById('chat-log');
   const phaseTracker = document.getElementById('phase-tracker');
   const footPhase = document.getElementById('foot-phase');
@@ -25,11 +31,13 @@
   const messageInput = document.getElementById('message-input');
   const sendBtn = document.getElementById('send-btn');
   const nextPhaseBtn = document.getElementById('next-phase-btn');
-  const restartBtn = document.getElementById('restart-btn');
   const logoutBtn = document.getElementById('logout-btn');
 
+  let chats = [];
   let currentChatId = null;
+  let currentMode = 'phased';
   let phaseIndex = 0;
+  let needsAutoTitle = false;
   let busy = false;
 
   // ---------- API helpers ----------
@@ -53,13 +61,13 @@
   // ---------- Auth view ----------
 
   function showAuthView() {
-    appShell.hidden = true;
+    appLayout.hidden = true;
     authShell.hidden = false;
   }
 
   function showAppView() {
     authShell.hidden = true;
-    appShell.hidden = false;
+    appLayout.hidden = false;
   }
 
   authTabs.forEach((tab) => {
@@ -112,6 +120,7 @@
 
   logoutBtn.addEventListener('click', async () => {
     await api('/api/auth/logout', { method: 'POST' });
+    chats = [];
     currentChatId = null;
     phaseIndex = 0;
     chatLog.innerHTML = '';
@@ -127,6 +136,94 @@
     }
   }
 
+  // ---------- Sidebar ----------
+
+  function chatDisplayTitle(chat) {
+    if (chat.title) return chat.title;
+    if (chat.topic) return chat.topic;
+    return chat.mode === 'tutor' ? 'AI Teacher chat' : 'Study session';
+  }
+
+  function relativeTime(iso) {
+    const diffMs = Date.now() - new Date(iso).getTime();
+    const mins = Math.round(diffMs / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.round(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.round(hours / 24);
+    return `${days}d ago`;
+  }
+
+  function renderSidebar() {
+    sidebarList.innerHTML = '';
+
+    if (!chats.length) {
+      const empty = document.createElement('p');
+      empty.className = 'sidebar-empty';
+      empty.textContent = 'No chats yet — start one above.';
+      sidebarList.appendChild(empty);
+      return;
+    }
+
+    chats.forEach((chat) => {
+      const item = document.createElement('div');
+      item.className = 'sidebar-item' + (chat.id === currentChatId ? ' active' : '');
+
+      const main = document.createElement('div');
+      main.className = 'sidebar-item-main';
+
+      const title = document.createElement('span');
+      title.className = 'sidebar-item-title';
+      title.textContent = chatDisplayTitle(chat);
+
+      const meta = document.createElement('span');
+      meta.className = 'sidebar-item-meta';
+      meta.textContent = `${chat.mode === 'tutor' ? 'AI Teacher' : 'Study session'} · ${relativeTime(chat.updatedAt)}`;
+
+      main.appendChild(title);
+      main.appendChild(meta);
+
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'sidebar-item-delete';
+      del.setAttribute('aria-label', 'Delete chat');
+      del.textContent = '×';
+      del.addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteChat(chat.id);
+      });
+
+      item.appendChild(main);
+      item.appendChild(del);
+      item.addEventListener('click', () => {
+        if (chat.id !== currentChatId) loadChat(chat.id);
+      });
+
+      sidebarList.appendChild(item);
+    });
+  }
+
+  async function refreshChatList() {
+    const { data } = await api('/api/chats');
+    chats = (data && data.chats) || [];
+    renderSidebar();
+  }
+
+  async function deleteChat(chatId) {
+    if (!confirm('Delete this chat? This cannot be undone.')) return;
+    await api(`/api/chats/${chatId}`, { method: 'DELETE' });
+    const wasActive = chatId === currentChatId;
+    await refreshChatList();
+    if (wasActive) {
+      if (chats.length) {
+        loadChat(chats[0].id);
+      } else {
+        await createChat('phased');
+      }
+    }
+  }
+
   // ---------- Chat view ----------
 
   function renderPhaseTracker() {
@@ -139,8 +236,22 @@
       else if (i < phaseIndex) span.classList.add('done');
       phaseTracker.appendChild(span);
     });
-    footPhase.textContent = `${PHASES[phaseIndex].label} — step ${phaseIndex + 1} of ${PHASES.length}`;
-    nextPhaseBtn.disabled = phaseIndex >= PHASES.length - 1;
+  }
+
+  function applyModeChrome() {
+    const isTutor = currentMode === 'tutor';
+    phaseTracker.hidden = isTutor;
+    nextPhaseBtn.hidden = isTutor;
+
+    if (isTutor) {
+      chatTitleSub.textContent = 'Ask anything, any time.';
+      footPhase.textContent = 'AI Teacher — freeform chat';
+    } else {
+      chatTitleSub.textContent = 'Four phases. One session.';
+      renderPhaseTracker();
+      footPhase.textContent = `${PHASES[phaseIndex].label} — step ${phaseIndex + 1} of ${PHASES.length}`;
+      nextPhaseBtn.disabled = phaseIndex >= PHASES.length - 1;
+    }
   }
 
   function addBubble(role, text) {
@@ -173,7 +284,9 @@
   function setBusy(isBusy) {
     busy = isBusy;
     sendBtn.disabled = isBusy;
-    nextPhaseBtn.disabled = isBusy || phaseIndex >= PHASES.length - 1;
+    if (currentMode === 'phased') {
+      nextPhaseBtn.disabled = isBusy || phaseIndex >= PHASES.length - 1;
+    }
     messageInput.disabled = isBusy;
   }
 
@@ -197,7 +310,15 @@
     chatLog.appendChild(typingEl);
     chatLog.scrollTop = chatLog.scrollHeight;
 
-    const { ok, status, data } = await api(`/api/chats/${currentChatId}/messages`, {
+    const chatIdAtSend = currentChatId;
+
+    if (needsAutoTitle && !hidden) {
+      needsAutoTitle = false;
+      const autoTitle = content.length > 40 ? `${content.slice(0, 40)}…` : content;
+      api(`/api/chats/${chatIdAtSend}`, { method: 'PATCH', body: { title: autoTitle } }).then(refreshChatList);
+    }
+
+    const { ok, status, data } = await api(`/api/chats/${chatIdAtSend}/messages`, {
       method: 'POST',
       body: { content, hidden: Boolean(hidden) },
     });
@@ -218,6 +339,8 @@
     addBubble('bot', data.reply);
     setBusy(false);
     messageInput.focus();
+
+    await refreshChatList();
   }
 
   composer.addEventListener('submit', (e) => {
@@ -244,49 +367,65 @@
     if (busy || phaseIndex >= PHASES.length - 1) return;
     phaseIndex += 1;
     const nextPhase = PHASES[phaseIndex];
-    renderPhaseTracker();
+    applyModeChrome();
     addSystemNote(`Moving on to ${nextPhase.label}`);
     await api(`/api/chats/${currentChatId}`, { method: 'PATCH', body: { phaseKey: nextPhase.key } });
     sendToBackend(`[The learner clicked "Next Phase." Begin the ${nextPhase.label} phase now.]`, true);
   });
 
-  restartBtn.addEventListener('click', async () => {
+  newSessionBtn.addEventListener('click', () => createChat('phased'));
+  newTutorBtn.addEventListener('click', () => createChat('tutor'));
+
+  async function createChat(mode) {
     if (busy) return;
-    if (!confirm('Restart the study session from the beginning?')) return;
-    const { data } = await api('/api/chats', { method: 'POST', body: { mode: 'phased' } });
-    currentChatId = data.chat.id;
-    phaseIndex = 0;
-    chatLog.innerHTML = '';
-    renderPhaseTracker();
-    showWelcome();
-  });
+    const { data } = await api('/api/chats', { method: 'POST', body: { mode } });
+    await refreshChatList();
+    await loadChat(data.chat.id, data.chat);
+  }
 
   function showWelcome() {
-    addBubble(
-      'bot',
-      "What would you like to study today, and what's your goal for this session (understand a concept, prep for a test, review before an exam)?"
-    );
+    if (currentMode === 'tutor') {
+      addBubble(
+        'bot',
+        "I'm your AI teacher — ask me anything, on any topic, any time. What's on your mind?"
+      );
+    } else {
+      addBubble(
+        'bot',
+        "What would you like to study today, and what's your goal for this session (understand a concept, prep for a test, review before an exam)?"
+      );
+    }
+  }
+
+  async function loadChat(chatId, knownChat) {
+    currentChatId = chatId;
+    chatLog.innerHTML = '';
+    needsAutoTitle = false;
+
+    const { data } = await api(`/api/chats/${chatId}`);
+    const chat = data.chat || knownChat;
+    currentMode = chat.mode;
+    phaseIndex = currentMode === 'phased' ? Math.max(0, PHASES.findIndex((p) => p.key === chat.phaseKey)) : 0;
+
+    applyModeChrome();
+    renderSidebar();
+
+    if (data.messages && data.messages.length) {
+      data.messages.forEach((m) => addBubble(m.role === 'user' ? 'user' : 'bot', m.content));
+    } else {
+      needsAutoTitle = !chat.title && !chat.topic;
+      showWelcome();
+    }
   }
 
   async function initApp() {
-    chatLog.innerHTML = '';
-    const { data: chatsData } = await api('/api/chats');
-    let chat = (chatsData.chats || []).find((c) => c.mode === 'phased');
+    chatTitleHeading.textContent = 'Study Buddy';
+    await refreshChatList();
 
-    if (!chat) {
-      const { data: created } = await api('/api/chats', { method: 'POST', body: { mode: 'phased' } });
-      chat = created.chat;
-    }
-
-    currentChatId = chat.id;
-    phaseIndex = Math.max(0, PHASES.findIndex((p) => p.key === chat.phaseKey));
-    renderPhaseTracker();
-
-    const { data: chatDetail } = await api(`/api/chats/${currentChatId}`);
-    if (chatDetail.messages && chatDetail.messages.length) {
-      chatDetail.messages.forEach((m) => addBubble(m.role === 'user' ? 'user' : 'bot', m.content));
+    if (chats.length) {
+      await loadChat(chats[0].id);
     } else {
-      showWelcome();
+      await createChat('phased');
     }
   }
 

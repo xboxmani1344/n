@@ -47,34 +47,47 @@
       </div>
     </div>
 
-    <div class="shell" id="app-shell" hidden>
-      <header class="brand">
-        <h1>Study Buddy</h1>
-        <p class="tagline">Four phases. One session.</p>
-      </header>
+    <div class="app-layout" id="app-layout" hidden>
+      <aside class="sidebar glass" id="sidebar">
+        <div class="sidebar-header">
+          <p class="sidebar-title">Study Buddy</p>
+          <button type="button" id="logout-btn" class="icon-btn" aria-label="Log out" title="Log out">⏻</button>
+        </div>
+        <div class="sidebar-new-buttons">
+          <button type="button" id="new-session-btn" class="pill-btn sidebar-new-btn">+ New Session</button>
+          <button type="button" id="new-tutor-btn" class="pill-btn sidebar-new-btn">+ Ask AI Teacher</button>
+        </div>
+        <p class="sidebar-label">Recent chats</p>
+        <div class="sidebar-list" id="sidebar-list"></div>
+      </aside>
 
-      <div class="segmented glass" id="phase-tracker" role="list" aria-label="Study phases"></div>
+      <div class="shell" id="app-shell">
+        <header class="brand chat-brand">
+          <h1 id="chat-title-heading">Study Buddy</h1>
+          <p class="tagline" id="chat-title-sub">Four phases. One session.</p>
+        </header>
 
-      <div class="chat-card glass">
-        <div class="transcript" id="chat-log" aria-live="polite"></div>
-      </div>
+        <div class="segmented glass" id="phase-tracker" role="list" aria-label="Study phases"></div>
 
-      <form class="composer glass" id="composer">
-        <textarea
-          id="message-input"
-          placeholder="Message Study Buddy…"
-          rows="1"
-        ></textarea>
-        <button type="submit" id="send-btn" class="send-btn" aria-label="Send">↑</button>
-      </form>
+        <div class="chat-card glass">
+          <div class="transcript" id="chat-log" aria-live="polite"></div>
+        </div>
 
-      <div class="controls">
-        <span class="status" id="foot-phase">Warm-Up — step 1 of 4</span>
-        <span class="controls-actions">
-          <button type="button" id="next-phase-btn" class="pill-btn glass">Next Phase</button>
-          <button type="button" id="restart-btn" class="pill-btn glass">Restart</button>
-          <button type="button" id="logout-btn" class="pill-btn glass">Log Out</button>
-        </span>
+        <form class="composer glass" id="composer">
+          <textarea
+            id="message-input"
+            placeholder="Message Study Buddy…"
+            rows="1"
+          ></textarea>
+          <button type="submit" id="send-btn" class="send-btn" aria-label="Send">↑</button>
+        </form>
+
+        <div class="controls">
+          <span class="status" id="foot-phase">Warm-Up — step 1 of 4</span>
+          <span class="controls-actions">
+            <button type="button" id="next-phase-btn" class="pill-btn glass">Next Phase</button>
+          </span>
+        </div>
       </div>
     </div>
   </div>
