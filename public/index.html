@@ -51,7 +51,10 @@
       <aside class="sidebar glass" id="sidebar">
         <div class="sidebar-header">
           <p class="sidebar-title">Study Buddy</p>
-          <button type="button" id="logout-btn" class="icon-btn" aria-label="Log out" title="Log out">⏻</button>
+          <span class="sidebar-header-actions">
+            <button type="button" id="settings-btn" class="icon-btn" aria-label="Settings" title="Settings">⚙</button>
+            <button type="button" id="logout-btn" class="icon-btn" aria-label="Log out" title="Log out">⏻</button>
+          </span>
         </div>
 
         <div class="sidebar-nav">
@@ -160,6 +163,67 @@
 
         <p class="sidebar-label" id="video-history-label" hidden>Recent summaries</p>
         <div class="sidebar-list video-history-list" id="video-history-list"></div>
+      </div>
+
+      <div class="shell" id="settings-shell" hidden>
+        <header class="brand chat-brand">
+          <h1>Settings</h1>
+          <p class="tagline">Your profile, theme, and plan.</p>
+        </header>
+
+        <div class="chat-card glass settings-card">
+          <p class="settings-section-label">Profile</p>
+          <form id="profile-form" class="settings-form">
+            <label class="settings-field">
+              <span>Name</span>
+              <input type="text" id="settings-display-name" placeholder="Your name" />
+            </label>
+            <label class="settings-field">
+              <span>Email</span>
+              <input type="email" id="settings-email" disabled />
+            </label>
+            <p class="auth-error" id="profile-error"></p>
+            <p class="settings-saved" id="profile-saved" hidden>Saved.</p>
+            <button type="submit" class="pill-btn primary-btn settings-save-btn">Save profile</button>
+          </form>
+        </div>
+
+        <div class="chat-card glass settings-card">
+          <p class="settings-section-label">Appearance</p>
+          <div class="theme-picker" id="theme-picker">
+            <button type="button" class="theme-option" data-theme="system">System</button>
+            <button type="button" class="theme-option" data-theme="light">Light</button>
+            <button type="button" class="theme-option" data-theme="dark">Dark</button>
+          </div>
+        </div>
+
+        <div class="chat-card glass settings-card">
+          <p class="settings-section-label">Password</p>
+          <form id="password-form" class="settings-form">
+            <label class="settings-field" id="current-password-field">
+              <span>Current password</span>
+              <input type="password" id="settings-current-password" autocomplete="current-password" />
+            </label>
+            <label class="settings-field">
+              <span>New password</span>
+              <input type="password" id="settings-new-password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" />
+            </label>
+            <p class="auth-error" id="password-error"></p>
+            <p class="settings-saved" id="password-saved" hidden>Password updated.</p>
+            <button type="submit" class="pill-btn primary-btn settings-save-btn">Update password</button>
+          </form>
+        </div>
+
+        <div class="chat-card glass settings-card">
+          <p class="settings-section-label">Plan</p>
+          <div class="plan-row">
+            <div>
+              <p class="plan-name" id="settings-plan-name">Free plan</p>
+              <p class="plan-desc">Limited daily AI messages and monthly video summaries.</p>
+            </div>
+            <button type="button" id="settings-upgrade-btn" class="pill-btn primary-btn">Upgrade</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

@@ -65,6 +65,24 @@
   const videoHistoryLabel = document.getElementById('video-history-label');
   const videoHistoryList = document.getElementById('video-history-list');
 
+  const settingsBtn = document.getElementById('settings-btn');
+  const settingsShell = document.getElementById('settings-shell');
+  const profileForm = document.getElementById('profile-form');
+  const settingsDisplayName = document.getElementById('settings-display-name');
+  const settingsEmail = document.getElementById('settings-email');
+  const profileError = document.getElementById('profile-error');
+  const profileSaved = document.getElementById('profile-saved');
+  const themePicker = document.getElementById('theme-picker');
+  const themeOptions = document.querySelectorAll('.theme-option');
+  const passwordForm = document.getElementById('password-form');
+  const currentPasswordField = document.getElementById('current-password-field');
+  const settingsCurrentPassword = document.getElementById('settings-current-password');
+  const settingsNewPassword = document.getElementById('settings-new-password');
+  const passwordError = document.getElementById('password-error');
+  const passwordSaved = document.getElementById('password-saved');
+  const settingsPlanName = document.getElementById('settings-plan-name');
+  const settingsUpgradeBtn = document.getElementById('settings-upgrade-btn');
+
   let chats = [];
   let currentChatId = null;
   let currentMode = 'phased';
@@ -479,27 +497,33 @@
 
   // ---------- View switching (Chats / Planner / Video) ----------
 
+  function switchView(view) {
+    sidebarNavBtns.forEach((b) => b.classList.toggle('active', b.dataset.view === view));
+
+    appShell.hidden = view !== 'chats';
+    plannerShell.hidden = view !== 'planner';
+    videoShell.hidden = view !== 'video';
+    settingsShell.hidden = view !== 'settings';
+    chatNavExtras.hidden = view !== 'chats';
+
+    if (view === 'planner' && !plannerLoaded) {
+      plannerLoaded = true;
+      initPlanner();
+    }
+    if (view === 'video' && !videoLoaded) {
+      videoLoaded = true;
+      initVideo();
+    }
+    if (view === 'settings') {
+      initSettings();
+    }
+  }
+
   sidebarNavBtns.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      sidebarNavBtns.forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
-      const view = btn.dataset.view;
-
-      appShell.hidden = view !== 'chats';
-      plannerShell.hidden = view !== 'planner';
-      videoShell.hidden = view !== 'video';
-      chatNavExtras.hidden = view !== 'chats';
-
-      if (view === 'planner' && !plannerLoaded) {
-        plannerLoaded = true;
-        initPlanner();
-      }
-      if (view === 'video' && !videoLoaded) {
-        videoLoaded = true;
-        initVideo();
-      }
-    });
+    btn.addEventListener('click', () => switchView(btn.dataset.view));
   });
+
+  settingsBtn.addEventListener('click', () => switchView('settings'));
 
   // ---------- Planner: calendar ----------
 
@@ -819,6 +843,84 @@
     await refreshVideoHistory();
   }
 
+  // ---------- Settings ----------
+
+  function applyTheme(theme) {
+    if (theme === 'light' || theme === 'dark') {
+      document.documentElement.dataset.theme = theme;
+    } else {
+      delete document.documentElement.dataset.theme;
+    }
+    themeOptions.forEach((btn) => btn.classList.toggle('active', btn.dataset.theme === (theme || 'system')));
+  }
+
+  async function initSettings() {
+    profileError.textContent = '';
+    profileSaved.hidden = true;
+    passwordError.textContent = '';
+    passwordSaved.hidden = true;
+
+    const { data } = await api('/api/settings');
+    if (!data) return;
+
+    settingsDisplayName.value = data.settings.displayName || '';
+    settingsEmail.value = data.settings.email;
+    currentPasswordField.hidden = !data.settings.hasPassword;
+    applyTheme(data.settings.theme);
+
+    const plan = data.subscription ? data.subscription.plan : 'free';
+    settingsPlanName.textContent = plan === 'paid' ? 'Paid plan' : 'Free plan';
+    settingsUpgradeBtn.hidden = plan === 'paid';
+  }
+
+  profileForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    profileError.textContent = '';
+    profileSaved.hidden = true;
+
+    const { ok, data } = await api('/api/settings', {
+      method: 'PATCH',
+      body: { displayName: settingsDisplayName.value.trim() },
+    });
+
+    if (!ok) {
+      profileError.textContent = (data && data.error) || 'Something went wrong.';
+      return;
+    }
+    profileSaved.hidden = false;
+  });
+
+  themeOptions.forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const theme = btn.dataset.theme;
+      applyTheme(theme);
+      await api('/api/settings', { method: 'PATCH', body: { theme } });
+    });
+  });
+
+  passwordForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    passwordError.textContent = '';
+    passwordSaved.hidden = true;
+
+    const { ok, data } = await api('/api/settings/password', {
+      method: 'PATCH',
+      body: {
+        currentPassword: settingsCurrentPassword.value,
+        newPassword: settingsNewPassword.value,
+      },
+    });
+
+    if (!ok) {
+      passwordError.textContent = (data && data.error) || 'Something went wrong.';
+      return;
+    }
+
+    settingsCurrentPassword.value = '';
+    settingsNewPassword.value = '';
+    passwordSaved.hidden = false;
+  });
+
   // ---------- Boot ----------
 
   async function bootstrap() {
@@ -826,6 +928,8 @@
     const { ok } = await api('/api/auth/me');
     if (ok) {
       showAppView();
+      const { data } = await api('/api/settings');
+      if (data) applyTheme(data.settings.theme);
       await initApp();
     } else {
       showAuthView();

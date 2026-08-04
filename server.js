@@ -14,6 +14,7 @@ const authRoutes = require('./src/routes/auth');
 const chatsRoutes = require('./src/routes/chats');
 const tasksRoutes = require('./src/routes/tasks');
 const videoRoutes = require('./src/routes/video');
+const settingsRoutes = require('./src/routes/settings');
 
 const PORT = process.env.PORT || 3000;
 
@@ -37,6 +38,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/chats', chatsRoutes);
 app.use('/api/tasks', tasksRoutes);
 app.use('/api/video', videoRoutes);
+app.use('/api/settings', settingsRoutes);
 
 app.use(errorHandler);
 
