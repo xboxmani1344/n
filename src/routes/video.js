@@ -6,6 +6,7 @@ const { requireAuth } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errors');
 const { extractYoutubeId, fetchMetadata, fetchTranscript } = require('../services/youtube');
 const anthropic = require('../services/anthropic');
+const usage = require('../services/usage');
 const { VIDEO_SUMMARY_PROMPT, VIDEO_CHUNK_PROMPT, VIDEO_REDUCE_PROMPT } = require('../prompts');
 
 const router = express.Router();
@@ -87,6 +88,16 @@ router.post(
     const cached = Boolean(video && video.summary) && !manualTranscript;
 
     if (!cached) {
+      const limitCheck = usage.checkLimit(req.user.id, 'video_summaries');
+      if (!limitCheck.ok) {
+        return res.status(429).json({
+          error: `You've hit your ${usage.periodLabel(limitCheck.period)} limit on the free plan. Upgrade for more.`,
+          code: 'limit_reached',
+          plan: limitCheck.plan,
+          upgradeAvailable: limitCheck.plan === 'free',
+        });
+      }
+
       let transcriptText;
       let transcriptSource;
 
@@ -123,6 +134,8 @@ router.post(
           .run(youtubeId, url.trim(), meta.title || null, meta.author || null, transcriptSource, transcriptText, summary, now);
         video = db.prepare('SELECT * FROM videos WHERE id = ?').get(Number(info.lastInsertRowid));
       }
+
+      usage.increment(req.user.id, 'video_summaries');
     }
 
     db.prepare('INSERT INTO video_summary_views (user_id, video_id, created_at) VALUES (?, ?, ?)').run(

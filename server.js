@@ -15,10 +15,16 @@ const chatsRoutes = require('./src/routes/chats');
 const tasksRoutes = require('./src/routes/tasks');
 const videoRoutes = require('./src/routes/video');
 const settingsRoutes = require('./src/routes/settings');
+const billingRoutes = require('./src/routes/billing');
 
 const PORT = process.env.PORT || 3000;
 
 const app = express();
+
+// Stripe webhook needs the raw body for signature verification, so it must be
+// parsed before the global JSON body parser touches the request stream.
+app.use('/api/billing/webhook', express.raw({ type: 'application/json' }));
+
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 app.use(attachUser);
@@ -39,6 +45,7 @@ app.use('/api/chats', chatsRoutes);
 app.use('/api/tasks', tasksRoutes);
 app.use('/api/video', videoRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/billing', billingRoutes);
 
 app.use(errorHandler);
 
@@ -49,5 +56,8 @@ app.listen(PORT, () => {
   }
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
     console.warn('Note: GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET not set — Google sign-in stays disabled until configured.');
+  }
+  if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_PRICE_ID) {
+    console.warn('Note: STRIPE_SECRET_KEY/STRIPE_PRICE_ID not set — upgrades stay disabled until configured.');
   }
 });

@@ -150,7 +150,7 @@
 
         <div id="video-error-block" class="chat-card glass video-error-block" hidden>
           <p class="video-error-text" id="video-error-text"></p>
-          <p class="video-fallback-label">You can paste the transcript in yourself instead:</p>
+          <p class="video-fallback-label" id="video-fallback-label">You can paste the transcript in yourself instead:</p>
           <textarea id="video-manual-transcript" placeholder="Paste the video's transcript here…" rows="5"></textarea>
           <button type="button" id="video-manual-submit-btn" class="pill-btn primary-btn">Summarize pasted transcript</button>
         </div>
@@ -219,10 +219,11 @@
           <div class="plan-row">
             <div>
               <p class="plan-name" id="settings-plan-name">Free plan</p>
-              <p class="plan-desc">Limited daily AI messages and monthly video summaries.</p>
+              <p class="plan-desc" id="settings-plan-usage">Limited daily AI messages and monthly video summaries.</p>
             </div>
             <button type="button" id="settings-upgrade-btn" class="pill-btn primary-btn">Upgrade</button>
           </div>
+          <p class="auth-error" id="billing-error"></p>
         </div>
       </div>
     </div>

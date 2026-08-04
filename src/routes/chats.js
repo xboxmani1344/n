@@ -6,6 +6,7 @@ const { requireAuth } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errors');
 const { PHASES, getPhaseByKey, getSystemPrompt, getTutorSystemPrompt } = require('../prompts');
 const anthropic = require('../services/anthropic');
+const usage = require('../services/usage');
 
 const router = express.Router();
 const MAX_HISTORY_MESSAGES = 24;
@@ -106,6 +107,19 @@ router.post(
       return res.status(400).json({ error: 'content is required' });
     }
 
+    // Hidden messages are system-generated nudges (e.g. "Next Phase" clicks), not a real user turn.
+    if (!hidden) {
+      const limitCheck = usage.checkLimit(req.user.id, 'ai_messages');
+      if (!limitCheck.ok) {
+        return res.status(429).json({
+          error: `You've hit your ${usage.periodLabel(limitCheck.period)} limit on the free plan. Upgrade for more.`,
+          code: 'limit_reached',
+          plan: limitCheck.plan,
+          upgradeAvailable: limitCheck.plan === 'free',
+        });
+      }
+    }
+
     const now = new Date().toISOString();
     db.prepare(
       'INSERT INTO messages (chat_id, role, content, hidden, created_at) VALUES (?, ?, ?, ?, ?)'
@@ -128,6 +142,10 @@ router.post(
       'INSERT INTO messages (chat_id, role, content, hidden, created_at) VALUES (?, ?, ?, 0, ?)'
     ).run(chat.id, 'assistant', reply, new Date().toISOString());
     db.prepare('UPDATE chats SET updated_at = ? WHERE id = ?').run(new Date().toISOString(), chat.id);
+
+    if (!hidden) {
+      usage.increment(req.user.id, 'ai_messages');
+    }
 
     res.json({ reply });
   })

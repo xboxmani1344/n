@@ -56,6 +56,7 @@
   const videoSubmitBtn = document.getElementById('video-submit-btn');
   const videoErrorBlock = document.getElementById('video-error-block');
   const videoErrorText = document.getElementById('video-error-text');
+  const videoFallbackLabel = document.getElementById('video-fallback-label');
   const videoManualTranscript = document.getElementById('video-manual-transcript');
   const videoManualSubmitBtn = document.getElementById('video-manual-submit-btn');
   const videoResultBlock = document.getElementById('video-result-block');
@@ -81,7 +82,9 @@
   const passwordError = document.getElementById('password-error');
   const passwordSaved = document.getElementById('password-saved');
   const settingsPlanName = document.getElementById('settings-plan-name');
+  const settingsPlanUsage = document.getElementById('settings-plan-usage');
   const settingsUpgradeBtn = document.getElementById('settings-upgrade-btn');
+  const billingError = document.getElementById('billing-error');
 
   let chats = [];
   let currentChatId = null;
@@ -396,7 +399,8 @@
     }
 
     if (!ok) {
-      addSystemNote((data && data.error) || 'Something went wrong. Please try again.');
+      const base = (data && data.error) || 'Something went wrong. Please try again.';
+      addSystemNote(data && data.code === 'limit_reached' ? `${base} (See Settings to upgrade.)` : base);
       setBusy(false);
       messageInput.focus();
       return;
@@ -768,11 +772,14 @@
     videoSummaryEl.textContent = video.summary;
   }
 
-  function showVideoError(message) {
+  function showVideoError(message, showFallback = true) {
     videoResultBlock.hidden = true;
     videoErrorBlock.hidden = false;
     videoErrorText.textContent = message;
     videoManualTranscript.value = '';
+    videoFallbackLabel.hidden = !showFallback;
+    videoManualTranscript.hidden = !showFallback;
+    videoManualSubmitBtn.hidden = !showFallback;
   }
 
   async function submitVideo(url, manualTranscript) {
@@ -786,7 +793,9 @@
     setVideoBusy(false);
 
     if (!ok) {
-      showVideoError((data && data.error) || 'Something went wrong. Please try again.');
+      const isLimitReached = data && data.code === 'limit_reached';
+      const base = (data && data.error) || 'Something went wrong. Please try again.';
+      showVideoError(isLimitReached ? `${base} (See Settings to upgrade.)` : base, !isLimitReached);
       return;
     }
 
@@ -859,19 +868,42 @@
     profileSaved.hidden = true;
     passwordError.textContent = '';
     passwordSaved.hidden = true;
+    billingError.textContent = '';
 
     const { data } = await api('/api/settings');
-    if (!data) return;
+    if (data) {
+      settingsDisplayName.value = data.settings.displayName || '';
+      settingsEmail.value = data.settings.email;
+      currentPasswordField.hidden = !data.settings.hasPassword;
+      applyTheme(data.settings.theme);
+    }
 
-    settingsDisplayName.value = data.settings.displayName || '';
-    settingsEmail.value = data.settings.email;
-    currentPasswordField.hidden = !data.settings.hasPassword;
-    applyTheme(data.settings.theme);
-
-    const plan = data.subscription ? data.subscription.plan : 'free';
-    settingsPlanName.textContent = plan === 'paid' ? 'Paid plan' : 'Free plan';
-    settingsUpgradeBtn.hidden = plan === 'paid';
+    const { data: billing } = await api('/api/billing');
+    if (billing) {
+      settingsPlanName.textContent = billing.plan === 'paid' ? 'Paid plan' : 'Free plan';
+      settingsUpgradeBtn.hidden = billing.plan === 'paid';
+      const msgs = billing.usage.ai_messages;
+      const vids = billing.usage.video_summaries;
+      settingsPlanUsage.textContent = `${msgs.used}/${msgs.limit} AI messages today · ${vids.used}/${vids.limit} video summaries this month`;
+    }
   }
+
+  settingsUpgradeBtn.addEventListener('click', async () => {
+    billingError.textContent = '';
+    settingsUpgradeBtn.disabled = true;
+    const { ok, data } = await api('/api/billing/checkout', { method: 'POST' });
+    settingsUpgradeBtn.disabled = false;
+
+    if (!ok) {
+      billingError.textContent =
+        (data && data.code === 'billing_not_configured'
+          ? 'Upgrades aren’t set up yet — the site owner needs to add Stripe keys.'
+          : data && data.error) || 'Something went wrong.';
+      return;
+    }
+
+    window.location.href = data.url;
+  });
 
   profileForm.addEventListener('submit', async (e) => {
     e.preventDefault();
