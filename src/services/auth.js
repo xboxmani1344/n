@@ -1,7 +1,7 @@
 'use strict';
 
 const crypto = require('crypto');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const { db } = require('../db');
 
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
