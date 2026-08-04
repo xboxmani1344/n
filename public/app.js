@@ -1,8 +1,6 @@
 (() => {
   'use strict';
 
-  const ROMAN = ['I', 'II', 'III', 'IV'];
-
   const PHASES = [
     { key: 'warmup', label: 'Warm-Up' },
     { key: 'learn', label: 'Learn' },
@@ -27,13 +25,14 @@
   function renderPhaseTracker() {
     phaseTracker.innerHTML = '';
     PHASES.forEach((phase, i) => {
-      const li = document.createElement('li');
-      li.innerHTML = `<span class="phase-num">${ROMAN[i]}</span>${phase.label}`;
-      if (i === phaseIndex) li.classList.add('active');
-      else if (i < phaseIndex) li.classList.add('done');
-      phaseTracker.appendChild(li);
+      const span = document.createElement('span');
+      span.className = 'segment';
+      span.innerHTML = `<span class="segment-num">${i + 1}</span>${phase.label}`;
+      if (i === phaseIndex) span.classList.add('active');
+      else if (i < phaseIndex) span.classList.add('done');
+      phaseTracker.appendChild(span);
     });
-    footPhase.textContent = `Part ${ROMAN[phaseIndex]} of IV · ${PHASES[phaseIndex].label}`;
+    footPhase.textContent = `${PHASES[phaseIndex].label} — step ${phaseIndex + 1} of ${PHASES.length}`;
     nextPhaseBtn.disabled = phaseIndex >= PHASES.length - 1;
   }
 
@@ -71,11 +70,23 @@
     messageInput.disabled = isBusy;
   }
 
+  function autoGrow() {
+    messageInput.style.height = 'auto';
+    messageInput.style.height = `${Math.min(messageInput.scrollHeight, 140)}px`;
+  }
+
   async function sendToBackend() {
     setBusy(true);
     const typingEl = document.createElement('div');
     typingEl.className = 'msg typing';
-    typingEl.textContent = 'Study Buddy is marking this up…';
+    const typingWho = document.createElement('span');
+    typingWho.className = 'who';
+    typingWho.textContent = 'Study Buddy';
+    const typingBody = document.createElement('span');
+    typingBody.className = 'body';
+    typingBody.textContent = 'Thinking';
+    typingEl.appendChild(typingWho);
+    typingEl.appendChild(typingBody);
     chatLog.appendChild(typingEl);
     chatLog.scrollTop = chatLog.scrollHeight;
 
@@ -120,8 +131,11 @@
     const text = messageInput.value.trim();
     if (!text) return;
     messageInput.value = '';
+    autoGrow();
     handleSend(text);
   });
+
+  messageInput.addEventListener('input', autoGrow);
 
   messageInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -134,10 +148,10 @@
     if (busy || phaseIndex >= PHASES.length - 1) return;
     phaseIndex += 1;
     renderPhaseTracker();
-    addSystemNote(`— Turning to Part ${ROMAN[phaseIndex]}: ${PHASES[phaseIndex].label} —`);
+    addSystemNote(`Moving on to ${PHASES[phaseIndex].label}`);
     messages.push({
       role: 'user',
-      content: `[The learner turned to Part ${ROMAN[phaseIndex]}. Begin the ${PHASES[phaseIndex].label} phase now.]`,
+      content: `[The learner clicked "Next Phase." Begin the ${PHASES[phaseIndex].label} phase now.]`,
       hidden: true,
     });
     sendToBackend();
@@ -145,7 +159,7 @@
 
   restartBtn.addEventListener('click', () => {
     if (busy) return;
-    if (!confirm('Close this booklet and start a fresh one?')) return;
+    if (!confirm('Restart the study session from the beginning?')) return;
     messages = [];
     phaseIndex = 0;
     chatLog.innerHTML = '';

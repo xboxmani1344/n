@@ -3,36 +3,38 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Study Buddy — An Examination Booklet in Four Parts</title>
+  <title>Study Buddy</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="desk">
-    <div class="booklet">
-      <div class="booklet-head">
-        <p class="wordmark">Study <span>Buddy</span></p>
-        <p class="subtitle">An examination booklet in four parts</p>
+    <div class="shell">
+      <header class="brand">
+        <h1>Study Buddy</h1>
+        <p class="tagline">Four phases. One session.</p>
+      </header>
+
+      <div class="segmented glass" id="phase-tracker" role="list" aria-label="Study phases"></div>
+
+      <div class="chat-card glass">
+        <div class="transcript" id="chat-log" aria-live="polite"></div>
       </div>
 
-      <ol class="tabs" id="phase-tracker" aria-label="Study phases"></ol>
-
-      <div class="transcript" id="chat-log" aria-live="polite"></div>
-
-      <form class="composer" id="composer">
+      <form class="composer glass" id="composer">
         <textarea
           id="message-input"
-          placeholder="Write your answer here…"
-          rows="2"
+          placeholder="Message Study Buddy…"
+          rows="1"
           autofocus
         ></textarea>
-        <button type="submit" id="send-btn" class="stamp primary">Send</button>
+        <button type="submit" id="send-btn" class="send-btn" aria-label="Send">↑</button>
       </form>
 
-      <div class="footline">
-        <span id="foot-phase">Part I of IV · Warm-Up</span>
-        <span class="footline-actions">
-          <button type="button" id="next-phase-btn" class="stamp">Next Part →</button>
-          <button type="button" id="restart-btn" class="stamp">New Booklet</button>
+      <div class="controls">
+        <span class="status" id="foot-phase">Warm-Up — step 1 of 4</span>
+        <span class="controls-actions">
+          <button type="button" id="next-phase-btn" class="pill-btn glass">Next Phase</button>
+          <button type="button" id="restart-btn" class="pill-btn glass">Restart</button>
         </span>
       </div>
     </div>
