@@ -53,12 +53,20 @@
           <p class="sidebar-title">Study Buddy</p>
           <button type="button" id="logout-btn" class="icon-btn" aria-label="Log out" title="Log out">⏻</button>
         </div>
-        <div class="sidebar-new-buttons">
-          <button type="button" id="new-session-btn" class="pill-btn sidebar-new-btn">+ New Session</button>
-          <button type="button" id="new-tutor-btn" class="pill-btn sidebar-new-btn">+ Ask AI Teacher</button>
+
+        <div class="sidebar-nav">
+          <button type="button" class="sidebar-nav-btn active" data-view="chats">Chats</button>
+          <button type="button" class="sidebar-nav-btn" data-view="planner">Planner</button>
         </div>
-        <p class="sidebar-label">Recent chats</p>
-        <div class="sidebar-list" id="sidebar-list"></div>
+
+        <div id="chat-nav-extras">
+          <div class="sidebar-new-buttons">
+            <button type="button" id="new-session-btn" class="pill-btn sidebar-new-btn">+ New Session</button>
+            <button type="button" id="new-tutor-btn" class="pill-btn sidebar-new-btn">+ Ask AI Teacher</button>
+          </div>
+          <p class="sidebar-label">Recent chats</p>
+          <div class="sidebar-list" id="sidebar-list"></div>
+        </div>
       </aside>
 
       <div class="shell" id="app-shell">
@@ -87,6 +95,41 @@
           <span class="controls-actions">
             <button type="button" id="next-phase-btn" class="pill-btn glass">Next Phase</button>
           </span>
+        </div>
+      </div>
+
+      <div class="shell" id="planner-shell" hidden>
+        <header class="brand chat-brand">
+          <h1>Planner</h1>
+          <p class="tagline">Assignments and due dates, at a glance.</p>
+        </header>
+
+        <div class="calendar-card glass">
+          <div class="calendar-nav">
+            <button type="button" id="cal-prev" class="icon-btn" aria-label="Previous month">‹</button>
+            <span id="cal-month-year" class="calendar-month-label"></span>
+            <button type="button" id="cal-today" class="pill-btn small-btn">Today</button>
+            <button type="button" id="cal-next" class="icon-btn" aria-label="Next month">›</button>
+          </div>
+          <div class="calendar-weekdays">
+            <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+          </div>
+          <div class="calendar-grid" id="calendar-grid"></div>
+        </div>
+
+        <form class="task-form glass" id="task-form">
+          <input type="text" id="task-title" placeholder="New task…" required />
+          <input type="date" id="task-due-date" aria-label="Due date" />
+          <input type="text" id="task-subject" placeholder="Subject" aria-label="Subject" />
+          <button type="submit" class="pill-btn primary-btn">Add</button>
+        </form>
+
+        <div class="chat-card glass task-list-card">
+          <div class="task-list-header">
+            <p class="task-list-heading" id="task-list-heading">All tasks</p>
+            <button type="button" id="task-filter-clear" class="icon-btn" aria-label="Clear filter" hidden>×</button>
+          </div>
+          <div class="task-list" id="task-list"></div>
         </div>
       </div>
     </div>

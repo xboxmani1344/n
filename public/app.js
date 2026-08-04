@@ -21,6 +21,8 @@
   const sidebarList = document.getElementById('sidebar-list');
   const newSessionBtn = document.getElementById('new-session-btn');
   const newTutorBtn = document.getElementById('new-tutor-btn');
+  const sidebarNavBtns = document.querySelectorAll('.sidebar-nav-btn');
+  const chatNavExtras = document.getElementById('chat-nav-extras');
 
   const chatTitleHeading = document.getElementById('chat-title-heading');
   const chatTitleSub = document.getElementById('chat-title-sub');
@@ -33,12 +35,39 @@
   const nextPhaseBtn = document.getElementById('next-phase-btn');
   const logoutBtn = document.getElementById('logout-btn');
 
+  const appShell = document.getElementById('app-shell');
+  const plannerShell = document.getElementById('planner-shell');
+  const calMonthYear = document.getElementById('cal-month-year');
+  const calGrid = document.getElementById('calendar-grid');
+  const calPrevBtn = document.getElementById('cal-prev');
+  const calNextBtn = document.getElementById('cal-next');
+  const calTodayBtn = document.getElementById('cal-today');
+  const taskForm = document.getElementById('task-form');
+  const taskTitleInput = document.getElementById('task-title');
+  const taskDueInput = document.getElementById('task-due-date');
+  const taskSubjectInput = document.getElementById('task-subject');
+  const taskList = document.getElementById('task-list');
+  const taskListHeading = document.getElementById('task-list-heading');
+  const taskFilterClear = document.getElementById('task-filter-clear');
+
   let chats = [];
   let currentChatId = null;
   let currentMode = 'phased';
   let phaseIndex = 0;
   let needsAutoTitle = false;
   let busy = false;
+
+  let tasks = [];
+  let calendarYear;
+  let calendarMonth; // 0-indexed
+  let selectedDate = null; // 'YYYY-MM-DD'
+  let plannerLoaded = false;
+
+  {
+    const now = new Date();
+    calendarYear = now.getFullYear();
+    calendarMonth = now.getMonth();
+  }
 
   // ---------- API helpers ----------
 
@@ -428,6 +457,253 @@
       await createChat('phased');
     }
   }
+
+  // ---------- View switching (Chats / Planner) ----------
+
+  sidebarNavBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      sidebarNavBtns.forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      const view = btn.dataset.view;
+      const isPlanner = view === 'planner';
+
+      appShell.hidden = isPlanner;
+      plannerShell.hidden = !isPlanner;
+      chatNavExtras.hidden = isPlanner;
+
+      if (isPlanner && !plannerLoaded) {
+        plannerLoaded = true;
+        initPlanner();
+      }
+    });
+  });
+
+  // ---------- Planner: calendar ----------
+
+  function pad2(n) {
+    return String(n).padStart(2, '0');
+  }
+
+  function isoDate(year, month, day) {
+    return `${year}-${pad2(month + 1)}-${pad2(day)}`;
+  }
+
+  function todayIso() {
+    const now = new Date();
+    return isoDate(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+
+  const MONTH_NAMES = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ];
+
+  function renderCalendar() {
+    calMonthYear.textContent = `${MONTH_NAMES[calendarMonth]} ${calendarYear}`;
+    calGrid.innerHTML = '';
+
+    const firstOfMonth = new Date(calendarYear, calendarMonth, 1);
+    const startOffset = firstOfMonth.getDay(); // 0 = Sunday
+    const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+    const daysInPrevMonth = new Date(calendarYear, calendarMonth, 0).getDate();
+
+    const dueDates = new Set(tasks.filter((t) => t.dueAt).map((t) => t.dueAt.slice(0, 10)));
+    const today = todayIso();
+
+    const cells = [];
+    for (let i = startOffset - 1; i >= 0; i--) {
+      cells.push({ day: daysInPrevMonth - i, outside: true, year: calendarMonth === 0 ? calendarYear - 1 : calendarYear, month: calendarMonth === 0 ? 11 : calendarMonth - 1 });
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      cells.push({ day: d, outside: false, year: calendarYear, month: calendarMonth });
+    }
+    const nextMonthYear = calendarMonth === 11 ? calendarYear + 1 : calendarYear;
+    const nextMonth = calendarMonth === 11 ? 0 : calendarMonth + 1;
+    let nextMonthDay = 1;
+    while (cells.length % 7 !== 0 || cells.length < 42) {
+      cells.push({ day: nextMonthDay, outside: true, year: nextMonthYear, month: nextMonth });
+      nextMonthDay += 1;
+      if (cells.length >= 42) break;
+    }
+
+    cells.forEach((cell) => {
+      const iso = isoDate(cell.year, cell.month, cell.day);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'calendar-day';
+      if (cell.outside) btn.classList.add('outside-month');
+      if (iso === today) btn.classList.add('today');
+      if (iso === selectedDate) btn.classList.add('selected');
+
+      const num = document.createElement('span');
+      num.textContent = String(cell.day);
+      btn.appendChild(num);
+
+      if (dueDates.has(iso)) {
+        const dot = document.createElement('span');
+        dot.className = 'calendar-day-dot';
+        btn.appendChild(dot);
+      }
+
+      btn.addEventListener('click', () => {
+        selectedDate = selectedDate === iso ? null : iso;
+        if (cell.outside) {
+          calendarYear = cell.year;
+          calendarMonth = cell.month;
+        }
+        if (selectedDate) taskDueInput.value = selectedDate;
+        renderCalendar();
+        renderTaskList();
+      });
+
+      calGrid.appendChild(btn);
+    });
+  }
+
+  calPrevBtn.addEventListener('click', () => {
+    calendarMonth -= 1;
+    if (calendarMonth < 0) {
+      calendarMonth = 11;
+      calendarYear -= 1;
+    }
+    renderCalendar();
+  });
+
+  calNextBtn.addEventListener('click', () => {
+    calendarMonth += 1;
+    if (calendarMonth > 11) {
+      calendarMonth = 0;
+      calendarYear += 1;
+    }
+    renderCalendar();
+  });
+
+  calTodayBtn.addEventListener('click', () => {
+    const now = new Date();
+    calendarYear = now.getFullYear();
+    calendarMonth = now.getMonth();
+    renderCalendar();
+  });
+
+  // ---------- Planner: task list ----------
+
+  function formatDue(dueAt) {
+    if (!dueAt) return null;
+    const d = new Date(dueAt);
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  function renderTaskList() {
+    taskList.innerHTML = '';
+
+    const visible = selectedDate
+      ? tasks.filter((t) => t.dueAt && t.dueAt.slice(0, 10) === selectedDate)
+      : tasks;
+
+    taskListHeading.textContent = selectedDate
+      ? `Tasks — ${new Date(`${selectedDate}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`
+      : 'All tasks';
+    taskFilterClear.hidden = !selectedDate;
+
+    if (!visible.length) {
+      const empty = document.createElement('p');
+      empty.className = 'task-list-empty';
+      empty.textContent = selectedDate ? 'Nothing due this day.' : 'No tasks yet — add one above.';
+      taskList.appendChild(empty);
+      return;
+    }
+
+    visible.forEach((task) => {
+      const row = document.createElement('div');
+      row.className = 'task-row' + (task.status === 'done' ? ' done' : '');
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.className = 'task-checkbox';
+      checkbox.checked = task.status === 'done';
+      checkbox.setAttribute('aria-label', `Mark "${task.title}" as done`);
+      checkbox.addEventListener('change', () => toggleTask(task.id, checkbox.checked));
+
+      const main = document.createElement('div');
+      main.className = 'task-row-main';
+
+      const title = document.createElement('div');
+      title.className = 'task-row-title';
+      title.textContent = task.title;
+
+      const meta = document.createElement('div');
+      meta.className = 'task-row-meta';
+      const metaParts = [];
+      if (task.dueAt) metaParts.push(formatDue(task.dueAt));
+      if (task.subject) metaParts.push(task.subject);
+      meta.textContent = metaParts.length ? metaParts.join(' · ') : 'No due date';
+
+      main.appendChild(title);
+      main.appendChild(meta);
+
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'task-row-delete';
+      del.setAttribute('aria-label', `Delete "${task.title}"`);
+      del.textContent = '×';
+      del.addEventListener('click', () => deleteTask(task.id));
+
+      row.appendChild(checkbox);
+      row.appendChild(main);
+      row.appendChild(del);
+      taskList.appendChild(row);
+    });
+  }
+
+  taskFilterClear.addEventListener('click', () => {
+    selectedDate = null;
+    renderCalendar();
+    renderTaskList();
+  });
+
+  async function refreshTasks() {
+    const { data } = await api('/api/tasks');
+    tasks = (data && data.tasks) || [];
+    renderCalendar();
+    renderTaskList();
+  }
+
+  async function toggleTask(taskId, done) {
+    await api(`/api/tasks/${taskId}`, { method: 'PATCH', body: { status: done ? 'done' : 'pending' } });
+    await refreshTasks();
+  }
+
+  async function deleteTask(taskId) {
+    await api(`/api/tasks/${taskId}`, { method: 'DELETE' });
+    await refreshTasks();
+  }
+
+  taskForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const title = taskTitleInput.value.trim();
+    if (!title) return;
+
+    const dueDate = taskDueInput.value || null;
+    const body = {
+      title,
+      subject: taskSubjectInput.value.trim() || null,
+      dueAt: dueDate ? new Date(`${dueDate}T09:00:00`).toISOString() : null,
+    };
+
+    taskTitleInput.value = '';
+    taskSubjectInput.value = '';
+    taskDueInput.value = '';
+
+    await api('/api/tasks', { method: 'POST', body });
+    await refreshTasks();
+  });
+
+  async function initPlanner() {
+    renderCalendar();
+    await refreshTasks();
+  }
+
+  // ---------- Boot ----------
 
   async function bootstrap() {
     configureGoogleButton();
