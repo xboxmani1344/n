@@ -1,6 +1,8 @@
 (() => {
   'use strict';
 
+  const ROMAN = ['I', 'II', 'III', 'IV'];
+
   const PHASES = [
     { key: 'warmup', label: 'Warm-Up' },
     { key: 'learn', label: 'Learn' },
@@ -10,6 +12,7 @@
 
   const chatLog = document.getElementById('chat-log');
   const phaseTracker = document.getElementById('phase-tracker');
+  const footPhase = document.getElementById('foot-phase');
   const composer = document.getElementById('composer');
   const messageInput = document.getElementById('message-input');
   const sendBtn = document.getElementById('send-btn');
@@ -25,19 +28,29 @@
     phaseTracker.innerHTML = '';
     PHASES.forEach((phase, i) => {
       const li = document.createElement('li');
-      li.innerHTML = `<span class="phase-num">${i + 1}</span>${phase.label}`;
+      li.innerHTML = `<span class="phase-num">${ROMAN[i]}</span>${phase.label}`;
       if (i === phaseIndex) li.classList.add('active');
       else if (i < phaseIndex) li.classList.add('done');
       phaseTracker.appendChild(li);
     });
+    footPhase.textContent = `Part ${ROMAN[phaseIndex]} of IV · ${PHASES[phaseIndex].label}`;
     nextPhaseBtn.disabled = phaseIndex >= PHASES.length - 1;
-    nextPhaseBtn.style.visibility = phaseIndex >= PHASES.length - 1 ? 'hidden' : 'visible';
   }
 
   function addBubble(role, text) {
     const div = document.createElement('div');
     div.className = `msg ${role}`;
-    div.textContent = text;
+
+    const who = document.createElement('span');
+    who.className = 'who';
+    who.textContent = role === 'user' ? 'You' : 'Study Buddy';
+
+    const body = document.createElement('span');
+    body.className = 'body';
+    body.textContent = text;
+
+    div.appendChild(who);
+    div.appendChild(body);
     chatLog.appendChild(div);
     chatLog.scrollTop = chatLog.scrollHeight;
     return div;
@@ -62,7 +75,7 @@
     setBusy(true);
     const typingEl = document.createElement('div');
     typingEl.className = 'msg typing';
-    typingEl.textContent = 'Study Buddy is thinking…';
+    typingEl.textContent = 'Study Buddy is marking this up…';
     chatLog.appendChild(typingEl);
     chatLog.scrollTop = chatLog.scrollHeight;
 
@@ -121,10 +134,10 @@
     if (busy || phaseIndex >= PHASES.length - 1) return;
     phaseIndex += 1;
     renderPhaseTracker();
-    addSystemNote(`— Moving to phase ${phaseIndex + 1}: ${PHASES[phaseIndex].label} —`);
+    addSystemNote(`— Turning to Part ${ROMAN[phaseIndex]}: ${PHASES[phaseIndex].label} —`);
     messages.push({
       role: 'user',
-      content: `[The learner clicked "Next Phase." Begin the ${PHASES[phaseIndex].label} phase now.]`,
+      content: `[The learner turned to Part ${ROMAN[phaseIndex]}. Begin the ${PHASES[phaseIndex].label} phase now.]`,
       hidden: true,
     });
     sendToBackend();
@@ -132,7 +145,7 @@
 
   restartBtn.addEventListener('click', () => {
     if (busy) return;
-    if (!confirm('Restart the study session from the beginning?')) return;
+    if (!confirm('Close this booklet and start a fresh one?')) return;
     messages = [];
     phaseIndex = 0;
     chatLog.innerHTML = '';
@@ -143,7 +156,7 @@
   function showWelcome() {
     addBubble(
       'bot',
-      "Hi! I'm Study Buddy 👋 What would you like to study today, and what's your goal for this session (e.g. understand a concept, prep for a test, review before an exam)?"
+      "What would you like to study today, and what's your goal for this session (understand a concept, prep for a test, review before an exam)?"
     );
   }
 

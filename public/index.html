@@ -3,35 +3,39 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Study Buddy — 4-Phase Study Chatbot</title>
+  <title>Study Buddy — An Examination Booklet in Four Parts</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="app">
-    <header class="app-header">
-      <h1>📚 Study Buddy</h1>
-      <p class="tagline">A study session in four phases: Warm-Up → Learn → Practice → Review</p>
-    </header>
+  <div class="desk">
+    <div class="booklet">
+      <div class="booklet-head">
+        <p class="wordmark">Study <span>Buddy</span></p>
+        <p class="subtitle">An examination booklet in four parts</p>
+      </div>
 
-    <ol class="phase-tracker" id="phase-tracker" aria-label="Study phases"></ol>
+      <ol class="tabs" id="phase-tracker" aria-label="Study phases"></ol>
 
-    <main class="chat-panel">
-      <div class="chat-log" id="chat-log" aria-live="polite"></div>
+      <div class="transcript" id="chat-log" aria-live="polite"></div>
 
       <form class="composer" id="composer">
         <textarea
           id="message-input"
-          placeholder="Type your message..."
+          placeholder="Write your answer here…"
           rows="2"
           autofocus
         ></textarea>
-        <div class="composer-actions">
-          <button type="button" id="next-phase-btn" class="secondary-btn">Next Phase →</button>
-          <button type="button" id="restart-btn" class="secondary-btn">Restart</button>
-          <button type="submit" id="send-btn" class="primary-btn">Send</button>
-        </div>
+        <button type="submit" id="send-btn" class="stamp primary">Send</button>
       </form>
-    </main>
+
+      <div class="footline">
+        <span id="foot-phase">Part I of IV · Warm-Up</span>
+        <span class="footline-actions">
+          <button type="button" id="next-phase-btn" class="stamp">Next Part →</button>
+          <button type="button" id="restart-btn" class="stamp">New Booklet</button>
+        </span>
+      </div>
+    </div>
   </div>
 
   <script src="app.js"></script>
