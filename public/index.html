@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Study Buddy</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="desk">
+    <div class="shell" id="auth-shell" hidden>
+      <header class="brand">
+        <h1>Study Buddy</h1>
+        <p class="tagline">Sign in to start studying</p>
+      </header>
+
+      <div class="chat-card glass auth-card">
+        <div class="auth-tabs">
+          <button type="button" class="auth-tab active" data-tab="login">Log In</button>
+          <button type="button" class="auth-tab" data-tab="signup">Sign Up</button>
+        </div>
+
+        <form id="login-form" class="auth-form">
+          <input type="email" name="email" placeholder="Email" required autocomplete="email" />
+          <input type="password" name="password" placeholder="Password" required autocomplete="current-password" />
+          <p class="auth-error" id="login-error"></p>
+          <button type="submit" class="pill-btn primary-btn">Log In</button>
+        </form>
+
+        <form id="signup-form" class="auth-form" hidden>
+          <input type="text" name="displayName" placeholder="Name" autocomplete="name" />
+          <input type="email" name="email" placeholder="Email" required autocomplete="email" />
+          <input
+            type="password"
+            name="password"
+            placeholder="Password (min. 8 characters)"
+            required
+            autocomplete="new-password"
+            minlength="8"
+          />
+          <p class="auth-error" id="signup-error"></p>
+          <button type="submit" class="pill-btn primary-btn">Create Account</button>
+        </form>
+
+        <div class="auth-divider"><span>or</span></div>
+        <a href="/api/auth/google" class="pill-btn google-btn" id="google-btn">Continue with Google</a>
+      </div>
+    </div>
+
+    <div class="app-layout" id="app-layout" hidden>
+      <aside class="sidebar glass" id="sidebar">
+        <div class="sidebar-header">
+          <p class="sidebar-title">Study Buddy</p>
+          <span class="sidebar-header-actions">
+            <button type="button" id="settings-btn" class="icon-btn" aria-label="Settings" title="Settings">⚙</button>
+            <button type="button" id="logout-btn" class="icon-btn" aria-label="Log out" title="Log out">⏻</button>
+          </span>
+        </div>
+
+        <div class="sidebar-nav">
+          <button type="button" class="sidebar-nav-btn active" data-view="chats">Chats</button>
+          <button type="button" class="sidebar-nav-btn" data-view="planner">Planner</button>
+          <button type="button" class="sidebar-nav-btn" data-view="video">Video</button>
+        </div>
+
+        <div id="chat-nav-extras">
+          <div class="sidebar-new-buttons">
+            <button type="button" id="new-session-btn" class="pill-btn sidebar-new-btn">+ New Session</button>
+            <button type="button" id="new-tutor-btn" class="pill-btn sidebar-new-btn">+ Ask AI Teacher</button>
+          </div>
+          <p class="sidebar-label">Recent chats</p>
+          <div class="sidebar-list" id="sidebar-list"></div>
+        </div>
+      </aside>
+
+      <div class="shell" id="app-shell">
+        <header class="brand chat-brand">
+          <h1 id="chat-title-heading">Study Buddy</h1>
+          <p class="tagline" id="chat-title-sub">Four phases. One session.</p>
+        </header>
+
+        <div class="segmented glass" id="phase-tracker" role="list" aria-label="Study phases"></div>
+
+        <div class="chat-card glass">
+          <div class="transcript" id="chat-log" aria-live="polite"></div>
+        </div>
+
+        <form class="composer glass" id="composer">
+          <textarea
+            id="message-input"
+            placeholder="Message Study Buddy…"
+            rows="1"
+          ></textarea>
+          <button type="submit" id="send-btn" class="send-btn" aria-label="Send">↑</button>
+        </form>
+
+        <div class="controls">
+          <span class="status" id="foot-phase">Warm-Up — step 1 of 4</span>
+          <span class="controls-actions">
+            <button type="button" id="next-phase-btn" class="pill-btn glass">Next Phase</button>
+          </span>
+        </div>
+      </div>
+
+      <div class="shell" id="planner-shell" hidden>
+        <header class="brand chat-brand">
+          <h1>Planner</h1>
+          <p class="tagline">Assignments and due dates, at a glance.</p>
+        </header>
+
+        <div class="calendar-card glass">
+          <div class="calendar-nav">
+            <button type="button" id="cal-prev" class="icon-btn" aria-label="Previous month">‹</button>
+            <span id="cal-month-year" class="calendar-month-label"></span>
+            <button type="button" id="cal-today" class="pill-btn small-btn">Today</button>
+            <button type="button" id="cal-next" class="icon-btn" aria-label="Next month">›</button>
+          </div>
+          <div class="calendar-weekdays">
+            <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+          </div>
+          <div class="calendar-grid" id="calendar-grid"></div>
+        </div>
+
+        <form class="task-form glass" id="task-form">
+          <input type="text" id="task-title" placeholder="New task…" required />
+          <input type="date" id="task-due-date" aria-label="Due date" />
+          <input type="text" id="task-subject" placeholder="Subject" aria-label="Subject" />
+          <button type="submit" class="pill-btn primary-btn">Add</button>
+        </form>
+
+        <div class="chat-card glass task-list-card">
+          <div class="task-list-header">
+            <p class="task-list-heading" id="task-list-heading">All tasks</p>
+            <button type="button" id="task-filter-clear" class="icon-btn" aria-label="Clear filter" hidden>×</button>
+          </div>
+          <div class="task-list" id="task-list"></div>
+        </div>
+      </div>
+
+      <div class="shell" id="video-shell" hidden>
+        <header class="brand chat-brand">
+          <h1>Video Summarizer</h1>
+          <p class="tagline">Turn any YouTube video into study notes.</p>
+        </header>
+
+        <form class="task-form glass" id="video-form">
+          <input type="url" id="video-url" placeholder="Paste a YouTube link…" required />
+          <button type="submit" id="video-submit-btn" class="pill-btn primary-btn">Summarize</button>
+        </form>
+
+        <div id="video-error-block" class="chat-card glass video-error-block" hidden>
+          <p class="video-error-text" id="video-error-text"></p>
+          <p class="video-fallback-label" id="video-fallback-label">You can paste the transcript in yourself instead:</p>
+          <textarea id="video-manual-transcript" placeholder="Paste the video's transcript here…" rows="5"></textarea>
+          <button type="button" id="video-manual-submit-btn" class="pill-btn primary-btn">Summarize pasted transcript</button>
+        </div>
+
+        <div id="video-result-block" class="chat-card glass" hidden>
+          <p class="video-result-title" id="video-result-title"></p>
+          <p class="video-result-author" id="video-result-author"></p>
+          <div class="video-summary" id="video-summary"></div>
+        </div>
+
+        <p class="sidebar-label" id="video-history-label" hidden>Recent summaries</p>
+        <div class="sidebar-list video-history-list" id="video-history-list"></div>
+      </div>
+
+      <div class="shell" id="settings-shell" hidden>
+        <header class="brand chat-brand">
+          <h1>Settings</h1>
+          <p class="tagline">Your profile, theme, and plan.</p>
+        </header>
+
+        <div class="chat-card glass settings-card">
+          <p class="settings-section-label">Profile</p>
+          <form id="profile-form" class="settings-form">
+            <label class="settings-field">
+              <span>Name</span>
+              <input type="text" id="settings-display-name" placeholder="Your name" />
+            </label>
+            <label class="settings-field">
+              <span>Email</span>
+              <input type="email" id="settings-email" disabled />
+            </label>
+            <p class="auth-error" id="profile-error"></p>
+            <p class="settings-saved" id="profile-saved" hidden>Saved.</p>
+            <button type="submit" class="pill-btn primary-btn settings-save-btn">Save profile</button>
+          </form>
+        </div>
+
+        <div class="chat-card glass settings-card">
+          <p class="settings-section-label">Appearance</p>
+          <div class="theme-picker" id="theme-picker">
+            <button type="button" class="theme-option" data-theme="system">System</button>
+            <button type="button" class="theme-option" data-theme="light">Light</button>
+            <button type="button" class="theme-option" data-theme="dark">Dark</button>
+          </div>
+        </div>
+
+        <div class="chat-card glass settings-card">
+          <p class="settings-section-label">Password</p>
+          <form id="password-form" class="settings-form">
+            <label class="settings-field" id="current-password-field">
+              <span>Current password</span>
+              <input type="password" id="settings-current-password" autocomplete="current-password" />
+            </label>
+            <label class="settings-field">
+              <span>New password</span>
+              <input type="password" id="settings-new-password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" />
+            </label>
+            <p class="auth-error" id="password-error"></p>
+            <p class="settings-saved" id="password-saved" hidden>Password updated.</p>
+            <button type="submit" class="pill-btn primary-btn settings-save-btn">Update password</button>
+          </form>
+        </div>
+
+        <div class="chat-card glass settings-card">
+          <p class="settings-section-label">Plan</p>
+          <div class="plan-row">
+            <div>
+              <p class="plan-name" id="settings-plan-name">Free plan</p>
+              <p class="plan-desc" id="settings-plan-usage">Limited daily AI messages and monthly video summaries.</p>
+            </div>
+            <button type="button" id="settings-upgrade-btn" class="pill-btn primary-btn">Upgrade</button>
+          </div>
+          <p class="auth-error" id="billing-error"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
