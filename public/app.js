@@ -50,6 +50,21 @@
   const taskListHeading = document.getElementById('task-list-heading');
   const taskFilterClear = document.getElementById('task-filter-clear');
 
+  const videoShell = document.getElementById('video-shell');
+  const videoForm = document.getElementById('video-form');
+  const videoUrlInput = document.getElementById('video-url');
+  const videoSubmitBtn = document.getElementById('video-submit-btn');
+  const videoErrorBlock = document.getElementById('video-error-block');
+  const videoErrorText = document.getElementById('video-error-text');
+  const videoManualTranscript = document.getElementById('video-manual-transcript');
+  const videoManualSubmitBtn = document.getElementById('video-manual-submit-btn');
+  const videoResultBlock = document.getElementById('video-result-block');
+  const videoResultTitle = document.getElementById('video-result-title');
+  const videoResultAuthor = document.getElementById('video-result-author');
+  const videoSummaryEl = document.getElementById('video-summary');
+  const videoHistoryLabel = document.getElementById('video-history-label');
+  const videoHistoryList = document.getElementById('video-history-list');
+
   let chats = [];
   let currentChatId = null;
   let currentMode = 'phased';
@@ -62,6 +77,10 @@
   let calendarMonth; // 0-indexed
   let selectedDate = null; // 'YYYY-MM-DD'
   let plannerLoaded = false;
+
+  let videoLoaded = false;
+  let videoBusy = false;
+  let lastVideoUrl = '';
 
   {
     const now = new Date();
@@ -458,22 +477,26 @@
     }
   }
 
-  // ---------- View switching (Chats / Planner) ----------
+  // ---------- View switching (Chats / Planner / Video) ----------
 
   sidebarNavBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
       sidebarNavBtns.forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
       const view = btn.dataset.view;
-      const isPlanner = view === 'planner';
 
-      appShell.hidden = isPlanner;
-      plannerShell.hidden = !isPlanner;
-      chatNavExtras.hidden = isPlanner;
+      appShell.hidden = view !== 'chats';
+      plannerShell.hidden = view !== 'planner';
+      videoShell.hidden = view !== 'video';
+      chatNavExtras.hidden = view !== 'chats';
 
-      if (isPlanner && !plannerLoaded) {
+      if (view === 'planner' && !plannerLoaded) {
         plannerLoaded = true;
         initPlanner();
+      }
+      if (view === 'video' && !videoLoaded) {
+        videoLoaded = true;
+        initVideo();
       }
     });
   });
@@ -701,6 +724,99 @@
   async function initPlanner() {
     renderCalendar();
     await refreshTasks();
+  }
+
+  // ---------- Video summarizer ----------
+
+  function setVideoBusy(isBusy) {
+    videoBusy = isBusy;
+    videoSubmitBtn.disabled = isBusy;
+    videoManualSubmitBtn.disabled = isBusy;
+    videoSubmitBtn.textContent = isBusy ? 'Summarizing…' : 'Summarize';
+  }
+
+  function showVideoResult(video) {
+    videoErrorBlock.hidden = true;
+    videoResultBlock.hidden = false;
+    videoResultTitle.textContent = video.title || 'Untitled video';
+    videoResultAuthor.textContent = video.author || '';
+    videoResultAuthor.hidden = !video.author;
+    videoSummaryEl.textContent = video.summary;
+  }
+
+  function showVideoError(message) {
+    videoResultBlock.hidden = true;
+    videoErrorBlock.hidden = false;
+    videoErrorText.textContent = message;
+    videoManualTranscript.value = '';
+  }
+
+  async function submitVideo(url, manualTranscript) {
+    if (videoBusy) return;
+    setVideoBusy(true);
+    lastVideoUrl = url;
+
+    const body = manualTranscript ? { url, transcript: manualTranscript } : { url };
+    const { ok, data } = await api('/api/video/summarize', { method: 'POST', body });
+
+    setVideoBusy(false);
+
+    if (!ok) {
+      showVideoError((data && data.error) || 'Something went wrong. Please try again.');
+      return;
+    }
+
+    showVideoResult(data.video);
+    await refreshVideoHistory();
+  }
+
+  videoForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const url = videoUrlInput.value.trim();
+    if (!url) return;
+    submitVideo(url, null);
+  });
+
+  videoManualSubmitBtn.addEventListener('click', () => {
+    const transcript = videoManualTranscript.value.trim();
+    if (!transcript) return;
+    submitVideo(lastVideoUrl, transcript);
+  });
+
+  function renderVideoHistory(videos) {
+    videoHistoryList.innerHTML = '';
+    videoHistoryLabel.hidden = !videos.length;
+
+    videos.forEach((video) => {
+      const item = document.createElement('div');
+      item.className = 'video-history-item';
+
+      const title = document.createElement('span');
+      title.className = 'video-history-item-title';
+      title.textContent = video.title || video.url;
+
+      const meta = document.createElement('span');
+      meta.className = 'video-history-item-meta';
+      meta.textContent = video.author || 'YouTube';
+
+      item.appendChild(title);
+      item.appendChild(meta);
+      item.addEventListener('click', () => {
+        videoUrlInput.value = video.url;
+        showVideoResult(video);
+      });
+
+      videoHistoryList.appendChild(item);
+    });
+  }
+
+  async function refreshVideoHistory() {
+    const { data } = await api('/api/video/summaries');
+    renderVideoHistory((data && data.videos) || []);
+  }
+
+  async function initVideo() {
+    await refreshVideoHistory();
   }
 
   // ---------- Boot ----------

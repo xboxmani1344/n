@@ -57,6 +57,7 @@
         <div class="sidebar-nav">
           <button type="button" class="sidebar-nav-btn active" data-view="chats">Chats</button>
           <button type="button" class="sidebar-nav-btn" data-view="planner">Planner</button>
+          <button type="button" class="sidebar-nav-btn" data-view="video">Video</button>
         </div>
 
         <div id="chat-nav-extras">
@@ -131,6 +132,34 @@
           </div>
           <div class="task-list" id="task-list"></div>
         </div>
+      </div>
+
+      <div class="shell" id="video-shell" hidden>
+        <header class="brand chat-brand">
+          <h1>Video Summarizer</h1>
+          <p class="tagline">Turn any YouTube video into study notes.</p>
+        </header>
+
+        <form class="task-form glass" id="video-form">
+          <input type="url" id="video-url" placeholder="Paste a YouTube link…" required />
+          <button type="submit" id="video-submit-btn" class="pill-btn primary-btn">Summarize</button>
+        </form>
+
+        <div id="video-error-block" class="chat-card glass video-error-block" hidden>
+          <p class="video-error-text" id="video-error-text"></p>
+          <p class="video-fallback-label">You can paste the transcript in yourself instead:</p>
+          <textarea id="video-manual-transcript" placeholder="Paste the video's transcript here…" rows="5"></textarea>
+          <button type="button" id="video-manual-submit-btn" class="pill-btn primary-btn">Summarize pasted transcript</button>
+        </div>
+
+        <div id="video-result-block" class="chat-card glass" hidden>
+          <p class="video-result-title" id="video-result-title"></p>
+          <p class="video-result-author" id="video-result-author"></p>
+          <div class="video-summary" id="video-summary"></div>
+        </div>
+
+        <p class="sidebar-label" id="video-history-label" hidden>Recent summaries</p>
+        <div class="sidebar-list video-history-list" id="video-history-list"></div>
       </div>
     </div>
   </div>
