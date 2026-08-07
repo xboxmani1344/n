@@ -56,8 +56,10 @@ app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`Study Buddy running at http://localhost:${PORT}`);
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.warn('Warning: ANTHROPIC_API_KEY is not set. Set it in a .env file to enable chat.');
+  if (!process.env.GEMINI_API_KEY) {
+    console.warn(
+      'Warning: GEMINI_API_KEY is not set — the AI features stay disabled. Get a free key at https://aistudio.google.com/apikey and put it in a .env file.'
+    );
   }
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
     console.warn('Note: GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET not set — Google sign-in stays disabled until configured.');

@@ -5,7 +5,7 @@ const { db } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errors');
 const { PHASES, getPhaseByKey, getSystemPrompt, getTutorSystemPrompt } = require('../prompts');
-const anthropic = require('../services/anthropic');
+const ai = require('../services/ai');
 const usage = require('../services/usage');
 
 const router = express.Router();
@@ -136,7 +136,7 @@ router.post(
         ? getTutorSystemPrompt(chat.topic)
         : getSystemPrompt((getPhaseByKey(chat.phase_key) || PHASES[0]).key, chat.topic);
 
-    const reply = await anthropic.complete({ system, messages: history });
+    const reply = await ai.complete({ system, messages: history });
 
     db.prepare(
       'INSERT INTO messages (chat_id, role, content, hidden, created_at) VALUES (?, ?, ?, 0, ?)'

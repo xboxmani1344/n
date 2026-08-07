@@ -5,7 +5,7 @@ const { db } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errors');
 const { extractYoutubeId, fetchMetadata, fetchTranscript } = require('../services/youtube');
-const anthropic = require('../services/anthropic');
+const ai = require('../services/ai');
 const usage = require('../services/usage');
 const { VIDEO_SUMMARY_PROMPT, VIDEO_CHUNK_PROMPT, VIDEO_REDUCE_PROMPT } = require('../prompts');
 
@@ -34,7 +34,7 @@ async function summarizeTranscript(transcript, title) {
   const titleLine = title ? `\n\nVideo title: "${title}"` : '';
 
   if (transcript.length <= CHUNK_THRESHOLD) {
-    return anthropic.complete({
+    return ai.complete({
       system: `${VIDEO_SUMMARY_PROMPT}${titleLine}`,
       messages: [{ role: 'user', content: transcript }],
       maxTokens: 1536,
@@ -44,7 +44,7 @@ async function summarizeTranscript(transcript, title) {
   const chunks = splitIntoChunks(transcript, CHUNK_SIZE);
   const chunkSummaries = [];
   for (const chunk of chunks) {
-    const summary = await anthropic.complete({
+    const summary = await ai.complete({
       system: VIDEO_CHUNK_PROMPT,
       messages: [{ role: 'user', content: chunk }],
       maxTokens: 600,
@@ -53,7 +53,7 @@ async function summarizeTranscript(transcript, title) {
   }
 
   const combined = chunkSummaries.map((s, i) => `Segment ${i + 1} notes:\n${s}`).join('\n\n');
-  return anthropic.complete({
+  return ai.complete({
     system: `${VIDEO_REDUCE_PROMPT}${titleLine}`,
     messages: [{ role: 'user', content: combined }],
     maxTokens: 1536,
