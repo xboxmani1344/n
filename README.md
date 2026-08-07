@@ -13,7 +13,25 @@ An AI study app: structured 4-phase study sessions, a freeform AI teacher, a tas
 - **Settings** — profile name, light/system/dark theme, password change, plan/usage.
 - **Subscriptions** — a free tier with daily/monthly usage limits, and a paid tier via real Stripe Checkout once configured.
 
-## Setup
+## Deploy to a live URL (Render)
+
+This repo includes a `render.yaml` blueprint, so deploying is mostly clicking through prompts:
+
+1. Sign up at **https://render.com** (the free tier is enough) and connect your GitHub account.
+2. Click **New → Blueprint**, pick this repository, and Render reads `render.yaml` automatically.
+3. When it asks for the `ANTHROPIC_API_KEY` environment variable, paste your key from https://console.anthropic.com/.
+4. Click **Apply** / **Create**. First build takes a few minutes; you'll get a URL like `https://study-buddy-xxxx.onrender.com`.
+
+**Important caveat about the free tier:** Render's free plan uses an *ephemeral* filesystem and spins the service down after ~15 minutes of inactivity. Since this app stores everything in a SQLite file on disk, **accounts, chats, and tasks are erased on every spin-down and redeploy.** That's fine for a demo or personal link, but for real use you'd want either:
+
+- a paid Render instance with a persistent disk mounted at `/data`, plus `DB_PATH=/data/study-buddy.db`, or
+- migrating the storage layer from SQLite to a hosted Postgres.
+
+Also note the first request after an idle period takes ~30 seconds while the free instance wakes up.
+
+If you enabled Google sign-in, add your deployed callback URL (`https://your-app.onrender.com/api/auth/google/callback`) to the authorized redirect URIs in the Google Cloud console — otherwise Google sign-in will only work locally.
+
+## Setup (running it locally)
 
 Requires Node.js 22+ (uses the built-in `node:sqlite` module) and an [Anthropic API key](https://console.anthropic.com/).
 
