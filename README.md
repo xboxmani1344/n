@@ -13,36 +13,33 @@ An AI study app: structured 4-phase study sessions, a freeform AI teacher, a tas
 - **Settings** — profile name, light/system/dark theme, password change, plan/usage.
 - **Subscriptions** — a free tier with daily/monthly usage limits, and a paid tier via real Stripe Checkout once configured.
 
-## Deploy to a live URL (Render)
+## Setup
 
-This repo includes a `render.yaml` blueprint, so deploying is mostly clicking through prompts:
+Requires **Node.js 22+** (it uses the built-in `node:sqlite` module) and a **free Gemini API key** — no credit card needed.
 
-1. Sign up at **https://render.com** (the free tier is enough) and connect your GitHub account.
-2. Click **New → Blueprint**, pick this repository, and Render reads `render.yaml` automatically.
-3. When it asks for the `ANTHROPIC_API_KEY` environment variable, paste your key from https://console.anthropic.com/.
-4. Click **Apply** / **Create**. First build takes a few minutes; you'll get a URL like `https://study-buddy-xxxx.onrender.com`.
-
-**Important caveat about the free tier:** Render's free plan uses an *ephemeral* filesystem and spins the service down after ~15 minutes of inactivity. Since this app stores everything in a SQLite file on disk, **accounts, chats, and tasks are erased on every spin-down and redeploy.** That's fine for a demo or personal link, but for real use you'd want either:
-
-- a paid Render instance with a persistent disk mounted at `/data`, plus `DB_PATH=/data/study-buddy.db`, or
-- migrating the storage layer from SQLite to a hosted Postgres.
-
-Also note the first request after an idle period takes ~30 seconds while the free instance wakes up.
-
-If you enabled Google sign-in, add your deployed callback URL (`https://your-app.onrender.com/api/auth/google/callback`) to the authorized redirect URIs in the Google Cloud console — otherwise Google sign-in will only work locally.
-
-## Setup (running it locally)
-
-Requires Node.js 22+ (uses the built-in `node:sqlite` module) and an [Anthropic API key](https://console.anthropic.com/).
+1. Get a key at **https://aistudio.google.com/apikey** → *Create API key*. It starts with `AIza`.
+2. Then:
 
 ```bash
 npm install
-cp .env.example .env
-# edit .env and set ANTHROPIC_API_KEY=sk-ant-...
+cp .env.example .env      # Windows: copy .env.example .env
+# open .env and set GEMINI_API_KEY=AIza...
 npm start
 ```
 
-Then open http://localhost:3000, create an account, and start studying. Google sign-in and Stripe billing are both optional — the app runs fully without them (see `.env.example` for how to turn them on).
+Open http://localhost:3000, create an account, and start studying. Google sign-in and Stripe billing are optional — the app runs fully without them (see `.env.example`).
+
+> ⚠️ **Gemini's free tier is not private.** Per [Google's API terms](https://ai.google.dev/gemini-api/terms), on the unpaid tier Google uses your prompts and responses to improve its products, and human reviewers may read them. Google's own advice is: *"Do not submit sensitive, confidential, or personal information to the Unpaid Services."* Enabling billing on your Google Cloud project switches this off. Keep it in mind for anything you'd rather not have reviewed.
+
+The free tier also caps daily requests (roughly a few hundred per day depending on model) — fine for personal study, not for real users. Check your live limits in [AI Studio](https://aistudio.google.com/).
+
+## Deploy to a live URL (optional)
+
+The repo includes a `render.yaml` blueprint for [Render](https://render.com). Note that Blueprints are a paid Render feature — on the free plan, create a **Web Service** manually instead (build `npm ci`, start `npm start`, instance type **Free**) and set `GEMINI_API_KEY` and `NODE_ENV=production` as environment variables.
+
+**Caveat:** Render's free plan uses an *ephemeral* filesystem and sleeps after ~15 minutes idle. Since this app stores everything in a SQLite file, **accounts, chats, and tasks are erased on every sleep and redeploy**, and the first request after idling takes ~30 seconds. For durable hosting you'd want a paid instance with a disk at `/data` (plus `DB_PATH=/data/study-buddy.db`), or a migration to hosted Postgres.
+
+If you enabled Google sign-in, add your deployed callback URL (`https://your-app.example.com/api/auth/google/callback`) to the authorized redirect URIs in the Google Cloud console — otherwise it only works locally.
 
 ## How it works
 
@@ -53,7 +50,7 @@ src/
   migrations/*.sql          # one file per schema change, applied in order on boot
   prompts.js                 # phase prompts, tutor prompt, video-summary prompts
   middleware/{auth,errors}.js
-  services/{auth,anthropic,youtube,usage}.js
+  services/{auth,ai,youtube,usage}.js
   routes/{auth,chats,tasks,video,settings,billing}.js
 public/
   index.html, styles.css     # monochrome "liquid glass" UI — translucent panels,
@@ -74,9 +71,9 @@ Environment variables (see `.env.example` for details on each):
 
 | Variable | Default | Description |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | — | required, your Claude API key |
+| `GEMINI_API_KEY` | — | required, your free Gemini key from [AI Studio](https://aistudio.google.com/apikey) |
 | `PORT` | `3000` | port the server listens on |
-| `MODEL_ID` | `claude-sonnet-5` | Claude model to use |
+| `MODEL_ID` | `gemini-3.6-flash` | Gemini model to use |
 | `DB_PATH` | `./data/study-buddy.db` | where the SQLite database file lives |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REDIRECT_URI` | — | optional; enables "Continue with Google". Email/password works fully without it. |
 | `STRIPE_SECRET_KEY` / `STRIPE_PRICE_ID` / `STRIPE_WEBHOOK_SECRET` | — | optional; enables real paid-plan upgrades. The free plan (with usage limits) works fully without it — the Upgrade button just explains billing isn't set up yet. |
