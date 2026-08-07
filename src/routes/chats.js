@@ -121,9 +121,10 @@ router.post(
     }
 
     const now = new Date().toISOString();
-    db.prepare(
-      'INSERT INTO messages (chat_id, role, content, hidden, created_at) VALUES (?, ?, ?, ?, ?)'
-    ).run(chat.id, 'user', content, hidden ? 1 : 0, now);
+    const inserted = db
+      .prepare('INSERT INTO messages (chat_id, role, content, hidden, created_at) VALUES (?, ?, ?, ?, ?)')
+      .run(chat.id, 'user', content, hidden ? 1 : 0, now);
+    const userMessageId = Number(inserted.lastInsertRowid);
 
     const history = db
       .prepare('SELECT role, content FROM messages WHERE chat_id = ? ORDER BY id ASC')
@@ -136,7 +137,17 @@ router.post(
         ? getTutorSystemPrompt(chat.topic)
         : getSystemPrompt((getPhaseByKey(chat.phase_key) || PHASES[0]).key, chat.topic);
 
-    const reply = await ai.complete({ system, messages: history });
+    // The user's turn is already stored so it can be part of the history above.
+    // If the AI call fails — rate limits make that routine on the free tier —
+    // take it back out, otherwise retrying the same message would stack a
+    // duplicate copy into the conversation.
+    let reply;
+    try {
+      reply = await ai.complete({ system, messages: history });
+    } catch (err) {
+      db.prepare('DELETE FROM messages WHERE id = ?').run(userMessageId);
+      throw err;
+    }
 
     db.prepare(
       'INSERT INTO messages (chat_id, role, content, hidden, created_at) VALUES (?, ?, ?, 0, ?)'

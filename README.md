@@ -17,13 +17,13 @@ An AI study app: structured 4-phase study sessions, a freeform AI teacher, a tas
 
 Requires **Node.js 22+** (it uses the built-in `node:sqlite` module) and a **free Gemini API key** — no credit card needed.
 
-1. Get a key at **https://aistudio.google.com/apikey** → *Create API key*. It starts with `AIza`.
+1. Get a key at **https://aistudio.google.com/apikey** → *Create API key*, and copy it.
 2. Then:
 
 ```bash
 npm install
 cp .env.example .env      # Windows: copy .env.example .env
-# open .env and set GEMINI_API_KEY=AIza...
+# open .env and paste your key after GEMINI_API_KEY=
 npm start
 ```
 
@@ -31,7 +31,7 @@ Open http://localhost:3000, create an account, and start studying. Google sign-i
 
 > ⚠️ **Gemini's free tier is not private.** Per [Google's API terms](https://ai.google.dev/gemini-api/terms), on the unpaid tier Google uses your prompts and responses to improve its products, and human reviewers may read them. Google's own advice is: *"Do not submit sensitive, confidential, or personal information to the Unpaid Services."* Enabling billing on your Google Cloud project switches this off. Keep it in mind for anything you'd rather not have reviewed.
 
-The free tier also caps daily requests (roughly a few hundred per day depending on model) — fine for personal study, not for real users. Check your live limits in [AI Studio](https://aistudio.google.com/).
+The free tier is also rate-limited, and the **per-minute** cap is the one you'll actually notice: `gemini-3.6-flash` allows only **5 requests per minute**, so firing off several messages back-to-back will get you a "wait about N seconds" message. There's a daily cap too (a few hundred requests, depending on model). Check your live limits in [AI Studio](https://aistudio.google.com/).
 
 ## Deploy to a live URL (optional)
 
@@ -73,7 +73,8 @@ Environment variables (see `.env.example` for details on each):
 |---|---|---|
 | `GEMINI_API_KEY` | — | required, your free Gemini key from [AI Studio](https://aistudio.google.com/apikey) |
 | `PORT` | `3000` | port the server listens on |
-| `MODEL_ID` | `gemini-3.6-flash` | Gemini model to use |
+| `MODEL_ID` | `gemini-3.6-flash` | Gemini model to use (`gemini-flash-latest` tracks the newest release) |
+| `THINKING_LEVEL` | unset | `MINIMAL` makes replies ~2x faster by skipping the model's reasoning step. Left unset, the model thinks as it normally would — worth keeping for the Practice phase, which grades your answers. |
 | `DB_PATH` | `./data/study-buddy.db` | where the SQLite database file lives |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REDIRECT_URI` | — | optional; enables "Continue with Google". Email/password works fully without it. |
 | `STRIPE_SECRET_KEY` / `STRIPE_PRICE_ID` / `STRIPE_WEBHOOK_SECRET` | — | optional; enables real paid-plan upgrades. The free plan (with usage limits) works fully without it — the Upgrade button just explains billing isn't set up yet. |

@@ -30,6 +30,13 @@ function splitIntoChunks(text, size) {
   return chunks.filter(Boolean);
 }
 
+// Ceilings are deliberately well above the length these prompts ask for: the
+// model's thinking tokens are drawn from the same budget, and on a long
+// transcript they alone can run into the hundreds. Generation still stops when
+// the model is done, so headroom costs nothing.
+const SUMMARY_MAX_TOKENS = 8192;
+const CHUNK_MAX_TOKENS = 2048;
+
 async function summarizeTranscript(transcript, title) {
   const titleLine = title ? `\n\nVideo title: "${title}"` : '';
 
@@ -37,7 +44,7 @@ async function summarizeTranscript(transcript, title) {
     return ai.complete({
       system: `${VIDEO_SUMMARY_PROMPT}${titleLine}`,
       messages: [{ role: 'user', content: transcript }],
-      maxTokens: 1536,
+      maxTokens: SUMMARY_MAX_TOKENS,
     });
   }
 
@@ -47,7 +54,7 @@ async function summarizeTranscript(transcript, title) {
     const summary = await ai.complete({
       system: VIDEO_CHUNK_PROMPT,
       messages: [{ role: 'user', content: chunk }],
-      maxTokens: 600,
+      maxTokens: CHUNK_MAX_TOKENS,
     });
     chunkSummaries.push(summary);
   }
@@ -56,7 +63,7 @@ async function summarizeTranscript(transcript, title) {
   return ai.complete({
     system: `${VIDEO_REDUCE_PROMPT}${titleLine}`,
     messages: [{ role: 'user', content: combined }],
-    maxTokens: 1536,
+    maxTokens: SUMMARY_MAX_TOKENS,
   });
 }
 
