@@ -9,6 +9,9 @@
     "dev": "node --watch server.js"
   },
   "license": "MIT",
+  "engines": {
+    "node": ">=22.5.0"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
     "bcryptjs": "^2.4.3",

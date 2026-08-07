@@ -18,6 +18,14 @@ function getStripe() {
   return stripeClient;
 }
 
+// Stripe needs absolute URLs to send the customer back to. Behind a TLS-terminating
+// proxy `req.protocol` only reports https once `trust proxy` is on (set in server.js);
+// APP_URL is an explicit override for hosts whose forwarded headers differ.
+function appOrigin(req) {
+  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, '');
+  return `${req.protocol}://${req.get('host')}`;
+}
+
 function billingNotConfigured(res) {
   return res.status(503).json({
     error: 'Billing is not configured yet. Set STRIPE_SECRET_KEY and STRIPE_PRICE_ID to enable upgrades.',
@@ -61,7 +69,7 @@ router.post(
       );
     }
 
-    const origin = `${req.protocol}://${req.get('host')}`;
+    const origin = appOrigin(req);
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customerId,
@@ -87,7 +95,7 @@ router.post(
       return res.status(400).json({ error: 'No billing account found yet — upgrade first.' });
     }
 
-    const origin = `${req.protocol}://${req.get('host')}`;
+    const origin = appOrigin(req);
     const session = await stripe.billingPortal.sessions.create({
       customer: sub.billing_customer_id,
       return_url: `${origin}/`,

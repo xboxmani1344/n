@@ -21,6 +21,11 @@ const PORT = process.env.PORT || 3000;
 
 const app = express();
 
+// Hosts like Render/Railway/Fly terminate TLS at a proxy and forward over plain
+// HTTP, so without this req.protocol is always 'http' and any absolute URL we
+// build (Stripe redirects, OAuth callbacks) points at the wrong scheme.
+app.set('trust proxy', 1);
+
 // Stripe webhook needs the raw body for signature verification, so it must be
 // parsed before the global JSON body parser touches the request stream.
 app.use('/api/billing/webhook', express.raw({ type: 'application/json' }));
