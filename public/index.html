@@ -8,6 +8,38 @@
 </head>
 <body>
   <div class="desk">
+    <div class="shell" id="setup-shell" hidden>
+      <header class="brand">
+        <h1>Study Buddy</h1>
+        <p class="tagline">One quick thing before we start</p>
+      </header>
+
+      <div class="chat-card glass auth-card">
+        <p class="setup-lead">Study Buddy needs a free Google Gemini key to do the actual teaching. It takes about a minute and doesn't need a credit card.</p>
+
+        <ol class="setup-steps">
+          <li>Open <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">aistudio.google.com/apikey</a></li>
+          <li>Click <strong>Create API key</strong></li>
+          <li>Copy it, then paste it below</li>
+        </ol>
+
+        <form class="auth-form" id="setup-form">
+          <input
+            type="password"
+            id="setup-key"
+            placeholder="Paste your API key here"
+            autocomplete="off"
+            spellcheck="false"
+            required
+          />
+          <button type="submit" class="primary-btn" id="setup-submit">Save and start studying</button>
+        </form>
+
+        <p class="auth-error" id="setup-error" role="alert"></p>
+        <p class="setup-note">Your key is saved to a file on this computer only. It is never sent anywhere except Google.</p>
+      </div>
+    </div>
+
     <div class="shell" id="auth-shell" hidden>
       <header class="brand">
         <h1>Study Buddy</h1>

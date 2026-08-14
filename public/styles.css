@@ -487,6 +487,43 @@ body {
   display: none;
 }
 
+/* --- First-run setup view --- */
+
+.setup-lead {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.setup-steps {
+  margin: 0;
+  padding-left: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.setup-steps strong {
+  color: var(--text);
+}
+
+.setup-steps a {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.setup-note {
+  margin: 0;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
 .auth-divider {
   display: flex;
   align-items: center;

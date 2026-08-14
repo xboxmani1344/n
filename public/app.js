@@ -11,6 +11,12 @@
   const authShell = document.getElementById('auth-shell');
   const appLayout = document.getElementById('app-layout');
 
+  const setupShell = document.getElementById('setup-shell');
+  const setupForm = document.getElementById('setup-form');
+  const setupKeyInput = document.getElementById('setup-key');
+  const setupSubmit = document.getElementById('setup-submit');
+  const setupError = document.getElementById('setup-error');
+
   const loginForm = document.getElementById('login-form');
   const signupForm = document.getElementById('signup-form');
   const loginError = document.getElementById('login-error');
@@ -129,15 +135,56 @@
 
   // ---------- Auth view ----------
 
+  function showSetupView() {
+    appLayout.hidden = true;
+    authShell.hidden = true;
+    setupShell.hidden = false;
+    setupKeyInput.focus();
+  }
+
   function showAuthView() {
     appLayout.hidden = true;
+    setupShell.hidden = true;
     authShell.hidden = false;
   }
 
   function showAppView() {
     authShell.hidden = true;
+    setupShell.hidden = true;
     appLayout.hidden = false;
   }
+
+  setupForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const key = setupKeyInput.value.trim();
+    if (!key) return;
+
+    setupError.textContent = '';
+    setupSubmit.disabled = true;
+    setupSubmit.textContent = 'Checking your key...';
+
+    // The server tries a real call before saving, so this covers a mistyped or
+    // revoked key too, not just an empty box.
+    const { ok, data } = await api('/api/setup/key', {
+      method: 'POST',
+      body: { key },
+    });
+
+    setupSubmit.disabled = false;
+    setupSubmit.textContent = 'Save and start studying';
+
+    if (!ok) {
+      setupError.textContent = (data && data.error) || 'That key was rejected. Please check it and try again.';
+      return;
+    }
+
+    setupKeyInput.value = '';
+    if (data && data.persisted === false && data.error) {
+      // Key works but couldn't be written to disk — say so instead of pretending.
+      window.alert(data.error);
+    }
+    showAuthView();
+  });
 
   authTabs.forEach((tab) => {
     tab.addEventListener('click', () => {
@@ -957,6 +1004,16 @@
 
   async function bootstrap() {
     configureGoogleButton();
+
+    // No key yet means nothing else in the app can work, so ask for it first.
+    // Only offered on the machine running the server; a remote visitor gets the
+    // normal sign-in screen rather than a box that would reject them anyway.
+    const setupStatus = await api('/api/setup/status');
+    if (setupStatus.ok && setupStatus.data && !setupStatus.data.configured && setupStatus.data.local) {
+      showSetupView();
+      return;
+    }
+
     const { ok } = await api('/api/auth/me');
     if (ok) {
       showAppView();

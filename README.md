@@ -25,10 +25,12 @@ Otherwise:
 
 ```bash
 npm install
-cp .env.example .env
-# open .env and paste your key after GEMINI_API_KEY=
 npm start
 ```
+
+Then open http://localhost:3000 and paste your key into the setup screen — **you don't need to create or edit any files.** The app checks the key against Google, saves it to `.env` itself, and starts working immediately without a restart. (You can still write `.env` by hand if you prefer: copy `.env.example` to `.env` and set `GEMINI_API_KEY=`.)
+
+The setup screen only appears when no key is configured, and only for a browser on the same machine as the server — so a deployed instance never exposes it.
 
 Open http://localhost:3000, create an account, and start studying. Google sign-in and Stripe billing are optional — the app runs fully without them (see `.env.example`).
 

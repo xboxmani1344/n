@@ -16,6 +16,7 @@ const tasksRoutes = require('./src/routes/tasks');
 const videoRoutes = require('./src/routes/video');
 const settingsRoutes = require('./src/routes/settings');
 const billingRoutes = require('./src/routes/billing');
+const setupRoutes = require('./src/routes/setup');
 
 const PORT = process.env.PORT || 3000;
 
@@ -51,6 +52,7 @@ app.use('/api/tasks', tasksRoutes);
 app.use('/api/video', videoRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/billing', billingRoutes);
+app.use('/api/setup', setupRoutes);
 
 app.use(errorHandler);
 
@@ -58,7 +60,7 @@ app.listen(PORT, () => {
   console.log(`Study Buddy running at http://localhost:${PORT}`);
   if (!process.env.GEMINI_API_KEY) {
     console.warn(
-      'Warning: GEMINI_API_KEY is not set — the AI features stay disabled. Get a free key at https://aistudio.google.com/apikey and put it in a .env file.'
+      `Note: no Gemini API key yet. You don't need to edit any files — open http://localhost:${PORT} and paste your key into the setup screen. Get a free one at https://aistudio.google.com/apikey`
     );
   }
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {

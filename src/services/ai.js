@@ -18,11 +18,23 @@ const THINKING_LEVEL = process.env.THINKING_LEVEL;
 // thinkingLevel is the supported knob — don't swap one for the other.
 const DEFAULT_MAX_TOKENS = 4096;
 
-const apiKey = process.env.GEMINI_API_KEY;
-const client = apiKey ? new GoogleGenAI({ apiKey }) : null;
+// Built on demand rather than at import time, so a key saved through the setup
+// screen takes effect immediately instead of needing a server restart.
+let cachedClient = null;
+let cachedKey = null;
+
+function getClient() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+  if (apiKey !== cachedKey) {
+    cachedClient = new GoogleGenAI({ apiKey });
+    cachedKey = apiKey;
+  }
+  return cachedClient;
+}
 
 function isConfigured() {
-  return Boolean(client);
+  return Boolean(process.env.GEMINI_API_KEY);
 }
 
 // Conversations are stored with the assistant turn labelled 'assistant';
@@ -111,6 +123,7 @@ function translateApiError(err) {
 }
 
 async function complete({ system, messages, maxTokens = DEFAULT_MAX_TOKENS }) {
+  const client = getClient();
   if (!client) {
     throw fail(
       'Server is missing GEMINI_API_KEY. Get a free key at https://aistudio.google.com/apikey, add it to .env, and restart the server.',
