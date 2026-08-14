@@ -46,12 +46,32 @@ echo [1/2] Dependencies already installed.
 
 REM --- API key ----------------------------------------------------------------
 REM Written straight to .env, which .gitignore excludes, so it stays on this PC.
-if exist ".env" goto :havekey
+REM
+REM Don't just test whether .env exists - ask the app's own loader whether it can
+REM actually read a key out of it. A .env can exist and still be unusable: saved
+REM by Notepad as .env.txt so this file is something else entirely, the key left
+REM commented out, the wrong variable name, or UTF-16 encoding. Checking for the
+REM file alone would report "already set up" and then fail at runtime with
+REM "GEMINI_API_KEY is not set", which tells the user nothing about the cause.
+node -e "require('dotenv').config();process.exit(process.env.GEMINI_API_KEY?0:1)" 2>nul
+if not errorlevel 1 goto :havekey
 
+if exist ".env" goto :badkeyfile
 echo.
 echo [2/2] One-time setup: your free Gemini API key.
+goto :askkey
+
+:badkeyfile
 echo.
-echo       Get one at https://aistudio.google.com/apikey
+echo [2/2] There's a .env file here, but no usable key could be read from it.
+echo       Common causes: the line still starts with #, the name is misspelled,
+echo       or Notepad saved it as .env.txt instead of .env.
+echo.
+echo       Entering your key below will add a correct line to the file.
+
+:askkey
+echo.
+echo       Get a key at https://aistudio.google.com/apikey
 echo       ^(click "Create API key", then copy it^)
 echo.
 echo       To paste into this window: right-click, or press Ctrl+V.
@@ -60,7 +80,12 @@ set "GEMKEY="
 set /p "GEMKEY=Paste your key here and press Enter: "
 if not defined GEMKEY goto :nokey
 
-> ".env" echo GEMINI_API_KEY=%GEMKEY%
+REM Append rather than overwrite, so any other settings already in .env survive.
+>> ".env" echo GEMINI_API_KEY=%GEMKEY%
+
+REM Confirm the app can now actually read it, instead of assuming the write worked.
+node -e "require('dotenv').config();process.exit(process.env.GEMINI_API_KEY?0:1)" 2>nul
+if errorlevel 1 goto :keywritefailed
 echo.
 echo       Saved to .env - you won't be asked again.
 goto :key_done
@@ -138,6 +163,17 @@ exit /b 1
 echo.
 echo [X] No key entered, so the AI wouldn't be able to reply.
 echo     Run start.bat again when you have your key.
+echo.
+pause
+exit /b 1
+
+:keywritefailed
+echo.
+echo [X] The key was written to .env but still can't be read back.
+echo.
+echo     Open .env in Notepad and check there's a line reading:
+echo         GEMINI_API_KEY=your-key-here
+echo     with no # in front of it.
 echo.
 pause
 exit /b 1
