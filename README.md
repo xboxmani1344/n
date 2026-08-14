@@ -18,11 +18,14 @@ An AI study app: structured 4-phase study sessions, a freeform AI teacher, a tas
 Requires **Node.js 22+** (it uses the built-in `node:sqlite` module) and a **free Gemini API key** — no credit card needed.
 
 1. Get a key at **https://aistudio.google.com/apikey** → *Create API key*, and copy it.
-2. Then:
+
+**On Windows**, that's the only step — **double-click `start.bat`**. It installs everything, asks for your key once, and opens the app. Skip the rest of this section.
+
+Otherwise:
 
 ```bash
 npm install
-cp .env.example .env      # Windows: copy .env.example .env
+cp .env.example .env
 # open .env and paste your key after GEMINI_API_KEY=
 npm start
 ```
