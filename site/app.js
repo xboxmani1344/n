@@ -272,23 +272,26 @@
 
   // ---------- theme ----------
 
+  /** What the page is actually showing right now, stamp or system preference. */
+  function showingLight() {
+    const stamped = document.documentElement.dataset.theme;
+    if (stamped === 'light') return true;
+    if (stamped === 'dark') return false;
+    return window.matchMedia('(prefers-color-scheme: light)').matches;
+  }
+
   function applyTheme() {
-    if (state.theme) {
-      document.documentElement.dataset.theme = state.theme;
-    } else {
-      delete document.documentElement.dataset.theme;
-    }
-    const isLight =
-      state.theme === 'light' ||
-      (!state.theme && window.matchMedia('(prefers-color-scheme: light)').matches);
-    el.themeToggle.setAttribute('aria-label', isLight ? 'Switch to dark mode' : 'Switch to light mode');
+    // Only stamp when there's a stored choice — never clear the attribute, since
+    // an embedding page may have set it to hand us the reader's preferred theme.
+    if (state.theme) document.documentElement.dataset.theme = state.theme;
+    el.themeToggle.setAttribute(
+      'aria-label',
+      showingLight() ? 'Switch to dark mode' : 'Switch to light mode'
+    );
   }
 
   el.themeToggle.addEventListener('click', () => {
-    const isLight =
-      state.theme === 'light' ||
-      (!state.theme && window.matchMedia('(prefers-color-scheme: light)').matches);
-    state.theme = isLight ? 'dark' : 'light';
+    state.theme = showingLight() ? 'dark' : 'light';
     applyTheme();
     savePrefs();
   });
