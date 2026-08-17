@@ -18,19 +18,22 @@ const THINKING_LEVEL = process.env.THINKING_LEVEL;
 // thinkingLevel is the supported knob — don't swap one for the other.
 const DEFAULT_MAX_TOKENS = 4096;
 
-// Built on demand rather than at import time, so a key saved through the setup
-// screen takes effect immediately instead of needing a server restart.
-let cachedClient = null;
-let cachedKey = null;
+// Clients are built on demand and cached per key, so a key saved at runtime
+// works immediately, and users on a shared deployment don't each pay the cost
+// of constructing a client on every message.
+const clients = new Map();
+const MAX_CACHED_CLIENTS = 100;
 
-function getClient() {
-  const apiKey = process.env.GEMINI_API_KEY;
+function getClient(apiKey) {
   if (!apiKey) return null;
-  if (apiKey !== cachedKey) {
-    cachedClient = new GoogleGenAI({ apiKey });
-    cachedKey = apiKey;
+  let client = clients.get(apiKey);
+  if (!client) {
+    // Bound the cache so a deployment with many users can't grow it forever.
+    if (clients.size >= MAX_CACHED_CLIENTS) clients.clear();
+    client = new GoogleGenAI({ apiKey });
+    clients.set(apiKey, client);
   }
-  return cachedClient;
+  return client;
 }
 
 function isConfigured() {
@@ -122,11 +125,15 @@ function translateApiError(err) {
   return err;
 }
 
-async function complete({ system, messages, maxTokens = DEFAULT_MAX_TOKENS }) {
-  const client = getClient();
+// `apiKey` is the caller's key. Callers that serve a signed-in user should pass
+// that user's key (see services/apiKeys.js) so rate limits and Google's usage
+// attribution land on the right person. Omitting it falls back to the server's
+// own key, which is what a single-user local install wants.
+async function complete({ system, messages, maxTokens = DEFAULT_MAX_TOKENS, apiKey }) {
+  const client = getClient(apiKey || process.env.GEMINI_API_KEY);
   if (!client) {
     throw fail(
-      'Server is missing GEMINI_API_KEY. Get a free key at https://aistudio.google.com/apikey, add it to .env, and restart the server.',
+      'No Gemini API key yet. Add one in Settings — it takes a minute and is free at https://aistudio.google.com/apikey',
       503
     );
   }

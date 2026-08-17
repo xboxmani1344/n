@@ -11,6 +11,15 @@
   const authShell = document.getElementById('auth-shell');
   const appLayout = document.getElementById('app-layout');
 
+  const keyBanner = document.getElementById('key-banner');
+  const keyBannerBtn = document.getElementById('key-banner-btn');
+  const apiKeyForm = document.getElementById('apikey-form');
+  const apiKeyInput = document.getElementById('apikey-input');
+  const apiKeyStatus = document.getElementById('apikey-status');
+  const apiKeyError = document.getElementById('apikey-error');
+  const apiKeySaved = document.getElementById('apikey-saved');
+  const apiKeyRemove = document.getElementById('apikey-remove');
+
   const setupShell = document.getElementById('setup-shell');
   const setupForm = document.getElementById('setup-form');
   const setupKeyInput = document.getElementById('setup-key');
@@ -537,6 +546,7 @@
 
   async function initApp() {
     chatTitleHeading.textContent = 'Study Buddy';
+    refreshKeyState();
     await refreshChatList();
 
     if (chats.length) {
@@ -575,6 +585,69 @@
   });
 
   settingsBtn.addEventListener('click', () => switchView('settings'));
+
+  // ---------- Per-user API key ----------
+
+  // Reflects whether this account can talk to the AI at all. Shown as a banner
+  // above the chat rather than left to fail on the first message.
+  async function refreshKeyState() {
+    const { ok, data } = await api('/api/setup/me/key');
+    if (!ok || !data) return;
+
+    keyBanner.hidden = data.ready;
+
+    if (data.hasOwnKey) {
+      apiKeyStatus.textContent = 'Your own key is set. Your study sessions use your free Gemini quota.';
+      apiKeyInput.placeholder = 'Paste a new key to replace it';
+      apiKeyRemove.hidden = false;
+    } else if (data.usingServerKey) {
+      apiKeyStatus.textContent = "You're using this server's shared key. Add your own for a private quota.";
+      apiKeyRemove.hidden = true;
+    } else {
+      apiKeyStatus.textContent = 'No key yet — add one below to start studying. It’s free and takes a minute.';
+      apiKeyRemove.hidden = true;
+    }
+  }
+
+  keyBannerBtn.addEventListener('click', () => {
+    switchView('settings');
+    apiKeyInput.focus();
+  });
+
+  apiKeyForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const key = apiKeyInput.value.trim();
+    if (!key) return;
+
+    apiKeyError.textContent = '';
+    apiKeySaved.hidden = true;
+    const saveBtn = document.getElementById('apikey-save');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Checking...';
+
+    // The server tries a real call before storing, so a mistyped key is caught
+    // here rather than on the user's first question.
+    const { ok, data } = await api('/api/setup/me/key', { method: 'PUT', body: { key } });
+
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save key';
+
+    if (!ok) {
+      apiKeyError.textContent = (data && data.error) || 'That key was rejected.';
+      return;
+    }
+
+    apiKeyInput.value = '';
+    apiKeySaved.hidden = false;
+    await refreshKeyState();
+  });
+
+  apiKeyRemove.addEventListener('click', async () => {
+    apiKeyError.textContent = '';
+    apiKeySaved.hidden = true;
+    await api('/api/setup/me/key', { method: 'DELETE' });
+    await refreshKeyState();
+  });
 
   // ---------- Planner: calendar ----------
 
@@ -911,6 +984,9 @@
   }
 
   async function initSettings() {
+    apiKeyError.textContent = '';
+    apiKeySaved.hidden = true;
+    refreshKeyState();
     profileError.textContent = '';
     profileSaved.hidden = true;
     passwordError.textContent = '';

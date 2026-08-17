@@ -524,6 +524,40 @@ body {
   color: var(--muted);
 }
 
+.setup-note a {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.apikey-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Banner shown when a signed-in user has no key of their own yet. */
+.key-banner {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  background: var(--chip-bg);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.key-banner p {
+  margin: 0;
+}
+
 .auth-divider {
   display: flex;
   align-items: center;

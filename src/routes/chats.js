@@ -6,6 +6,7 @@ const { requireAuth } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errors');
 const { PHASES, getPhaseByKey, getSystemPrompt, getTutorSystemPrompt } = require('../prompts');
 const ai = require('../services/ai');
+const apiKeys = require('../services/apiKeys');
 const usage = require('../services/usage');
 
 const router = express.Router();
@@ -143,7 +144,7 @@ router.post(
     // duplicate copy into the conversation.
     let reply;
     try {
-      reply = await ai.complete({ system, messages: history });
+      reply = await ai.complete({ system, messages: history, apiKey: apiKeys.resolveKey(req.user.id) });
     } catch (err) {
       db.prepare('DELETE FROM messages WHERE id = ?').run(userMessageId);
       throw err;

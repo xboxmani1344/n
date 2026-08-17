@@ -6,6 +6,7 @@ const { requireAuth } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errors');
 const { extractYoutubeId, fetchMetadata, fetchTranscript } = require('../services/youtube');
 const ai = require('../services/ai');
+const apiKeys = require('../services/apiKeys');
 const usage = require('../services/usage');
 const { VIDEO_SUMMARY_PROMPT, VIDEO_CHUNK_PROMPT, VIDEO_REDUCE_PROMPT } = require('../prompts');
 
@@ -37,7 +38,7 @@ function splitIntoChunks(text, size) {
 const SUMMARY_MAX_TOKENS = 8192;
 const CHUNK_MAX_TOKENS = 2048;
 
-async function summarizeTranscript(transcript, title) {
+async function summarizeTranscript(transcript, title, apiKey) {
   const titleLine = title ? `\n\nVideo title: "${title}"` : '';
 
   if (transcript.length <= CHUNK_THRESHOLD) {
@@ -45,6 +46,7 @@ async function summarizeTranscript(transcript, title) {
       system: `${VIDEO_SUMMARY_PROMPT}${titleLine}`,
       messages: [{ role: 'user', content: transcript }],
       maxTokens: SUMMARY_MAX_TOKENS,
+      apiKey,
     });
   }
 
@@ -55,6 +57,7 @@ async function summarizeTranscript(transcript, title) {
       system: VIDEO_CHUNK_PROMPT,
       messages: [{ role: 'user', content: chunk }],
       maxTokens: CHUNK_MAX_TOKENS,
+      apiKey,
     });
     chunkSummaries.push(summary);
   }
@@ -64,6 +67,7 @@ async function summarizeTranscript(transcript, title) {
     system: `${VIDEO_REDUCE_PROMPT}${titleLine}`,
     messages: [{ role: 'user', content: combined }],
     maxTokens: SUMMARY_MAX_TOKENS,
+    apiKey,
   });
 }
 
@@ -123,7 +127,7 @@ router.post(
       }
 
       const meta = await fetchMetadata(url.trim());
-      const summary = await summarizeTranscript(transcriptText, meta.title);
+      const summary = await summarizeTranscript(transcriptText, meta.title, apiKeys.resolveKey(req.user.id));
       const now = new Date().toISOString();
 
       if (video) {

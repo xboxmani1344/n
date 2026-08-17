@@ -38,6 +38,19 @@ Open http://localhost:3000, create an account, and start studying. Google sign-i
 
 The free tier is also rate-limited, and the **per-minute** cap is the one you'll actually notice: `gemini-3.6-flash` allows only **5 requests per minute**, so firing off several messages back-to-back will get you a "wait about N seconds" message. There's a daily cap too (a few hundred requests, depending on model). Check your live limits in [AI Studio](https://aistudio.google.com/).
 
+## Who pays for the AI? (read before deploying publicly)
+
+Running this for one person and running it for strangers are different problems, and the difference is the API key.
+
+- **Locally, for yourself:** one key in `.env` (or entered in the setup screen). Everything works, nothing else to think about.
+- **Deployed for other people:** leave `GEMINI_API_KEY` **unset**. Each user adds their own key under **Settings → AI key**, and it's stored against their account.
+
+That isn't bureaucracy — the free tier allows roughly **5 requests per minute per key**, so a shared key means two people studying simultaneously interfere with each other. Google also attributes every prompt to the key's owner, so a shared key means your account is credited with strangers' conversations.
+
+If you genuinely want everyone on one key — because you're paying for it and accept that attribution — set `SHARED_API_KEY=1`. Users can still add their own to opt out of the shared pool.
+
+Keys are validated against Google before they're saved, so a mistyped key is rejected at entry rather than failing later mid-conversation.
+
 ## Deploy to a live URL (optional)
 
 The repo includes a `render.yaml` blueprint for [Render](https://render.com). Note that Blueprints are a paid Render feature — on the free plan, create a **Web Service** manually instead (build `npm ci`, start `npm start`, instance type **Free**) and set `GEMINI_API_KEY` and `NODE_ENV=production` as environment variables.
@@ -79,6 +92,7 @@ Environment variables (see `.env.example` for details on each):
 | `GEMINI_API_KEY` | — | required, your free Gemini key from [AI Studio](https://aistudio.google.com/apikey) |
 | `PORT` | `3000` | port the server listens on |
 | `MODEL_ID` | `gemini-3.6-flash` | Gemini model to use (`gemini-flash-latest` tracks the newest release) |
+| `SHARED_API_KEY` | unset | Only read when `NODE_ENV=production`. Set to `1` to let every signed-in user spend the server's `GEMINI_API_KEY`. Leave unset so each user supplies their own — see below. |
 | `THINKING_LEVEL` | unset | `MINIMAL` makes replies ~2x faster by skipping the model's reasoning step. Left unset, the model thinks as it normally would — worth keeping for the Practice phase, which grades your answers. |
 | `DB_PATH` | `./data/study-buddy.db` | where the SQLite database file lives |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REDIRECT_URI` | — | optional; enables "Continue with Google". Email/password works fully without it. |
