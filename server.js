@@ -36,6 +36,13 @@ app.use(cookieParser());
 app.use(attachUser);
 app.use(express.static(path.join(__dirname, 'public')));
 
+// The marketing page is index.html at /; the application itself lives at /app.
+// Served explicitly because express.static only resolves index.html by
+// directory, and app.html has no directory of its own.
+app.get('/app', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'app.html'));
+});
+
 app.get('/api/phases', (_req, res) => {
   // `phases` is the study track, kept so an older cached client still works.
   res.json({ phases: PHASES, tracks: TRACKS });

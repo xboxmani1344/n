@@ -352,7 +352,7 @@
 
       const meta = document.createElement('span');
       meta.className = 'sidebar-item-meta';
-      meta.textContent = `${chat.mode === 'tutor' ? 'AI Teacher' : 'Study session'} · ${relativeTime(chat.updatedAt)}`;
+      meta.textContent = `${chat.mode === 'tutor' ? 'AI Teacher' : trackCopy(chat.mode).title} · ${relativeTime(chat.updatedAt)}`;
 
       main.appendChild(title);
       main.appendChild(meta);
