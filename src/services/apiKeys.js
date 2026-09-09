@@ -1,12 +1,13 @@
 'use strict';
 
 const { db } = require('../db');
+const ai = require('./ai');
 
 // Resolution order matters. A user's own key always wins; the server's
-// GEMINI_API_KEY is only a fallback so a single-person local install keeps
+// key (AI_API_KEY) is only a fallback so a single-person local install keeps
 // working exactly as before without anyone entering a key twice.
 //
-// On a public deployment you normally leave GEMINI_API_KEY unset, which makes
+// On a public deployment you normally leave AI_API_KEY unset, which makes
 // every user supply their own. Set SHARED_API_KEY=1 to deliberately let
 // everyone spend the server's key instead — only sane if you're paying for it
 // and understand every user's prompts are attributed to you.
@@ -22,7 +23,7 @@ function getUserKey(userId) {
 }
 
 function serverKey() {
-  return SHARED_KEY_ALLOWED ? process.env.GEMINI_API_KEY || null : null;
+  return SHARED_KEY_ALLOWED ? ai.serverApiKey() : null;
 }
 
 // What an actual request should use.

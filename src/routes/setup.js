@@ -41,7 +41,7 @@ async function validateKey(key) {
 function friendlyKeyError(err) {
   const rejected = err.status === 502 && /rejected/i.test(err.message);
   return rejected
-    ? "Google didn't accept that key. Check you copied all of it, then try again."
+    ? "That key wasn't accepted. Check you copied all of it, then try again."
     : err.message;
 }
 
@@ -73,18 +73,18 @@ router.post(
     }
     const trimmed = normalizeKey(key);
 
-    process.env.GEMINI_API_KEY = trimmed;
+    process.env.AI_API_KEY = trimmed;
     try {
       await validateKey(trimmed);
     } catch (err) {
-      delete process.env.GEMINI_API_KEY;
+      delete process.env.AI_API_KEY;
       return res.status(err.status === 429 ? 429 : 400).json({ error: friendlyKeyError(err) });
     }
 
     try {
       const existing = fs.existsSync(ENV_PATH) ? fs.readFileSync(ENV_PATH, 'utf8') : '';
       const separator = existing && !existing.endsWith('\n') ? '\n' : '';
-      fs.appendFileSync(ENV_PATH, `${separator}GEMINI_API_KEY=${trimmed}\n`);
+      fs.appendFileSync(ENV_PATH, `${separator}AI_API_KEY=${trimmed}\n`);
     } catch (err) {
       // The key works and is live in memory, so the app is usable right now —
       // it just won't survive a restart. Say exactly that rather than failing.

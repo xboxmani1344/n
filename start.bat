@@ -52,8 +52,8 @@ REM actually read a key out of it. A .env can exist and still be unusable: saved
 REM by Notepad as .env.txt so this file is something else entirely, the key left
 REM commented out, the wrong variable name, or UTF-16 encoding. Checking for the
 REM file alone would report "already set up" and then fail at runtime with
-REM "GEMINI_API_KEY is not set", which tells the user nothing about the cause.
-node -e "require('dotenv').config();process.exit(process.env.GEMINI_API_KEY?0:1)" 2>nul
+REM "no AI API key yet", which tells the user nothing about the cause.
+node -e "require('dotenv').config();process.exit((process.env.AI_API_KEY||process.env.GEMINI_API_KEY)?0:1)" 2>nul
 if not errorlevel 1 goto :havekey
 
 if exist ".env" goto :badkeyfile
@@ -81,10 +81,10 @@ set /p "GEMKEY=Paste your key here and press Enter: "
 if not defined GEMKEY goto :nokey
 
 REM Append rather than overwrite, so any other settings already in .env survive.
->> ".env" echo GEMINI_API_KEY=%GEMKEY%
+>> ".env" echo AI_API_KEY=%GEMKEY%
 
 REM Confirm the app can now actually read it, instead of assuming the write worked.
-node -e "require('dotenv').config();process.exit(process.env.GEMINI_API_KEY?0:1)" 2>nul
+node -e "require('dotenv').config();process.exit((process.env.AI_API_KEY||process.env.GEMINI_API_KEY)?0:1)" 2>nul
 if errorlevel 1 goto :keywritefailed
 echo.
 echo       Saved to .env - you won't be asked again.
@@ -172,7 +172,7 @@ echo.
 echo [X] The key was written to .env but still can't be read back.
 echo.
 echo     Open .env in Notepad and check there's a line reading:
-echo         GEMINI_API_KEY=your-key-here
+echo         AI_API_KEY=your-key-here
 echo     with no # in front of it.
 echo.
 pause

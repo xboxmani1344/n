@@ -1,52 +1,43 @@
 'use strict';
 
-const { GoogleGenAI } = require('@google/genai');
+// One adapter, many providers.
+//
+// Everything here speaks the OpenAI "chat completions" shape, which is a
+// de-facto standard: OpenAI, Liara AI, OpenRouter, Ollama and Google all accept
+// it. Google publishes an OpenAI-compatible endpoint alongside its native one,
+// so pointing AI_BASE_URL at that keeps Gemini working while freeing the app
+// from any single vendor. That matters because a server hosted inside Iran
+// cannot reach Google at all, and switching providers there has to be a config
+// change rather than a rewrite.
+//
+// Plain fetch rather than a vendor SDK: the request is a single JSON POST, and
+// dropping the SDK removes ~40 MB of install and one more dependency that can
+// break on a managed platform.
 
-// gemini-3.6-flash is the current general-purpose stable model. Override with
-// MODEL_ID if you want a different one (e.g. gemini-flash-latest to track the
-// newest release automatically).
+const DEFAULT_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai';
+
+// Trailing slashes are the classic copy-paste error when a base URL comes out
+// of a dashboard, so normalise rather than producing a 404.
+const BASE_URL = (process.env.AI_BASE_URL || DEFAULT_BASE_URL).replace(/\/+$/, '');
+
 const MODEL_ID = process.env.MODEL_ID || 'gemini-3.6-flash';
 
-// Gemini 3.x models "think" before answering, and those thinking tokens are
-// billed against maxOutputTokens. Setting this to MINIMAL roughly halves reply
-// latency; the default (unset) leaves the model's own reasoning in place, which
-// matters most in the Practice phase where the tutor grades answers.
-// Valid values: MINIMAL, LOW, MEDIUM, HIGH.
-const THINKING_LEVEL = process.env.THINKING_LEVEL;
-
-// Note: gemini-3.x rejects thinkingConfig.thinkingBudget (400 INVALID_ARGUMENT).
-// thinkingLevel is the supported knob — don't swap one for the other.
+// Reasoning models spend part of the output budget thinking before they write
+// anything, so a ceiling that looks generous can still cut a reply off
+// mid-sentence. Keep this well above what the prompts ask for; generation stops
+// when the model is done, so headroom costs nothing.
 const DEFAULT_MAX_TOKENS = 4096;
 
-// Clients are built on demand and cached per key, so a key saved at runtime
-// works immediately, and users on a shared deployment don't each pay the cost
-// of constructing a client on every message.
-const clients = new Map();
-const MAX_CACHED_CLIENTS = 100;
+const REQUEST_TIMEOUT_MS = 120000;
 
-function getClient(apiKey) {
-  if (!apiKey) return null;
-  let client = clients.get(apiKey);
-  if (!client) {
-    // Bound the cache so a deployment with many users can't grow it forever.
-    if (clients.size >= MAX_CACHED_CLIENTS) clients.clear();
-    client = new GoogleGenAI({ apiKey });
-    clients.set(apiKey, client);
-  }
-  return client;
+// GEMINI_API_KEY is still honoured so existing .env files and the Windows
+// launcher keep working after the rename to the provider-neutral AI_API_KEY.
+function serverApiKey() {
+  return process.env.AI_API_KEY || process.env.GEMINI_API_KEY || null;
 }
 
 function isConfigured() {
-  return Boolean(process.env.GEMINI_API_KEY);
-}
-
-// Conversations are stored with the assistant turn labelled 'assistant';
-// Gemini's Content.role only accepts 'user' or 'model'.
-function toGeminiContents(messages) {
-  return messages.map((m) => ({
-    role: m.role === 'assistant' ? 'model' : 'user',
-    parts: [{ text: m.content }],
-  }));
+  return Boolean(serverApiKey());
 }
 
 function fail(message, status) {
@@ -55,20 +46,42 @@ function fail(message, status) {
   return err;
 }
 
-// The SDK stringifies the whole API error envelope into err.message — a wall of
-// JSON with quota IDs and internal URLs. That ends up rendered verbatim in a
-// chat bubble, so unpack it into something a person can act on.
-function parseApiError(err) {
+// The conversation is stored with a separate system prompt and turns labelled
+// user/assistant, which is already the OpenAI shape - no role translation
+// needed, unlike Gemini's native API which calls the assistant "model".
+function toChatMessages(system, messages) {
+  const out = [];
+  if (system) out.push({ role: 'system', content: system });
+  for (const m of messages) {
+    out.push({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content });
+  }
+  return out;
+}
+
+// Providers disagree about error shape: OpenAI returns {error:{message,code}},
+// Google returns {error:{message,code,status,details}} - and Google's
+// OpenAI-compatible endpoint wraps that in a single-element array. All of them
+// put a human sentence at error.message, so dig it out and treat the rest as
+// optional.
+function parseErrorBody(raw) {
   try {
-    const body = JSON.parse(err.message).error;
+    let parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) parsed = parsed[0];
+    const body = (parsed && parsed.error) || parsed;
     if (body && typeof body.message === 'string') return body;
   } catch {
-    // Not a JSON envelope — nothing to unpack.
+    // Not JSON - an HTML error page from a proxy, most likely.
   }
   return null;
 }
 
-function retryAfterSeconds(body) {
+function retryAfterSeconds(res, body) {
+  const header = res && res.headers && res.headers.get('retry-after');
+  if (header) {
+    const seconds = Math.ceil(parseFloat(header));
+    if (Number.isFinite(seconds) && seconds > 0) return seconds;
+  }
+  // Google puts the delay in the error details rather than the header.
   for (const d of (body && body.details) || []) {
     const delay = d.retryDelay || (d.retryInfo && d.retryInfo.retryDelay);
     if (typeof delay === 'string') {
@@ -79,98 +92,130 @@ function retryAfterSeconds(body) {
   return null;
 }
 
-function translateApiError(err) {
-  const body = parseApiError(err);
-  const status = err.status || (body && body.code);
+// Raw provider errors are walls of JSON full of quota IDs and internal URLs,
+// and whatever comes back is rendered straight into a chat bubble. Turn them
+// into sentences a person can act on.
+function translateHttpError(res, raw) {
+  const body = parseErrorBody(raw);
+  const status = res.status;
 
   if (status === 429) {
-    const seconds = retryAfterSeconds(body);
+    const seconds = retryAfterSeconds(res, body);
     const wait = seconds ? `about ${seconds} seconds` : 'a minute';
-    return fail(
-      `Gemini's free tier only allows a few requests per minute. Wait ${wait} and send it again.`,
-      429
-    );
+    return fail(`The AI service is rate-limited right now. Wait ${wait} and send it again.`, 429);
   }
 
-  // A bad key comes back as 400 INVALID_ARGUMENT, not 401, so match on the
-  // reason as well as the status — this is the likeliest setup mistake and
-  // deserves a message that points at the fix.
+  // A rejected key arrives as 400 INVALID_ARGUMENT from Google but 401 from
+  // most others, and the wording varies by provider and endpoint ("API key not
+  // valid", "Please pass a valid API key", "Incorrect API key provided").
+  // Rather than chase phrasings, treat any client error mentioning an API key
+  // as a key problem - it is the likeliest setup mistake and deserves a message
+  // that points at the fix.
+  const mentionsKey = body && /api[ _-]?key/i.test(body.message);
   const badKey =
     status === 401 ||
     status === 403 ||
     (body && (body.details || []).some((d) => d.reason === 'API_KEY_INVALID')) ||
-    (body && /API key not valid|API_KEY_INVALID/i.test(body.message));
+    (status === 400 && mentionsKey);
 
   if (badKey) {
     return fail(
-      'Your Gemini API key was rejected. Check GEMINI_API_KEY in your .env file, or create a new key at https://aistudio.google.com/apikey.',
+      'The AI API key was rejected. If you set it up, check AI_API_KEY on the server; otherwise this is on the site owner, not you.',
       502
     );
   }
 
-  if (status === 503) {
+  if (status === 503 || status === 502 || status === 504) {
     return fail('The AI service is busy right now. Please try again in a moment.', 503);
   }
 
-  // Anything else: Google's own message is usually plain English ("This model
-  // is no longer available to new users", "Request contains an invalid
-  // argument"), so pass that along rather than the surrounding JSON.
+  // Providers' own wording is usually plain English ("This model is no longer
+  // available to new users"), so pass it along rather than the JSON around it.
   if (body) return fail(body.message, status >= 400 && status < 600 ? status : 502);
 
-  // No envelope at all usually means the request never reached Google.
-  if (/fetch failed|ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EAI_AGAIN/i.test(err.message || '')) {
-    return fail("Couldn't reach Google's servers. Check your internet connection and try again.", 502);
-  }
+  return fail(`The AI service returned an unexpected error (HTTP ${status}).`, 502);
+}
 
+function translateNetworkError(err) {
+  if (err.name === 'AbortError') {
+    return fail('The AI took too long to respond. Please try again.', 504);
+  }
+  if (/fetch failed|ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EAI_AGAIN|certificate/i.test(err.message || '')) {
+    return fail(
+      "Couldn't reach the AI service. Check the server's connection, and that AI_BASE_URL is reachable from where this is hosted.",
+      502
+    );
+  }
   return err;
 }
 
-// `apiKey` is the caller's key. Callers that serve a signed-in user should pass
-// that user's key (see services/apiKeys.js) so rate limits and Google's usage
+// `apiKey` is the caller's key. Callers serving a signed-in user should pass
+// that user's key (see services/apiKeys.js) so rate limits and usage
 // attribution land on the right person. Omitting it falls back to the server's
-// own key, which is what a single-user local install wants.
+// own key, which is what both a single-user local install and a deployment
+// running on the operator's key want.
 async function complete({ system, messages, maxTokens = DEFAULT_MAX_TOKENS, apiKey }) {
-  const client = getClient(apiKey || process.env.GEMINI_API_KEY);
-  if (!client) {
-    throw fail(
-      'No Gemini API key yet. Add one in Settings — it takes a minute and is free at https://aistudio.google.com/apikey',
-      503
-    );
+  const key = apiKey || serverApiKey();
+  if (!key) {
+    throw fail('No AI API key is configured yet.', 503);
   }
 
-  let response;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  let res;
+  let raw;
   try {
-    response = await client.models.generateContent({
-      model: MODEL_ID,
-      contents: toGeminiContents(messages),
-      config: {
-        systemInstruction: system,
-        maxOutputTokens: maxTokens,
-        ...(THINKING_LEVEL ? { thinkingConfig: { thinkingLevel: THINKING_LEVEL } } : {}),
+    res = await fetch(`${BASE_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${key}`,
       },
+      body: JSON.stringify({
+        model: MODEL_ID,
+        messages: toChatMessages(system, messages),
+        max_tokens: maxTokens,
+      }),
+      signal: controller.signal,
     });
+    raw = await res.text();
   } catch (err) {
-    throw translateApiError(err);
+    throw translateNetworkError(err);
+  } finally {
+    clearTimeout(timeout);
   }
 
-  // Thinking tokens come out of the same budget as the visible reply, so a
-  // ceiling that looks generous can still cut the answer off mid-sentence. The
-  // caller writes this straight into the messages table, so a partial reply
-  // would become permanent history — fail loudly instead.
-  if (response.candidates && response.candidates[0] && response.candidates[0].finishReason === 'MAX_TOKENS') {
+  if (!res.ok) throw translateHttpError(res, raw);
+
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    throw fail('The AI service returned a response this app could not read.', 502);
+  }
+
+  const choice = data.choices && data.choices[0];
+  if (!choice) {
+    throw fail('The AI returned an empty response. Please try again.', 502);
+  }
+
+  // The caller writes this straight into the messages table, so a truncated
+  // reply would become permanent conversation history. Fail loudly rather than
+  // storing half a sentence.
+  if (choice.finish_reason === 'length') {
     throw fail(
       'The AI ran out of room before finishing its answer. Please try again, or ask for something shorter.',
       502
     );
   }
 
-  // `.text` is undefined when the model returns no text part — e.g. the
-  // response was blocked by a safety filter, or the free-tier quota ran out
-  // mid-flight. Surface that rather than storing an empty reply.
-  const text = response.text;
-  if (!text) {
+  const text = choice.message && choice.message.content;
+  if (!text || !text.trim()) {
+    // Empty content usually means a safety filter blocked it, or quota ran out
+    // mid-flight. Either way, don't store a blank reply.
     throw fail(
-      'The AI returned an empty response. It may have been blocked or you may have hit your daily free-tier limit. Please try again.',
+      'The AI returned an empty response. It may have been blocked, or the usage limit may have been reached. Please try again.',
       502
     );
   }
@@ -178,4 +223,4 @@ async function complete({ system, messages, maxTokens = DEFAULT_MAX_TOKENS, apiK
   return text.trim();
 }
 
-module.exports = { complete, isConfigured, MODEL_ID };
+module.exports = { complete, isConfigured, serverApiKey, MODEL_ID, BASE_URL };

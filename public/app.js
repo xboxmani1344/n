@@ -65,6 +65,7 @@
   const apiKeyError = document.getElementById('apikey-error');
   const apiKeySaved = document.getElementById('apikey-saved');
   const apiKeyRemove = document.getElementById('apikey-remove');
+  const apiKeyLabel = document.getElementById('apikey-label');
 
   const setupShell = document.getElementById('setup-shell');
   const setupForm = document.getElementById('setup-form');
@@ -645,15 +646,22 @@
     keyBanner.hidden = data.ready;
 
     if (data.hasOwnKey) {
-      apiKeyStatus.textContent = 'Your own key is set. Your study sessions use your free Gemini quota.';
+      apiKeyStatus.textContent = 'Your own key is set — your sessions run on your quota, not this site’s.';
       apiKeyInput.placeholder = 'Paste a new key to replace it';
       apiKeyRemove.hidden = false;
+      if (apiKeyLabel) apiKeyLabel.textContent = 'Your own AI key';
     } else if (data.usingServerKey) {
-      apiKeyStatus.textContent = "You're using this server's shared key. Add your own for a private quota.";
+      // The site owner supplies the key here, so this is genuinely optional.
+      // Saying "add your own" as an instruction would send people off to sign
+      // up for something they do not need.
+      apiKeyStatus.textContent =
+        'Ready to go — this site provides the AI. You can add your own key below if you’d rather use your own quota, but you don’t need to.';
       apiKeyRemove.hidden = true;
+      if (apiKeyLabel) apiKeyLabel.textContent = 'Use your own AI key instead (optional)';
     } else {
-      apiKeyStatus.textContent = 'No key yet — add one below to start studying. It’s free and takes a minute.';
+      apiKeyStatus.textContent = 'No key yet — add one below to start. It’s free and takes a minute.';
       apiKeyRemove.hidden = true;
+      if (apiKeyLabel) apiKeyLabel.textContent = 'Your own AI key';
     }
   }
 

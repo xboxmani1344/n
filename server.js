@@ -10,6 +10,7 @@ require('./src/db');
 const { attachUser } = require('./src/middleware/auth');
 const { errorHandler } = require('./src/middleware/errors');
 const { TRACKS, PHASES } = require('./src/prompts');
+const ai = require('./src/services/ai');
 const authRoutes = require('./src/routes/auth');
 const chatsRoutes = require('./src/routes/chats');
 const tasksRoutes = require('./src/routes/tasks');
@@ -66,9 +67,9 @@ app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`Study Buddy running at http://localhost:${PORT}`);
-  if (!process.env.GEMINI_API_KEY) {
+  if (!ai.isConfigured()) {
     console.warn(
-      `Note: no Gemini API key yet. You don't need to edit any files — open http://localhost:${PORT} and paste your key into the setup screen. Get a free one at https://aistudio.google.com/apikey`
+      `Note: no AI API key yet. You don't need to edit any files — open http://localhost:${PORT} and paste your key into the setup screen. Get a free one at https://aistudio.google.com/apikey`
     );
   }
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
