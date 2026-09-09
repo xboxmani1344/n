@@ -4,9 +4,23 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Study Buddy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- Vazirmatn covers both Persian and Latin, so type does not change
+       character when the interface language is switched. -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <!-- Purely decorative drifting backdrop. Hidden from assistive tech, and all
+       of its motion is disabled under prefers-reduced-motion. -->
+  <div class="aurora" aria-hidden="true">
+    <span class="aurora-blob a"></span>
+    <span class="aurora-blob b"></span>
+    <span class="aurora-blob c"></span>
+    <span class="aurora-blob d"></span>
+  </div>
+
   <div class="desk">
     <div class="shell" id="setup-shell" hidden>
       <header class="brand">
