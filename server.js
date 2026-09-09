@@ -9,7 +9,7 @@ const cookieParser = require('cookie-parser');
 require('./src/db');
 const { attachUser } = require('./src/middleware/auth');
 const { errorHandler } = require('./src/middleware/errors');
-const { PHASES } = require('./src/prompts');
+const { TRACKS, PHASES } = require('./src/prompts');
 const authRoutes = require('./src/routes/auth');
 const chatsRoutes = require('./src/routes/chats');
 const tasksRoutes = require('./src/routes/tasks');
@@ -37,7 +37,8 @@ app.use(attachUser);
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/phases', (_req, res) => {
-  res.json({ phases: PHASES });
+  // `phases` is the study track, kept so an older cached client still works.
+  res.json({ phases: PHASES, tracks: TRACKS });
 });
 
 app.get('/api/config', (_req, res) => {

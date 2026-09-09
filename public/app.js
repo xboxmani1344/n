@@ -1,12 +1,58 @@
 (() => {
   'use strict';
 
-  const PHASES = [
-    { key: 'warmup', label: 'Warm-Up' },
-    { key: 'learn', label: 'Learn' },
-    { key: 'practice', label: 'Practice' },
-    { key: 'review', label: 'Review' },
-  ];
+  // Filled from /api/phases at boot so the server stays the single source of
+  // truth for what phases a track has. Seeded with the study track so the first
+  // paint is correct even before that request lands.
+  let TRACKS = {
+    study: {
+      key: 'study',
+      label: 'Study',
+      phases: [
+        { key: 'warmup', label: 'Warm-Up' },
+        { key: 'learn', label: 'Learn' },
+        { key: 'practice', label: 'Practice' },
+        { key: 'review', label: 'Review' },
+      ],
+    },
+  };
+
+  // The phases of the chat currently open. 'phased' is the old name for study.
+  function phasesFor(mode) {
+    const track = TRACKS[mode === 'phased' || !mode ? 'study' : mode];
+    return (track || TRACKS.study).phases;
+  }
+
+  function currentPhases() {
+    return phasesFor(currentMode);
+  }
+
+  // Everything that differs between tracks, kept together so adding a fourth
+  // track is one entry rather than a hunt through the file.
+  const TRACK_COPY = {
+    study: {
+      title: 'Study session',
+      sub: 'Four phases. One session.',
+      welcome:
+        "What would you like to study today, and what's your goal for this session (understand a concept, prep for a test, review before an exam)?",
+    },
+    workout: {
+      title: 'Workout plan',
+      sub: 'Assess, plan, train, adjust.',
+      welcome:
+        "Let's build something you'll actually keep up. Tell me roughly how active you are right now, what equipment you can get to, and how many days a week are genuinely free.",
+    },
+    diet: {
+      title: 'Nutrition plan',
+      sub: 'Small changes that stick.',
+      welcome:
+        "Let's start with how you eat now — no counting, no judgement. What does a normal day of food look like for you, and what are the meals you'd never want to give up?",
+    },
+  };
+
+  function trackCopy(mode) {
+    return TRACK_COPY[mode === 'phased' || !mode ? 'study' : mode] || TRACK_COPY.study;
+  }
 
   const authShell = document.getElementById('auth-shell');
   const appLayout = document.getElementById('app-layout');
@@ -35,6 +81,8 @@
 
   const sidebarList = document.getElementById('sidebar-list');
   const newSessionBtn = document.getElementById('new-session-btn');
+  const newWorkoutBtn = document.getElementById('new-workout-btn');
+  const newDietBtn = document.getElementById('new-diet-btn');
   const newTutorBtn = document.getElementById('new-tutor-btn');
   const sidebarNavBtns = document.querySelectorAll('.sidebar-nav-btn');
   const chatNavExtras = document.getElementById('chat-nav-extras');
@@ -103,7 +151,7 @@
 
   let chats = [];
   let currentChatId = null;
-  let currentMode = 'phased';
+  let currentMode = 'study';
   let phaseIndex = 0;
   let needsAutoTitle = false;
   let busy = false;
@@ -266,7 +314,7 @@
   function chatDisplayTitle(chat) {
     if (chat.title) return chat.title;
     if (chat.topic) return chat.topic;
-    return chat.mode === 'tutor' ? 'AI Teacher chat' : 'Study session';
+    return chat.mode === 'tutor' ? 'AI Teacher chat' : trackCopy(chat.mode).title;
   }
 
   function relativeTime(iso) {
@@ -344,7 +392,7 @@
       if (chats.length) {
         loadChat(chats[0].id);
       } else {
-        await createChat('phased');
+        await createChat('study');
       }
     }
   }
@@ -353,7 +401,7 @@
 
   function renderPhaseTracker() {
     phaseTracker.innerHTML = '';
-    PHASES.forEach((phase, i) => {
+    currentPhases().forEach((phase, i) => {
       const span = document.createElement('span');
       span.className = 'segment';
       span.innerHTML = `<span class="segment-num">${i + 1}</span>${phase.label}`;
@@ -372,10 +420,11 @@
       chatTitleSub.textContent = 'Ask anything, any time.';
       footPhase.textContent = 'AI Teacher — freeform chat';
     } else {
-      chatTitleSub.textContent = 'Four phases. One session.';
+      chatTitleSub.textContent = trackCopy(currentMode).sub;
       renderPhaseTracker();
-      footPhase.textContent = `${PHASES[phaseIndex].label} — step ${phaseIndex + 1} of ${PHASES.length}`;
-      nextPhaseBtn.disabled = phaseIndex >= PHASES.length - 1;
+      const phases = currentPhases();
+      footPhase.textContent = `${phases[phaseIndex].label} — step ${phaseIndex + 1} of ${phases.length}`;
+      nextPhaseBtn.disabled = phaseIndex >= phases.length - 1;
     }
   }
 
@@ -409,8 +458,8 @@
   function setBusy(isBusy) {
     busy = isBusy;
     sendBtn.disabled = isBusy;
-    if (currentMode === 'phased') {
-      nextPhaseBtn.disabled = isBusy || phaseIndex >= PHASES.length - 1;
+    if (currentMode !== 'tutor') {
+      nextPhaseBtn.disabled = isBusy || phaseIndex >= currentPhases().length - 1;
     }
     messageInput.disabled = isBusy;
   }
@@ -490,16 +539,18 @@
   });
 
   nextPhaseBtn.addEventListener('click', async () => {
-    if (busy || phaseIndex >= PHASES.length - 1) return;
+    if (busy || phaseIndex >= currentPhases().length - 1) return;
     phaseIndex += 1;
-    const nextPhase = PHASES[phaseIndex];
+    const nextPhase = currentPhases()[phaseIndex];
     applyModeChrome();
     addSystemNote(`Moving on to ${nextPhase.label}`);
     await api(`/api/chats/${currentChatId}`, { method: 'PATCH', body: { phaseKey: nextPhase.key } });
     sendToBackend(`[The learner clicked "Next Phase." Begin the ${nextPhase.label} phase now.]`, true);
   });
 
-  newSessionBtn.addEventListener('click', () => createChat('phased'));
+  newSessionBtn.addEventListener('click', () => createChat('study'));
+  newWorkoutBtn.addEventListener('click', () => createChat('workout'));
+  newDietBtn.addEventListener('click', () => createChat('diet'));
   newTutorBtn.addEventListener('click', () => createChat('tutor'));
 
   async function createChat(mode) {
@@ -516,10 +567,7 @@
         "I'm your AI teacher — ask me anything, on any topic, any time. What's on your mind?"
       );
     } else {
-      addBubble(
-        'bot',
-        "What would you like to study today, and what's your goal for this session (understand a concept, prep for a test, review before an exam)?"
-      );
+      addBubble('bot', trackCopy(currentMode).welcome);
     }
   }
 
@@ -531,7 +579,7 @@
     const { data } = await api(`/api/chats/${chatId}`);
     const chat = data.chat || knownChat;
     currentMode = chat.mode;
-    phaseIndex = currentMode === 'phased' ? Math.max(0, PHASES.findIndex((p) => p.key === chat.phaseKey)) : 0;
+    phaseIndex = currentMode === 'tutor' ? 0 : Math.max(0, currentPhases().findIndex((p) => p.key === chat.phaseKey));
 
     applyModeChrome();
     renderSidebar();
@@ -552,7 +600,7 @@
     if (chats.length) {
       await loadChat(chats[0].id);
     } else {
-      await createChat('phased');
+      await createChat('study');
     }
   }
 
@@ -1078,8 +1126,16 @@
 
   // ---------- Boot ----------
 
+  // Phase definitions live on the server; fetch them before the first render
+  // so a workout chat never briefly shows study phases.
+  async function loadTracks() {
+    const { ok, data } = await api('/api/phases');
+    if (ok && data && data.tracks) TRACKS = data.tracks;
+  }
+
   async function bootstrap() {
     configureGoogleButton();
+    await loadTracks();
 
     // No key yet means nothing else in the app can work, so ask for it first.
     // Only offered on the machine running the server; a remote visitor gets the

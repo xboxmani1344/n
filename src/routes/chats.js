@@ -4,7 +4,7 @@ const express = require('express');
 const { db } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errors');
-const { PHASES, getPhaseByKey, getSystemPrompt, getTutorSystemPrompt } = require('../prompts');
+const { getTrack, isTrackKey, getPhases, getPhaseByKey, getSystemPrompt, getTutorSystemPrompt } = require('../prompts');
 const ai = require('../services/ai');
 const apiKeys = require('../services/apiKeys');
 const usage = require('../services/usage');
@@ -18,6 +18,7 @@ function chatSummary(row) {
   return {
     id: row.id,
     mode: row.mode,
+    track: row.mode === 'tutor' ? null : getTrack(row.mode).key,
     title: row.title,
     topic: row.topic,
     phaseKey: row.phase_key,
@@ -39,9 +40,10 @@ router.get('/', (req, res) => {
 
 router.post('/', (req, res) => {
   const { mode, topic } = req.body || {};
-  const chatMode = mode === 'tutor' ? 'tutor' : 'phased';
+  // 'tutor' is freeform and has no phases; everything else is a coached track.
+  const chatMode = mode === 'tutor' ? 'tutor' : isTrackKey(mode) ? mode : 'study';
   const now = new Date().toISOString();
-  const initialPhase = chatMode === 'phased' ? PHASES[0].key : null;
+  const initialPhase = chatMode === 'tutor' ? null : getPhases(chatMode)[0].key;
 
   const info = db
     .prepare(
@@ -72,7 +74,7 @@ router.patch('/:id', (req, res) => {
   if (!chat) return res.status(404).json({ error: 'Chat not found' });
 
   const { title, phaseKey, archived } = req.body || {};
-  if (phaseKey !== undefined && phaseKey !== null && !getPhaseByKey(phaseKey)) {
+  if (phaseKey !== undefined && phaseKey !== null && !getPhaseByKey(phaseKey, chat.mode)) {
     return res.status(400).json({ error: `Unknown phase: ${phaseKey}` });
   }
 
@@ -136,7 +138,11 @@ router.post(
     const system =
       chat.mode === 'tutor'
         ? getTutorSystemPrompt(chat.topic)
-        : getSystemPrompt((getPhaseByKey(chat.phase_key) || PHASES[0]).key, chat.topic);
+        : getSystemPrompt(
+            (getPhaseByKey(chat.phase_key, chat.mode) || getPhases(chat.mode)[0]).key,
+            chat.topic,
+            chat.mode
+          );
 
     // The user's turn is already stored so it can be part of the history above.
     // If the AI call fails — rate limits make that routine on the free tier —
