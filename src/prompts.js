@@ -8,34 +8,40 @@ const TRACKS = {
   study: {
     key: 'study',
     label: 'Study',
+    labelFa: 'درس',
     blurb: 'Learn a topic properly, in four steps.',
+    blurbFa: 'یک موضوع را درست و کامل یاد بگیر، در چهار قدم.',
     phases: [
-      { id: 1, key: 'warmup', label: 'Warm-Up', description: 'Figure out the topic, current knowledge, and goals.' },
-      { id: 2, key: 'learn', label: 'Learn', description: 'Teach the core concepts clearly, with checks for understanding.' },
-      { id: 3, key: 'practice', label: 'Practice', description: 'Active recall through questions, problems, and feedback.' },
-      { id: 4, key: 'review', label: 'Review', description: 'Summarize, target weak spots, and plan spaced repetition.' },
+      { id: 1, key: 'warmup', label: 'Warm-Up', labelFa: 'گرم‌کردن', description: 'Figure out the topic, current knowledge, and goals.' },
+      { id: 2, key: 'learn', label: 'Learn', labelFa: 'یادگیری', description: 'Teach the core concepts clearly, with checks for understanding.' },
+      { id: 3, key: 'practice', label: 'Practice', labelFa: 'تمرین', description: 'Active recall through questions, problems, and feedback.' },
+      { id: 4, key: 'review', label: 'Review', labelFa: 'مرور', description: 'Summarize, target weak spots, and plan spaced repetition.' },
     ],
   },
   workout: {
     key: 'workout',
     label: 'Workout',
+    labelFa: 'تمرین',
     blurb: 'Build a training plan that fits your week.',
+    blurbFa: 'یک برنامه‌ی تمرینی که با هفته‌ی واقعی‌ات جور دربیاید.',
     phases: [
-      { id: 1, key: 'assess', label: 'Assess', description: 'Current activity level, equipment, time, and any injuries.' },
-      { id: 2, key: 'plan', label: 'Plan', description: 'A realistic weekly split built around what you actually have.' },
-      { id: 3, key: 'train', label: 'Train', description: 'Walk through the session, with form cues and substitutions.' },
-      { id: 4, key: 'progress', label: 'Progress', description: 'Review how it went and adjust the next block.' },
+      { id: 1, key: 'assess', label: 'Assess', labelFa: 'ارزیابی', description: 'Current activity level, equipment, time, and any injuries.' },
+      { id: 2, key: 'plan', label: 'Plan', labelFa: 'برنامه', description: 'A realistic weekly split built around what you actually have.' },
+      { id: 3, key: 'train', label: 'Train', labelFa: 'تمرین', description: 'Walk through the session, with form cues and substitutions.' },
+      { id: 4, key: 'progress', label: 'Progress', labelFa: 'پیشرفت', description: 'Review how it went and adjust the next block.' },
     ],
   },
   diet: {
     key: 'diet',
     label: 'Nutrition',
+    labelFa: 'تغذیه',
     blurb: 'Eat in a way you can actually keep up.',
+    blurbFa: 'جوری غذا بخور که واقعاً بتوانی ادامه‌اش بدهی.',
     phases: [
-      { id: 1, key: 'intake', label: 'Check In', description: 'How you eat now, your schedule, and what you enjoy.' },
-      { id: 2, key: 'shape', label: 'Shape', description: 'Simple, flexible guidelines rather than a rigid meal plan.' },
-      { id: 3, key: 'meals', label: 'Meals', description: 'Practical meal and snack ideas from food you can get.' },
-      { id: 4, key: 'adjust', label: 'Adjust', description: 'See what stuck, drop what did not, and keep going.' },
+      { id: 1, key: 'intake', label: 'Check In', labelFa: 'شروع', description: 'How you eat now, your schedule, and what you enjoy.' },
+      { id: 2, key: 'shape', label: 'Shape', labelFa: 'چارچوب', description: 'Simple, flexible guidelines rather than a rigid meal plan.' },
+      { id: 3, key: 'meals', label: 'Meals', labelFa: 'وعده‌ها', description: 'Practical meal and snack ideas from food you can get.' },
+      { id: 4, key: 'adjust', label: 'Adjust', labelFa: 'تنظیم', description: 'See what stuck, drop what did not, and keep going.' },
     ],
   },
 };
@@ -306,19 +312,33 @@ const TOPIC_LABEL = {
   diet: 'focus for this session',
 };
 
-function getSystemPrompt(phaseKey, topic, trackKey) {
+// The persona prompts are written in English, and a model given English
+// instructions will answer in English unless told otherwise -- so a Persian
+// interface with an English coach would be a translation of the buttons only.
+// The user still wins the argument: if they write in another language, the
+// model follows them rather than the setting.
+const LANGUAGE_INSTRUCTION = {
+  fa: `\n\nLANGUAGE: Write every reply in Persian (Farsi), in natural conversational Persian rather than translated-sounding English. Use Persian numerals (\u06f0-\u06f9) in prose. Technical terms with no settled Persian equivalent may stay in English. If the user writes to you in a different language, reply in theirs instead.`,
+  en: '',
+};
+
+function languageLine(lang) {
+  return LANGUAGE_INSTRUCTION[lang] || LANGUAGE_INSTRUCTION.en;
+}
+
+function getSystemPrompt(phaseKey, topic, trackKey, lang) {
   const track = getTrack(trackKey);
   const prompts = TRACK_PROMPTS[track.key] || STUDY_PHASE_PROMPTS;
   const base = prompts[phaseKey] || prompts[track.phases[0].key];
   const topicLine = topic
     ? `\n\nThe ${TOPIC_LABEL[track.key] || TOPIC_LABEL.study} is: "${topic}".`
     : '';
-  return `${base}${topicLine}`;
+  return `${base}${topicLine}${languageLine(lang)}`;
 }
 
-function getTutorSystemPrompt(topic) {
+function getTutorSystemPrompt(topic, lang) {
   const topicLine = topic ? `\n\nThe learner's current topic of interest is: "${topic}".` : '';
-  return `${TUTOR_PROMPT}${topicLine}`;
+  return `${TUTOR_PROMPT}${topicLine}${languageLine(lang)}`;
 }
 
 module.exports = {
@@ -335,5 +355,6 @@ module.exports = {
   getPhaseByKey,
   getPhaseById,
   getSystemPrompt,
+  languageLine,
   getTutorSystemPrompt,
 };

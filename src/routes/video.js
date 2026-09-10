@@ -8,7 +8,7 @@ const { extractYoutubeId, fetchMetadata, fetchTranscript } = require('../service
 const ai = require('../services/ai');
 const apiKeys = require('../services/apiKeys');
 const usage = require('../services/usage');
-const { VIDEO_SUMMARY_PROMPT, VIDEO_CHUNK_PROMPT, VIDEO_REDUCE_PROMPT } = require('../prompts');
+const { VIDEO_SUMMARY_PROMPT, VIDEO_CHUNK_PROMPT, VIDEO_REDUCE_PROMPT, languageLine } = require('../prompts');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -38,12 +38,16 @@ function splitIntoChunks(text, size) {
 const SUMMARY_MAX_TOKENS = 8192;
 const CHUNK_MAX_TOKENS = 2048;
 
-async function summarizeTranscript(transcript, title, apiKey) {
+async function summarizeTranscript(transcript, title, apiKey, lang) {
   const titleLine = title ? `\n\nVideo title: "${title}"` : '';
+  // Only the notes the user reads are translated. The intermediate per-segment
+  // notes stay in English: they are fed back to the model, never displayed, and
+  // round-tripping them through Persian only loses detail.
+  const langLine = languageLine(lang);
 
   if (transcript.length <= CHUNK_THRESHOLD) {
     return ai.complete({
-      system: `${VIDEO_SUMMARY_PROMPT}${titleLine}`,
+      system: `${VIDEO_SUMMARY_PROMPT}${titleLine}${langLine}`,
       messages: [{ role: 'user', content: transcript }],
       maxTokens: SUMMARY_MAX_TOKENS,
       apiKey,
@@ -64,22 +68,36 @@ async function summarizeTranscript(transcript, title, apiKey) {
 
   const combined = chunkSummaries.map((s, i) => `Segment ${i + 1} notes:\n${s}`).join('\n\n');
   return ai.complete({
-    system: `${VIDEO_REDUCE_PROMPT}${titleLine}`,
+    system: `${VIDEO_REDUCE_PROMPT}${titleLine}${langLine}`,
     messages: [{ role: 'user', content: combined }],
     maxTokens: SUMMARY_MAX_TOKENS,
     apiKey,
   });
 }
 
-function videoOut(v) {
+function videoOut(v, summary) {
   return {
     id: v.id,
     youtubeId: v.youtube_id,
     url: v.url,
     title: v.title,
     author: v.author,
-    summary: v.summary,
+    summary: summary !== undefined ? summary : v.summary,
   };
+}
+
+function findSummary(videoId, lang) {
+  const row = db
+    .prepare('SELECT summary FROM video_summaries WHERE video_id = ? AND language = ?')
+    .get(videoId, lang);
+  return row ? row.summary : null;
+}
+
+function saveSummary(videoId, lang, summary) {
+  db.prepare(
+    `INSERT INTO video_summaries (video_id, language, summary, created_at) VALUES (?, ?, ?, ?)
+     ON CONFLICT (video_id, language) DO UPDATE SET summary = excluded.summary, created_at = excluded.created_at`
+  ).run(videoId, lang, summary, new Date().toISOString());
 }
 
 router.post(
@@ -95,8 +113,10 @@ router.post(
       return res.status(400).json({ error: "That doesn't look like a valid YouTube URL." });
     }
 
+    const lang = req.user.language;
     let video = db.prepare('SELECT * FROM videos WHERE youtube_id = ?').get(youtubeId);
-    const cached = Boolean(video && video.summary) && !manualTranscript;
+    let summary = video ? findSummary(video.id, lang) : null;
+    const cached = Boolean(summary) && !manualTranscript;
 
     if (!cached) {
       const limitCheck = usage.checkLimit(req.user.id, 'video_summaries');
@@ -115,6 +135,11 @@ router.post(
       if (typeof manualTranscript === 'string' && manualTranscript.trim()) {
         transcriptText = manualTranscript.trim();
         transcriptSource = 'manual';
+      } else if (video && video.transcript) {
+        // Already fetched for another language. The transcript does not change,
+        // and re-fetching risks YouTube's bot detection for nothing.
+        transcriptText = video.transcript;
+        transcriptSource = video.transcript_source;
       } else {
         try {
           const result = await fetchTranscript(youtubeId);
@@ -126,26 +151,27 @@ router.post(
         }
       }
 
-      const meta = await fetchMetadata(url.trim());
-      const summary = await summarizeTranscript(transcriptText, meta.title, apiKeys.resolveKey(req.user.id));
+      const meta = video && video.title ? { title: video.title, author: video.author } : await fetchMetadata(url.trim());
+      summary = await summarizeTranscript(transcriptText, meta.title, apiKeys.resolveKey(req.user.id), lang);
       const now = new Date().toISOString();
 
       if (video) {
         db.prepare(
-          `UPDATE videos SET title = ?, author = ?, transcript_source = ?, transcript = ?, summary = ?, fetched_at = ?
+          `UPDATE videos SET title = ?, author = ?, transcript_source = ?, transcript = ?, fetched_at = ?
            WHERE id = ?`
-        ).run(meta.title || null, meta.author || null, transcriptSource, transcriptText, summary, now, video.id);
+        ).run(meta.title || null, meta.author || null, transcriptSource, transcriptText, now, video.id);
         video = db.prepare('SELECT * FROM videos WHERE id = ?').get(video.id);
       } else {
         const info = db
           .prepare(
-            `INSERT INTO videos (youtube_id, url, title, author, transcript_source, transcript, summary, fetched_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+            `INSERT INTO videos (youtube_id, url, title, author, transcript_source, transcript, fetched_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`
           )
-          .run(youtubeId, url.trim(), meta.title || null, meta.author || null, transcriptSource, transcriptText, summary, now);
+          .run(youtubeId, url.trim(), meta.title || null, meta.author || null, transcriptSource, transcriptText, now);
         video = db.prepare('SELECT * FROM videos WHERE id = ?').get(Number(info.lastInsertRowid));
       }
 
+      saveSummary(video.id, lang, summary);
       usage.increment(req.user.id, 'video_summaries');
     }
 
@@ -155,23 +181,30 @@ router.post(
       new Date().toISOString()
     );
 
-    res.json({ video: videoOut(video), cached });
+    res.json({ video: videoOut(video, summary), cached });
   })
 );
 
 router.get('/summaries', (req, res) => {
+  // A video the user opened is listed whether or not a summary exists in their
+  // current language; opening it re-summarizes rather than showing a blank.
   const rows = db
     .prepare(
-      `SELECT videos.*, MAX(video_summary_views.created_at) as viewed_at
+      `SELECT videos.*, video_summaries.summary AS lang_summary,
+              MAX(video_summary_views.created_at) as viewed_at
        FROM video_summary_views
        JOIN videos ON videos.id = video_summary_views.video_id
+       LEFT JOIN video_summaries
+              ON video_summaries.video_id = videos.id AND video_summaries.language = ?
        WHERE video_summary_views.user_id = ?
        GROUP BY videos.id
        ORDER BY viewed_at DESC`
     )
-    .all(req.user.id);
+    .all(req.user.language, req.user.id);
 
-  res.json({ videos: rows.map((v) => ({ ...videoOut(v), viewedAt: v.viewed_at })) });
+  res.json({
+    videos: rows.map((v) => ({ ...videoOut(v, v.lang_summary), viewedAt: v.viewed_at })),
+  });
 });
 
 module.exports = router;

@@ -10,6 +10,7 @@ const router = express.Router();
 router.use(requireAuth);
 
 const VALID_THEMES = new Set(['system', 'light', 'dark']);
+const VALID_LANGUAGES = new Set(['en', 'fa']);
 
 function usageSummary(userId) {
   const sub = db.prepare('SELECT * FROM subscriptions WHERE user_id = ?').get(userId);
@@ -19,42 +20,49 @@ function usageSummary(userId) {
   };
 }
 
+function settingsOut(user) {
+  return {
+    displayName: user.display_name,
+    email: user.email,
+    theme: user.theme,
+    language: user.language,
+    hasPassword: Boolean(user.password_hash),
+  };
+}
+
 router.get('/', (req, res) => {
-  const user = req.user;
   res.json({
-    settings: {
-      displayName: user.display_name,
-      email: user.email,
-      theme: user.theme,
-      hasPassword: Boolean(user.password_hash),
-    },
-    subscription: usageSummary(user.id),
+    settings: settingsOut(req.user),
+    subscription: usageSummary(req.user.id),
   });
 });
 
 router.patch('/', (req, res) => {
-  const { displayName, theme } = req.body || {};
+  const { displayName, theme, language } = req.body || {};
 
   if (theme !== undefined && !VALID_THEMES.has(theme)) {
     return res.status(400).json({ error: `Invalid theme: ${theme}` });
+  }
+  if (language !== undefined && !VALID_LANGUAGES.has(language)) {
+    return res.status(400).json({ error: `Invalid language: ${language}` });
   }
 
   db.prepare(
     `UPDATE users SET
        display_name = CASE WHEN ? THEN ? ELSE display_name END,
-       theme = COALESCE(?, theme)
+       theme = COALESCE(?, theme),
+       language = COALESCE(?, language)
      WHERE id = ?`
-  ).run(displayName !== undefined ? 1 : 0, displayName ?? null, theme ?? null, req.user.id);
+  ).run(
+    displayName !== undefined ? 1 : 0,
+    displayName ?? null,
+    theme ?? null,
+    language ?? null,
+    req.user.id
+  );
 
   const updated = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
-  res.json({
-    settings: {
-      displayName: updated.display_name,
-      email: updated.email,
-      theme: updated.theme,
-      hasPassword: Boolean(updated.password_hash),
-    },
-  });
+  res.json({ settings: settingsOut(updated) });
 });
 
 router.patch(

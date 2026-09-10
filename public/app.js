@@ -1,6 +1,12 @@
 (() => {
   'use strict';
 
+  // Deliberately not destructured to a bare `t`: this file already uses `t` as
+  // a loop variable in several places, and the shadowing would be silent.
+  const i18n = window.I18N;
+  const tr = (key, vars) => i18n.t(key, vars);
+  const num = (value) => i18n.num(value);
+
   // Filled from /api/phases at boot so the server stays the single source of
   // truth for what phases a track has. Seeded with the study track so the first
   // paint is correct even before that request lands.
@@ -23,35 +29,25 @@
     return (track || TRACKS.study).phases;
   }
 
+  // The server sends both spellings of every phase name, so the tracker follows
+  // the interface language without the client keeping its own copy of the list.
+  function phaseLabel(phase) {
+    return (i18n.lang === 'fa' && phase.labelFa) || phase.label;
+  }
+
   function currentPhases() {
     return phasesFor(currentMode);
   }
 
-  // Everything that differs between tracks, kept together so adding a fourth
-  // track is one entry rather than a hunt through the file.
-  const TRACK_COPY = {
-    study: {
-      title: 'Study session',
-      sub: 'Four phases. One session.',
-      welcome:
-        "What would you like to study today, and what's your goal for this session (understand a concept, prep for a test, review before an exam)?",
-    },
-    workout: {
-      title: 'Workout plan',
-      sub: 'Assess, plan, train, adjust.',
-      welcome:
-        "Let's build something you'll actually keep up. Tell me roughly how active you are right now, what equipment you can get to, and how many days a week are genuinely free.",
-    },
-    diet: {
-      title: 'Nutrition plan',
-      sub: 'Small changes that stick.',
-      welcome:
-        "Let's start with how you eat now — no counting, no judgement. What does a normal day of food look like for you, and what are the meals you'd never want to give up?",
-    },
-  };
+  // Per-track wording lives in the dictionary; this only resolves which track's
+  // keys to read. 'phased' is the old name for study.
+  function trackKey(mode) {
+    const key = mode === 'phased' || !mode ? 'study' : mode;
+    return ['study', 'workout', 'diet', 'tutor'].includes(key) ? key : 'study';
+  }
 
-  function trackCopy(mode) {
-    return TRACK_COPY[mode === 'phased' || !mode ? 'study' : mode] || TRACK_COPY.study;
+  function trackText(mode, part) {
+    return tr(`track.${trackKey(mode)}.${part}`);
   }
 
   const authShell = document.getElementById('auth-shell');
@@ -103,6 +99,7 @@
   const plannerShell = document.getElementById('planner-shell');
   const calMonthYear = document.getElementById('cal-month-year');
   const calGrid = document.getElementById('calendar-grid');
+  const calWeekdays = document.getElementById('calendar-weekdays');
   const calPrevBtn = document.getElementById('cal-prev');
   const calNextBtn = document.getElementById('cal-next');
   const calTodayBtn = document.getElementById('cal-today');
@@ -138,7 +135,12 @@
   const profileError = document.getElementById('profile-error');
   const profileSaved = document.getElementById('profile-saved');
   const themePicker = document.getElementById('theme-picker');
-  const themeOptions = document.querySelectorAll('.theme-option');
+  // Scoped to their own picker: both use .theme-option, and a document-wide
+  // query would wire the language buttons to the theme handler.
+  const themeOptions = themePicker.querySelectorAll('.theme-option');
+  const languagePicker = document.getElementById('language-picker');
+  const languageOptions = languagePicker.querySelectorAll('.theme-option');
+  const langToggles = document.querySelectorAll('.lang-toggle');
   const passwordForm = document.getElementById('password-form');
   const currentPasswordField = document.getElementById('current-password-field');
   const settingsCurrentPassword = document.getElementById('settings-current-password');
@@ -158,20 +160,18 @@
   let busy = false;
 
   let tasks = [];
-  let calendarYear;
-  let calendarMonth; // 0-indexed
-  let selectedDate = null; // 'YYYY-MM-DD'
+  // Which month the grid is showing, in whichever calendar the language uses:
+  // Gregorian in English, Jalali in Persian. Every date that leaves this file --
+  // selectedDate, the task API, the DB -- stays a Gregorian ISO string.
+  let calendarCursor;
+  let selectedDate = null; // 'YYYY-MM-DD', always Gregorian
   let plannerLoaded = false;
 
   let videoLoaded = false;
   let videoBusy = false;
   let lastVideoUrl = '';
 
-  {
-    const now = new Date();
-    calendarYear = now.getFullYear();
-    calendarMonth = now.getMonth();
-  }
+  calendarCursor = i18n.cursorFor(i18n.todayIso());
 
   // ---------- API helpers ----------
 
@@ -219,7 +219,7 @@
 
     setupError.textContent = '';
     setupSubmit.disabled = true;
-    setupSubmit.textContent = 'Checking your key...';
+    setupSubmit.textContent = tr('setup.submitting');
 
     // The server tries a real call before saving, so this covers a mistyped or
     // revoked key too, not just an empty box.
@@ -229,10 +229,10 @@
     });
 
     setupSubmit.disabled = false;
-    setupSubmit.textContent = 'Save and start studying';
+    setupSubmit.textContent = tr('setup.submit');
 
     if (!ok) {
-      setupError.textContent = (data && data.error) || 'That key was rejected. Please check it and try again.';
+      setupError.textContent = (data && data.error) || tr('err.keyRejected');
       return;
     }
 
@@ -265,7 +265,7 @@
       body: { email: formData.get('email'), password: formData.get('password') },
     });
     if (!ok) {
-      loginError.textContent = (data && data.error) || 'Something went wrong. Please try again.';
+      loginError.textContent = (data && data.error) || tr('err.retry');
       return;
     }
     showAppView();
@@ -285,7 +285,7 @@
       },
     });
     if (!ok) {
-      signupError.textContent = (data && data.error) || 'Something went wrong. Please try again.';
+      signupError.textContent = (data && data.error) || tr('err.retry');
       return;
     }
     showAppView();
@@ -306,7 +306,7 @@
     if (!data || !data.googleEnabled) {
       googleBtn.setAttribute('aria-disabled', 'true');
       googleBtn.removeAttribute('href');
-      googleBtn.textContent = 'Google sign-in not configured yet';
+      googleBtn.textContent = tr('auth.googleOff');
     }
   }
 
@@ -315,18 +315,7 @@
   function chatDisplayTitle(chat) {
     if (chat.title) return chat.title;
     if (chat.topic) return chat.topic;
-    return chat.mode === 'tutor' ? 'AI Teacher chat' : trackCopy(chat.mode).title;
-  }
-
-  function relativeTime(iso) {
-    const diffMs = Date.now() - new Date(iso).getTime();
-    const mins = Math.round(diffMs / 60000);
-    if (mins < 1) return 'just now';
-    if (mins < 60) return `${mins}m ago`;
-    const hours = Math.round(mins / 60);
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.round(hours / 24);
-    return `${days}d ago`;
+    return chat.mode === 'tutor' ? tr('chat.tutorChat') : trackText(chat.mode, 'title');
   }
 
   function renderSidebar() {
@@ -335,7 +324,7 @@
     if (!chats.length) {
       const empty = document.createElement('p');
       empty.className = 'sidebar-empty';
-      empty.textContent = 'No chats yet — start one above.';
+      empty.textContent = tr('nav.noChats');
       sidebarList.appendChild(empty);
       return;
     }
@@ -353,7 +342,7 @@
 
       const meta = document.createElement('span');
       meta.className = 'sidebar-item-meta';
-      meta.textContent = `${chat.mode === 'tutor' ? 'AI Teacher' : trackCopy(chat.mode).title} · ${relativeTime(chat.updatedAt)}`;
+      meta.textContent = `${trackText(chat.mode, 'title')} · ${i18n.relativeTime(chat.updatedAt)}`;
 
       main.appendChild(title);
       main.appendChild(meta);
@@ -361,7 +350,7 @@
       const del = document.createElement('button');
       del.type = 'button';
       del.className = 'sidebar-item-delete';
-      del.setAttribute('aria-label', 'Delete chat');
+      del.setAttribute('aria-label', tr('chat.delete'));
       del.textContent = '×';
       del.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -385,7 +374,7 @@
   }
 
   async function deleteChat(chatId) {
-    if (!confirm('Delete this chat? This cannot be undone.')) return;
+    if (!confirm(tr('chat.confirmDelete'))) return;
     await api(`/api/chats/${chatId}`, { method: 'DELETE' });
     const wasActive = chatId === currentChatId;
     await refreshChatList();
@@ -405,7 +394,11 @@
     currentPhases().forEach((phase, i) => {
       const span = document.createElement('span');
       span.className = 'segment';
-      span.innerHTML = `<span class="segment-num">${i + 1}</span>${phase.label}`;
+      const numEl = document.createElement('span');
+      numEl.className = 'segment-num';
+      numEl.textContent = num(i + 1);
+      span.appendChild(numEl);
+      span.appendChild(document.createTextNode(phaseLabel(phase)));
       if (i === phaseIndex) span.classList.add('active');
       else if (i < phaseIndex) span.classList.add('done');
       phaseTracker.appendChild(span);
@@ -418,13 +411,17 @@
     nextPhaseBtn.hidden = isTutor;
 
     if (isTutor) {
-      chatTitleSub.textContent = 'Ask anything, any time.';
-      footPhase.textContent = 'AI Teacher — freeform chat';
+      chatTitleSub.textContent = tr('track.tutor.sub');
+      footPhase.textContent = tr('track.tutor.foot');
     } else {
-      chatTitleSub.textContent = trackCopy(currentMode).sub;
+      chatTitleSub.textContent = trackText(currentMode, 'sub');
       renderPhaseTracker();
       const phases = currentPhases();
-      footPhase.textContent = `${phases[phaseIndex].label} — step ${phaseIndex + 1} of ${phases.length}`;
+      footPhase.textContent = tr('chat.step', {
+        label: phaseLabel(phases[phaseIndex]),
+        n: num(phaseIndex + 1),
+        total: num(phases.length),
+      });
       nextPhaseBtn.disabled = phaseIndex >= phases.length - 1;
     }
   }
@@ -435,7 +432,8 @@
 
     const who = document.createElement('span');
     who.className = 'who';
-    who.textContent = role === 'user' ? 'You' : 'Study Buddy';
+    who.dataset.i18n = role === 'user' ? 'chat.you' : 'chat.brand';
+    who.textContent = tr(who.dataset.i18n);
 
     const body = document.createElement('span');
     body.className = 'body';
@@ -476,10 +474,11 @@
     typingEl.className = 'msg typing';
     const typingWho = document.createElement('span');
     typingWho.className = 'who';
-    typingWho.textContent = 'Study Buddy';
+    typingWho.dataset.i18n = 'chat.brand';
+    typingWho.textContent = tr('chat.brand');
     const typingBody = document.createElement('span');
     typingBody.className = 'body';
-    typingBody.textContent = 'Thinking';
+    typingBody.textContent = tr('chat.thinking');
     typingEl.appendChild(typingWho);
     typingEl.appendChild(typingBody);
     chatLog.appendChild(typingEl);
@@ -505,8 +504,8 @@
     }
 
     if (!ok) {
-      const base = (data && data.error) || 'Something went wrong. Please try again.';
-      addSystemNote(data && data.code === 'limit_reached' ? `${base} (See Settings to upgrade.)` : base);
+      const base = (data && data.error) || tr('err.retry');
+      addSystemNote(data && data.code === 'limit_reached' ? tr('chat.limitHint', { error: base }) : base);
       setBusy(false);
       messageInput.focus();
       return;
@@ -544,7 +543,7 @@
     phaseIndex += 1;
     const nextPhase = currentPhases()[phaseIndex];
     applyModeChrome();
-    addSystemNote(`Moving on to ${nextPhase.label}`);
+    addSystemNote(tr('chat.movingOn', { phase: phaseLabel(nextPhase) }));
     await api(`/api/chats/${currentChatId}`, { method: 'PATCH', body: { phaseKey: nextPhase.key } });
     sendToBackend(`[The learner clicked "Next Phase." Begin the ${nextPhase.label} phase now.]`, true);
   });
@@ -563,12 +562,9 @@
 
   function showWelcome() {
     if (currentMode === 'tutor') {
-      addBubble(
-        'bot',
-        "I'm your AI teacher — ask me anything, on any topic, any time. What's on your mind?"
-      );
+      addBubble('bot', tr('chat.tutorWelcome'));
     } else {
-      addBubble('bot', trackCopy(currentMode).welcome);
+      addBubble('bot', trackText(currentMode, 'welcome'));
     }
   }
 
@@ -594,7 +590,7 @@
   }
 
   async function initApp() {
-    chatTitleHeading.textContent = 'Study Buddy';
+    chatTitleHeading.textContent = tr('chat.brand');
     refreshKeyState();
     await refreshChatList();
 
@@ -646,22 +642,23 @@
     keyBanner.hidden = data.ready;
 
     if (data.hasOwnKey) {
-      apiKeyStatus.textContent = 'Your own key is set — your sessions run on your quota, not this site’s.';
-      apiKeyInput.placeholder = 'Paste a new key to replace it';
+      apiKeyStatus.textContent = tr('settings.keySet');
+      apiKeyInput.placeholder = tr('settings.keyReplace');
       apiKeyRemove.hidden = false;
-      if (apiKeyLabel) apiKeyLabel.textContent = 'Your own AI key';
+      if (apiKeyLabel) apiKeyLabel.textContent = tr('settings.yourOwnKey');
     } else if (data.usingServerKey) {
       // The site owner supplies the key here, so this is genuinely optional.
       // Saying "add your own" as an instruction would send people off to sign
       // up for something they do not need.
-      apiKeyStatus.textContent =
-        'Ready to go — this site provides the AI. You can add your own key below if you’d rather use your own quota, but you don’t need to.';
+      apiKeyStatus.textContent = tr('settings.keyShared');
+      apiKeyInput.placeholder = tr('settings.keyPlaceholder');
       apiKeyRemove.hidden = true;
-      if (apiKeyLabel) apiKeyLabel.textContent = 'Use your own AI key instead (optional)';
+      if (apiKeyLabel) apiKeyLabel.textContent = tr('settings.yourOwnKeyOptional');
     } else {
-      apiKeyStatus.textContent = 'No key yet — add one below to start. It’s free and takes a minute.';
+      apiKeyStatus.textContent = tr('settings.keyMissing');
+      apiKeyInput.placeholder = tr('settings.keyPlaceholder');
       apiKeyRemove.hidden = true;
-      if (apiKeyLabel) apiKeyLabel.textContent = 'Your own AI key';
+      if (apiKeyLabel) apiKeyLabel.textContent = tr('settings.yourOwnKey');
     }
   }
 
@@ -679,17 +676,17 @@
     apiKeySaved.hidden = true;
     const saveBtn = document.getElementById('apikey-save');
     saveBtn.disabled = true;
-    saveBtn.textContent = 'Checking...';
+    saveBtn.textContent = tr('settings.checking');
 
     // The server tries a real call before storing, so a mistyped key is caught
     // here rather than on the user's first question.
     const { ok, data } = await api('/api/setup/me/key', { method: 'PUT', body: { key } });
 
     saveBtn.disabled = false;
-    saveBtn.textContent = 'Save key';
+    saveBtn.textContent = tr('settings.saveKey');
 
     if (!ok) {
-      apiKeyError.textContent = (data && data.error) || 'That key was rejected.';
+      apiKeyError.textContent = (data && data.error) || tr('err.keyRejectedShort');
       return;
     }
 
@@ -707,77 +704,46 @@
 
   // ---------- Planner: calendar ----------
 
-  function pad2(n) {
-    return String(n).padStart(2, '0');
+  function renderWeekdays() {
+    calWeekdays.innerHTML = '';
+    i18n.weekdayNames().forEach((name) => {
+      const span = document.createElement('span');
+      span.textContent = name;
+      calWeekdays.appendChild(span);
+    });
   }
-
-  function isoDate(year, month, day) {
-    return `${year}-${pad2(month + 1)}-${pad2(day)}`;
-  }
-
-  function todayIso() {
-    const now = new Date();
-    return isoDate(now.getFullYear(), now.getMonth(), now.getDate());
-  }
-
-  const MONTH_NAMES = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
-  ];
 
   function renderCalendar() {
-    calMonthYear.textContent = `${MONTH_NAMES[calendarMonth]} ${calendarYear}`;
+    calMonthYear.textContent = i18n.monthLabel(calendarCursor);
+    renderWeekdays();
     calGrid.innerHTML = '';
 
-    const firstOfMonth = new Date(calendarYear, calendarMonth, 1);
-    const startOffset = firstOfMonth.getDay(); // 0 = Sunday
-    const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
-    const daysInPrevMonth = new Date(calendarYear, calendarMonth, 0).getDate();
-
     const dueDates = new Set(tasks.filter((t) => t.dueAt).map((t) => t.dueAt.slice(0, 10)));
-    const today = todayIso();
+    const today = i18n.todayIso();
 
-    const cells = [];
-    for (let i = startOffset - 1; i >= 0; i--) {
-      cells.push({ day: daysInPrevMonth - i, outside: true, year: calendarMonth === 0 ? calendarYear - 1 : calendarYear, month: calendarMonth === 0 ? 11 : calendarMonth - 1 });
-    }
-    for (let d = 1; d <= daysInMonth; d++) {
-      cells.push({ day: d, outside: false, year: calendarYear, month: calendarMonth });
-    }
-    const nextMonthYear = calendarMonth === 11 ? calendarYear + 1 : calendarYear;
-    const nextMonth = calendarMonth === 11 ? 0 : calendarMonth + 1;
-    let nextMonthDay = 1;
-    while (cells.length % 7 !== 0 || cells.length < 42) {
-      cells.push({ day: nextMonthDay, outside: true, year: nextMonthYear, month: nextMonth });
-      nextMonthDay += 1;
-      if (cells.length >= 42) break;
-    }
-
-    cells.forEach((cell) => {
-      const iso = isoDate(cell.year, cell.month, cell.day);
+    // Six weeks of cells, each already carrying the Gregorian date it stands
+    // for, so which calendar system produced them stops mattering here.
+    i18n.monthGrid(calendarCursor).forEach((cell) => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'calendar-day';
       if (cell.outside) btn.classList.add('outside-month');
-      if (iso === today) btn.classList.add('today');
-      if (iso === selectedDate) btn.classList.add('selected');
+      if (cell.iso === today) btn.classList.add('today');
+      if (cell.iso === selectedDate) btn.classList.add('selected');
 
-      const num = document.createElement('span');
-      num.textContent = String(cell.day);
-      btn.appendChild(num);
+      const label = document.createElement('span');
+      label.textContent = cell.label;
+      btn.appendChild(label);
 
-      if (dueDates.has(iso)) {
+      if (dueDates.has(cell.iso)) {
         const dot = document.createElement('span');
         dot.className = 'calendar-day-dot';
         btn.appendChild(dot);
       }
 
       btn.addEventListener('click', () => {
-        selectedDate = selectedDate === iso ? null : iso;
-        if (cell.outside) {
-          calendarYear = cell.year;
-          calendarMonth = cell.month;
-        }
+        selectedDate = selectedDate === cell.iso ? null : cell.iso;
+        if (cell.outside) calendarCursor = i18n.cursorFor(cell.iso);
         if (selectedDate) taskDueInput.value = selectedDate;
         renderCalendar();
         renderTaskList();
@@ -788,36 +754,24 @@
   }
 
   calPrevBtn.addEventListener('click', () => {
-    calendarMonth -= 1;
-    if (calendarMonth < 0) {
-      calendarMonth = 11;
-      calendarYear -= 1;
-    }
+    calendarCursor = i18n.stepCursor(calendarCursor, -1);
     renderCalendar();
   });
 
   calNextBtn.addEventListener('click', () => {
-    calendarMonth += 1;
-    if (calendarMonth > 11) {
-      calendarMonth = 0;
-      calendarYear += 1;
-    }
+    calendarCursor = i18n.stepCursor(calendarCursor, 1);
     renderCalendar();
   });
 
   calTodayBtn.addEventListener('click', () => {
-    const now = new Date();
-    calendarYear = now.getFullYear();
-    calendarMonth = now.getMonth();
+    calendarCursor = i18n.cursorFor(i18n.todayIso());
     renderCalendar();
   });
 
   // ---------- Planner: task list ----------
 
   function formatDue(dueAt) {
-    if (!dueAt) return null;
-    const d = new Date(dueAt);
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return dueAt ? i18n.formatShortDate(dueAt.slice(0, 10)) : null;
   }
 
   function renderTaskList() {
@@ -828,14 +782,14 @@
       : tasks;
 
     taskListHeading.textContent = selectedDate
-      ? `Tasks — ${new Date(`${selectedDate}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`
-      : 'All tasks';
+      ? tr('planner.tasksOn', { date: i18n.formatLongDate(selectedDate) })
+      : tr('planner.allTasks');
     taskFilterClear.hidden = !selectedDate;
 
     if (!visible.length) {
       const empty = document.createElement('p');
       empty.className = 'task-list-empty';
-      empty.textContent = selectedDate ? 'Nothing due this day.' : 'No tasks yet — add one above.';
+      empty.textContent = tr(selectedDate ? 'planner.nothingDue' : 'planner.noTasksYet');
       taskList.appendChild(empty);
       return;
     }
@@ -848,7 +802,7 @@
       checkbox.type = 'checkbox';
       checkbox.className = 'task-checkbox';
       checkbox.checked = task.status === 'done';
-      checkbox.setAttribute('aria-label', `Mark "${task.title}" as done`);
+      checkbox.setAttribute('aria-label', tr('planner.markDone', { title: task.title }));
       checkbox.addEventListener('change', () => toggleTask(task.id, checkbox.checked));
 
       const main = document.createElement('div');
@@ -863,7 +817,7 @@
       const metaParts = [];
       if (task.dueAt) metaParts.push(formatDue(task.dueAt));
       if (task.subject) metaParts.push(task.subject);
-      meta.textContent = metaParts.length ? metaParts.join(' · ') : 'No due date';
+      meta.textContent = metaParts.length ? metaParts.join(' · ') : tr('planner.noDueDate');
 
       main.appendChild(title);
       main.appendChild(meta);
@@ -871,7 +825,7 @@
       const del = document.createElement('button');
       del.type = 'button';
       del.className = 'task-row-delete';
-      del.setAttribute('aria-label', `Delete "${task.title}"`);
+      del.setAttribute('aria-label', tr('planner.deleteNamed', { title: task.title }));
       del.textContent = '×';
       del.addEventListener('click', () => deleteTask(task.id));
 
@@ -936,13 +890,13 @@
     videoBusy = isBusy;
     videoSubmitBtn.disabled = isBusy;
     videoManualSubmitBtn.disabled = isBusy;
-    videoSubmitBtn.textContent = isBusy ? 'Summarizing…' : 'Summarize';
+    videoSubmitBtn.textContent = tr(isBusy ? 'video.working' : 'video.submit');
   }
 
   function showVideoResult(video) {
     videoErrorBlock.hidden = true;
     videoResultBlock.hidden = false;
-    videoResultTitle.textContent = video.title || 'Untitled video';
+    videoResultTitle.textContent = video.title || tr('video.untitled');
     videoResultAuthor.textContent = video.author || '';
     videoResultAuthor.hidden = !video.author;
     videoSummaryEl.textContent = video.summary;
@@ -970,8 +924,8 @@
 
     if (!ok) {
       const isLimitReached = data && data.code === 'limit_reached';
-      const base = (data && data.error) || 'Something went wrong. Please try again.';
-      showVideoError(isLimitReached ? `${base} (See Settings to upgrade.)` : base, !isLimitReached);
+      const base = (data && data.error) || tr('err.retry');
+      showVideoError(isLimitReached ? tr('chat.limitHint', { error: base }) : base, !isLimitReached);
       return;
     }
 
@@ -1006,13 +960,19 @@
 
       const meta = document.createElement('span');
       meta.className = 'video-history-item-meta';
-      meta.textContent = video.author || 'YouTube';
+      meta.textContent = video.author || tr('video.source');
 
       item.appendChild(title);
       item.appendChild(meta);
       item.addEventListener('click', () => {
         videoUrlInput.value = video.url;
-        showVideoResult(video);
+        if (video.summary) {
+          showVideoResult(video);
+        } else {
+          // Summarized before, but in the other language. The transcript is
+          // already stored server-side, so this only re-runs the summarizing.
+          submitVideo(video.url, null);
+        }
       });
 
       videoHistoryList.appendChild(item);
@@ -1029,6 +989,43 @@
   }
 
   // ---------- Settings ----------
+
+  function markActiveLanguage() {
+    languageOptions.forEach((btn) => btn.classList.toggle('active', btn.dataset.language === i18n.lang));
+  }
+
+  // Switching redraws everything the interface generated itself. The static
+  // markup is handled by i18n before this runs.
+  function setLanguage(lang, options) {
+    if (lang === i18n.lang) return;
+    i18n.applyLanguage(lang);
+    if (!options || options.persist !== false) {
+      api('/api/settings', { method: 'PATCH', body: { language: lang } });
+    }
+  }
+
+  document.addEventListener('languagechange', () => {
+    markActiveLanguage();
+    if (appLayout.hidden) return;
+
+    applyModeChrome();
+    renderSidebar();
+    // The calendar has to be rebuilt rather than relabelled: Persian shows a
+    // different month with different days in it, not the same grid translated.
+    calendarCursor = i18n.cursorFor(selectedDate || i18n.todayIso());
+    renderCalendar();
+    renderTaskList();
+    refreshKeyState();
+    if (!settingsShell.hidden) initSettings();
+  });
+
+  langToggles.forEach((btn) => {
+    btn.addEventListener('click', () => setLanguage(i18n.lang === 'fa' ? 'en' : 'fa'));
+  });
+
+  languageOptions.forEach((btn) => {
+    btn.addEventListener('click', () => setLanguage(btn.dataset.language));
+  });
 
   function applyTheme(theme) {
     if (theme === 'light' || theme === 'dark') {
@@ -1055,15 +1052,21 @@
       settingsEmail.value = data.settings.email;
       currentPasswordField.hidden = !data.settings.hasPassword;
       applyTheme(data.settings.theme);
+      markActiveLanguage();
     }
 
     const { data: billing } = await api('/api/billing');
     if (billing) {
-      settingsPlanName.textContent = billing.plan === 'paid' ? 'Paid plan' : 'Free plan';
+      settingsPlanName.textContent = tr(billing.plan === 'paid' ? 'settings.planPaid' : 'settings.planFree');
       settingsUpgradeBtn.hidden = billing.plan === 'paid';
       const msgs = billing.usage.ai_messages;
       const vids = billing.usage.video_summaries;
-      settingsPlanUsage.textContent = `${msgs.used}/${msgs.limit} AI messages today · ${vids.used}/${vids.limit} video summaries this month`;
+      settingsPlanUsage.textContent = tr('settings.usage', {
+        used: num(msgs.used),
+        limit: num(msgs.limit),
+        vUsed: num(vids.used),
+        vLimit: num(vids.limit),
+      });
     }
   }
 
@@ -1075,9 +1078,8 @@
 
     if (!ok) {
       billingError.textContent =
-        (data && data.code === 'billing_not_configured'
-          ? 'Upgrades aren’t set up yet — the site owner needs to add Stripe keys.'
-          : data && data.error) || 'Something went wrong.';
+        (data && data.code === 'billing_not_configured' ? tr('err.billingOff') : data && data.error) ||
+        tr('err.generic');
       return;
     }
 
@@ -1095,7 +1097,7 @@
     });
 
     if (!ok) {
-      profileError.textContent = (data && data.error) || 'Something went wrong.';
+      profileError.textContent = (data && data.error) || tr('err.generic');
       return;
     }
     profileSaved.hidden = false;
@@ -1123,7 +1125,7 @@
     });
 
     if (!ok) {
-      passwordError.textContent = (data && data.error) || 'Something went wrong.';
+      passwordError.textContent = (data && data.error) || tr('err.generic');
       return;
     }
 
@@ -1142,6 +1144,10 @@
   }
 
   async function bootstrap() {
+    // The inline <head> script already set the direction; this fills the text.
+    i18n.applyLanguage(i18n.detect(), { persist: false });
+    markActiveLanguage();
+
     configureGoogleButton();
     await loadTracks();
 
@@ -1158,7 +1164,16 @@
     if (ok) {
       showAppView();
       const { data } = await api('/api/settings');
-      if (data) applyTheme(data.settings.theme);
+      if (data) {
+        applyTheme(data.settings.theme);
+        // A choice made in this browser wins and is pushed up; otherwise the
+        // account's language wins, which is what makes it follow to a new
+        // device. Without the first half, signing up while reading in Persian
+        // would flip the page to English the moment the account was created.
+        const chosenHere = i18n.storedLang();
+        if (chosenHere) setLanguage(chosenHere);
+        else setLanguage(data.settings.language, { persist: false });
+      }
       await initApp();
     } else {
       showAuthView();

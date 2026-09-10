@@ -1,6 +1,20 @@
 (() => {
   'use strict';
 
+  // Language first, and before the reduced-motion early return below -- someone
+  // who has turned animation off still needs the page in their own language.
+  const i18n = window.I18N;
+  if (i18n) {
+    i18n.applyLanguage(i18n.detect(), { persist: false });
+
+    const toggle = document.getElementById('lang-toggle');
+    if (toggle) {
+      toggle.addEventListener('click', () => {
+        i18n.applyLanguage(i18n.lang === 'fa' ? 'en' : 'fa');
+      });
+    }
+  }
+
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // With motion reduced, everything is simply visible from the start: no

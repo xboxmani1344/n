@@ -18,8 +18,48 @@ An AI coach that runs four-phase sessions for **studying**, **training** and **e
 - **Planner** — a month calendar plus a task list: add assignments with due dates and subjects, click a day to filter, check things off.
 - **Video Summarizer** — paste a YouTube link and get structured study notes from its captions. If auto-fetch fails for a video (YouTube's caption/bot-detection endpoints change often), you can paste the transcript in yourself instead — summarization always works either way.
 - **Accounts** — email/password sign-in, plus optional "Continue with Google" once configured (see below).
-- **Settings** — profile name, light/system/dark theme, password change, plan/usage.
+- **Settings** — profile name, language, light/system/dark theme, password change, plan/usage.
 - **Subscriptions** — a free tier with daily/monthly usage limits, and a paid tier via real Stripe Checkout once configured.
+- **Persian and English**, switchable from any screen — including the coach itself. See below.
+
+
+## Persian and English
+
+The whole interface is bilingual, and switching is a single button in the sidebar
+(or on the landing page's nav bar). Persian is not a translation layer bolted on
+top — the parts that would still feel foreign are localized too:
+
+- **The layout mirrors.** `dir="rtl"`, with the direction-sensitive CSS written
+  in logical properties so one rule serves both directions.
+- **The coach replies in Persian.** The user's language is appended to the system
+  prompt server-side (`languageLine` in `src/prompts.js`), so the phases, the
+  workout plan and the video notes all come back in Persian. If the user writes
+  in another language, the model follows them instead of the setting.
+- **The planner switches to the Jalali calendar**, weeks starting Saturday, with
+  the Gregorian dates shown alongside — «شهریور ۱۴۰۵ · Aug–Sep 2026». The
+  conversion uses `Intl` rather than a date library. Dates are *stored* as
+  Gregorian ISO strings whatever the language, so the same task shows the same
+  day in both.
+- **Numerals are Persian** (۱۲۳) in displayed text, and ASCII everywhere that
+  matters — inputs, the API, the database.
+- **The font is self-hosted.** Vazirmatn ships in `public/fonts/`, split by
+  `unicode-range`, so nothing is fetched from Google — which is unreachable from
+  Iran anyway.
+
+**Which language a visitor gets:** their browser's, on a first visit. After that,
+whatever they picked — remembered in the browser, and on their account so it
+follows them to another device. The choice is applied by a small inline script in
+`<head>` before the first paint; otherwise the page would render left-to-right and
+visibly flip.
+
+One thing is deliberately left alone: the **due-date picker** in the planner is the
+browser's native `<input type="date">`, which is always Gregorian. Clicking a day in
+the Jalali calendar fills it in, and the date is displayed in both calendars once
+saved, so the Jalali path is the one you'd actually use.
+
+Adding a third language means adding a third entry to each pair in
+`public/i18n.js` — the strings are stored as `key: [English, Persian]` in one
+table specifically so a key cannot exist in one language and go missing in another.
 
 ## Setup
 

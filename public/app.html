@@ -4,6 +4,25 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Study Buddy</title>
+  <script>
+    // Language before first paint -- see the same block in index.html. Getting
+    // this wrong means the whole interface visibly flips direction after load.
+    (function () {
+      var lang = null;
+      try { lang = localStorage.getItem('studybuddy.lang'); } catch (e) { /* blocked */ }
+      if (lang !== 'en' && lang !== 'fa') {
+        lang = String(navigator.language || '').toLowerCase().indexOf('fa') === 0 ? 'fa' : 'en';
+      }
+      var root = document.documentElement;
+      root.lang = lang;
+      root.dir = lang === 'fa' ? 'rtl' : 'ltr';
+      root.dataset.lang = lang;
+      if (lang === 'fa') {
+        root.dataset.i18nPending = '1';
+        setTimeout(function () { delete root.dataset.i18nPending; }, 1500);
+      }
+    })();
+  </script>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -20,16 +39,16 @@
     <div class="shell" id="setup-shell" hidden>
       <header class="brand">
         <h1>Study Buddy</h1>
-        <p class="tagline">One quick thing before we start</p>
+        <p class="tagline" data-i18n="setup.tagline">One quick thing before we start</p>
       </header>
 
       <div class="chat-card glass auth-card">
-        <p class="setup-lead">Study Buddy needs an AI key to do the actual teaching. A free Google Gemini key works and takes about a minute — no credit card.</p>
+        <p class="setup-lead" data-i18n="setup.lead">Study Buddy needs an AI key to do the actual teaching. A free Google Gemini key works and takes about a minute — no credit card.</p>
 
         <ol class="setup-steps">
-          <li>Open <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">aistudio.google.com/apikey</a></li>
-          <li>Click <strong>Create API key</strong></li>
-          <li>Copy it, then paste it below</li>
+          <li><span data-i18n="setup.step1">Open</span> <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">aistudio.google.com/apikey</a></li>
+          <li data-i18n-html="setup.step2html">Click <strong>Create API key</strong></li>
+          <li data-i18n="setup.step3">Copy it, then paste it below</li>
         </ol>
 
         <form class="auth-form" id="setup-form">
@@ -37,54 +56,58 @@
             type="password"
             id="setup-key"
             placeholder="Paste your API key here"
+            data-i18n-placeholder="setup.placeholder"
             autocomplete="off"
             spellcheck="false"
             required
           />
-          <button type="submit" class="primary-btn" id="setup-submit">Save and start studying</button>
+          <button type="submit" class="primary-btn" id="setup-submit" data-i18n="setup.submit">Save and start studying</button>
         </form>
 
         <p class="auth-error" id="setup-error" role="alert"></p>
-        <p class="setup-note">Your key is saved to a file on this computer only. It is never sent anywhere except Google.</p>
+        <p class="setup-note" data-i18n="setup.note">Your key is saved to a file on this computer only. It is never sent anywhere except Google.</p>
       </div>
     </div>
 
     <div class="shell" id="auth-shell" hidden>
       <header class="brand">
         <h1>Study Buddy</h1>
-        <p class="tagline">Sign in to start studying</p>
+        <p class="tagline" data-i18n="auth.tagline">Sign in to start studying</p>
       </header>
 
       <div class="chat-card glass auth-card">
         <div class="auth-tabs">
-          <button type="button" class="auth-tab active" data-tab="login">Log In</button>
-          <button type="button" class="auth-tab" data-tab="signup">Sign Up</button>
+          <button type="button" class="auth-tab active" data-tab="login" data-i18n="auth.login">Log In</button>
+          <button type="button" class="auth-tab" data-tab="signup" data-i18n="auth.signup">Sign Up</button>
         </div>
 
         <form id="login-form" class="auth-form">
-          <input type="email" name="email" placeholder="Email" required autocomplete="email" />
-          <input type="password" name="password" placeholder="Password" required autocomplete="current-password" />
+          <input type="email" name="email" placeholder="Email" data-i18n-placeholder="auth.email" required autocomplete="email" />
+          <input type="password" name="password" placeholder="Password" data-i18n-placeholder="auth.password" required autocomplete="current-password" />
           <p class="auth-error" id="login-error"></p>
-          <button type="submit" class="pill-btn primary-btn">Log In</button>
+          <button type="submit" class="pill-btn primary-btn" data-i18n="auth.login">Log In</button>
         </form>
 
         <form id="signup-form" class="auth-form" hidden>
-          <input type="text" name="displayName" placeholder="Name" autocomplete="name" />
-          <input type="email" name="email" placeholder="Email" required autocomplete="email" />
+          <input type="text" name="displayName" placeholder="Name" data-i18n-placeholder="auth.name" autocomplete="name" />
+          <input type="email" name="email" placeholder="Email" data-i18n-placeholder="auth.email" required autocomplete="email" />
           <input
             type="password"
             name="password"
             placeholder="Password (min. 8 characters)"
+            data-i18n-placeholder="auth.passwordMin"
             required
             autocomplete="new-password"
             minlength="8"
           />
           <p class="auth-error" id="signup-error"></p>
-          <button type="submit" class="pill-btn primary-btn">Create Account</button>
+          <button type="submit" class="pill-btn primary-btn" data-i18n="auth.create">Create Account</button>
         </form>
 
-        <div class="auth-divider"><span>or</span></div>
-        <a href="/api/auth/google" class="pill-btn google-btn" id="google-btn">Continue with Google</a>
+        <div class="auth-divider"><span data-i18n="auth.or">or</span></div>
+        <a href="/api/auth/google" class="pill-btn google-btn" id="google-btn" data-i18n="auth.google">Continue with Google</a>
+
+        <button type="button" class="lang-toggle auth-lang-toggle" id="lang-toggle-auth" data-i18n="lang.switch" data-i18n-aria="lang.switch.aria">فارسی</button>
       </div>
     </div>
 
@@ -93,25 +116,26 @@
         <div class="sidebar-header">
           <p class="sidebar-title">Study Buddy</p>
           <span class="sidebar-header-actions">
-            <button type="button" id="settings-btn" class="icon-btn" aria-label="Settings" title="Settings">⚙</button>
-            <button type="button" id="logout-btn" class="icon-btn" aria-label="Log out" title="Log out">⏻</button>
+            <button type="button" class="lang-toggle" id="lang-toggle" data-i18n="lang.switch" data-i18n-aria="lang.switch.aria">فارسی</button>
+            <button type="button" id="settings-btn" class="icon-btn" data-i18n-aria="nav.settings" data-i18n-title="nav.settings" aria-label="Settings" title="Settings">⚙</button>
+            <button type="button" id="logout-btn" class="icon-btn" data-i18n-aria="nav.logout" data-i18n-title="nav.logout" aria-label="Log out" title="Log out">⏻</button>
           </span>
         </div>
 
         <div class="sidebar-nav">
-          <button type="button" class="sidebar-nav-btn active" data-view="chats">Chats</button>
-          <button type="button" class="sidebar-nav-btn" data-view="planner">Planner</button>
-          <button type="button" class="sidebar-nav-btn" data-view="video">Video</button>
+          <button type="button" class="sidebar-nav-btn active" data-view="chats" data-i18n="nav.chats">Chats</button>
+          <button type="button" class="sidebar-nav-btn" data-view="planner" data-i18n="nav.planner">Planner</button>
+          <button type="button" class="sidebar-nav-btn" data-view="video" data-i18n="nav.video">Video</button>
         </div>
 
         <div id="chat-nav-extras">
           <div class="sidebar-new-buttons">
-            <button type="button" id="new-session-btn" class="pill-btn sidebar-new-btn">+ Study session</button>
-            <button type="button" id="new-workout-btn" class="pill-btn sidebar-new-btn">+ Workout plan</button>
-            <button type="button" id="new-diet-btn" class="pill-btn sidebar-new-btn">+ Nutrition plan</button>
-            <button type="button" id="new-tutor-btn" class="pill-btn sidebar-new-btn">+ Ask AI Teacher</button>
+            <button type="button" id="new-session-btn" class="pill-btn sidebar-new-btn" data-i18n="nav.new.study">+ Study session</button>
+            <button type="button" id="new-workout-btn" class="pill-btn sidebar-new-btn" data-i18n="nav.new.workout">+ Workout plan</button>
+            <button type="button" id="new-diet-btn" class="pill-btn sidebar-new-btn" data-i18n="nav.new.diet">+ Nutrition plan</button>
+            <button type="button" id="new-tutor-btn" class="pill-btn sidebar-new-btn" data-i18n="nav.new.tutor">+ Ask AI Teacher</button>
           </div>
-          <p class="sidebar-label">Recent chats</p>
+          <p class="sidebar-label" data-i18n="nav.recent">Recent chats</p>
           <div class="sidebar-list" id="sidebar-list"></div>
         </div>
       </aside>
@@ -123,11 +147,11 @@
         </header>
 
         <div class="key-banner" id="key-banner" hidden>
-          <p><strong>Add your free AI key to start studying.</strong> It takes a minute and no card is needed.</p>
-          <button type="button" class="pill-btn primary-btn" id="key-banner-btn">Add key</button>
+          <p data-i18n-html="chat.keyBannerHtml"><strong>Add your free AI key to start studying.</strong> It takes a minute and no card is needed.</p>
+          <button type="button" class="pill-btn primary-btn" id="key-banner-btn" data-i18n="chat.keyBannerBtn">Add key</button>
         </div>
 
-        <div class="segmented glass" id="phase-tracker" role="list" aria-label="Study phases"></div>
+        <div class="segmented glass" id="phase-tracker" role="list" data-i18n-aria="chat.phasesAria" aria-label="Session phases"></div>
 
         <div class="chat-card glass">
           <div class="transcript" id="chat-log" aria-live="polite"></div>
@@ -137,49 +161,48 @@
           <textarea
             id="message-input"
             placeholder="Message Study Buddy…"
+            data-i18n-placeholder="chat.placeholder"
             rows="1"
           ></textarea>
-          <button type="submit" id="send-btn" class="send-btn" aria-label="Send">↑</button>
+          <button type="submit" id="send-btn" class="send-btn" data-i18n-aria="chat.send" aria-label="Send">↑</button>
         </form>
 
         <div class="controls">
-          <span class="status" id="foot-phase">Warm-Up — step 1 of 4</span>
+          <span class="status" id="foot-phase"></span>
           <span class="controls-actions">
-            <button type="button" id="next-phase-btn" class="pill-btn glass">Next Phase</button>
+            <button type="button" id="next-phase-btn" class="pill-btn glass" data-i18n="chat.nextPhase">Next Phase</button>
           </span>
         </div>
       </div>
 
       <div class="shell" id="planner-shell" hidden>
         <header class="brand chat-brand">
-          <h1>Planner</h1>
-          <p class="tagline">Assignments and due dates, at a glance.</p>
+          <h1 data-i18n="planner.title">Planner</h1>
+          <p class="tagline" data-i18n="planner.tagline">Assignments and due dates, at a glance.</p>
         </header>
 
         <div class="calendar-card glass">
           <div class="calendar-nav">
-            <button type="button" id="cal-prev" class="icon-btn" aria-label="Previous month">‹</button>
+            <button type="button" id="cal-prev" class="icon-btn cal-arrow" data-i18n-aria="planner.prevMonth" aria-label="Previous month">‹</button>
             <span id="cal-month-year" class="calendar-month-label"></span>
-            <button type="button" id="cal-today" class="pill-btn small-btn">Today</button>
-            <button type="button" id="cal-next" class="icon-btn" aria-label="Next month">›</button>
+            <button type="button" id="cal-today" class="pill-btn small-btn" data-i18n="planner.today">Today</button>
+            <button type="button" id="cal-next" class="icon-btn cal-arrow" data-i18n-aria="planner.nextMonth" aria-label="Next month">›</button>
           </div>
-          <div class="calendar-weekdays">
-            <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
-          </div>
+          <div class="calendar-weekdays" id="calendar-weekdays"></div>
           <div class="calendar-grid" id="calendar-grid"></div>
         </div>
 
         <form class="task-form glass" id="task-form">
-          <input type="text" id="task-title" placeholder="New task…" required />
-          <input type="date" id="task-due-date" aria-label="Due date" />
-          <input type="text" id="task-subject" placeholder="Subject" aria-label="Subject" />
-          <button type="submit" class="pill-btn primary-btn">Add</button>
+          <input type="text" id="task-title" placeholder="New task…" data-i18n-placeholder="planner.newTask" required />
+          <input type="date" id="task-due-date" data-i18n-aria="planner.dueDate" aria-label="Due date" />
+          <input type="text" id="task-subject" placeholder="Subject" data-i18n-placeholder="planner.subject" data-i18n-aria="planner.subject" aria-label="Subject" />
+          <button type="submit" class="pill-btn primary-btn" data-i18n="planner.add">Add</button>
         </form>
 
         <div class="chat-card glass task-list-card">
           <div class="task-list-header">
-            <p class="task-list-heading" id="task-list-heading">All tasks</p>
-            <button type="button" id="task-filter-clear" class="icon-btn" aria-label="Clear filter" hidden>×</button>
+            <p class="task-list-heading" id="task-list-heading" data-i18n="planner.allTasks">All tasks</p>
+            <button type="button" id="task-filter-clear" class="icon-btn" data-i18n-aria="planner.clearFilter" aria-label="Clear filter" hidden>×</button>
           </div>
           <div class="task-list" id="task-list"></div>
         </div>
@@ -187,20 +210,20 @@
 
       <div class="shell" id="video-shell" hidden>
         <header class="brand chat-brand">
-          <h1>Video Summarizer</h1>
-          <p class="tagline">Turn any YouTube video into study notes.</p>
+          <h1 data-i18n="video.title">Video Summarizer</h1>
+          <p class="tagline" data-i18n="video.tagline">Turn any YouTube video into study notes.</p>
         </header>
 
         <form class="task-form glass" id="video-form">
-          <input type="url" id="video-url" placeholder="Paste a YouTube link…" required />
-          <button type="submit" id="video-submit-btn" class="pill-btn primary-btn">Summarize</button>
+          <input type="url" id="video-url" placeholder="Paste a YouTube link…" data-i18n-placeholder="video.placeholder" required />
+          <button type="submit" id="video-submit-btn" class="pill-btn primary-btn" data-i18n="video.submit">Summarize</button>
         </form>
 
         <div id="video-error-block" class="chat-card glass video-error-block" hidden>
           <p class="video-error-text" id="video-error-text"></p>
-          <p class="video-fallback-label" id="video-fallback-label">You can paste the transcript in yourself instead:</p>
-          <textarea id="video-manual-transcript" placeholder="Paste the video's transcript here…" rows="5"></textarea>
-          <button type="button" id="video-manual-submit-btn" class="pill-btn primary-btn">Summarize pasted transcript</button>
+          <p class="video-fallback-label" id="video-fallback-label" data-i18n="video.fallbackLabel">You can paste the transcript in yourself instead:</p>
+          <textarea id="video-manual-transcript" placeholder="Paste the video's transcript here…" data-i18n-placeholder="video.transcriptPlaceholder" rows="5"></textarea>
+          <button type="button" id="video-manual-submit-btn" class="pill-btn primary-btn" data-i18n="video.manualSubmit">Summarize pasted transcript</button>
         </div>
 
         <div id="video-result-block" class="chat-card glass" hidden>
@@ -209,95 +232,104 @@
           <div class="video-summary" id="video-summary"></div>
         </div>
 
-        <p class="sidebar-label" id="video-history-label" hidden>Recent summaries</p>
+        <p class="sidebar-label" id="video-history-label" data-i18n="video.recent" hidden>Recent summaries</p>
         <div class="sidebar-list video-history-list" id="video-history-list"></div>
       </div>
 
       <div class="shell" id="settings-shell" hidden>
         <header class="brand chat-brand">
-          <h1>Settings</h1>
-          <p class="tagline">Your profile, theme, and plan.</p>
+          <h1 data-i18n="settings.title">Settings</h1>
+          <p class="tagline" data-i18n="settings.tagline">Your profile, theme, and plan.</p>
         </header>
 
         <div class="chat-card glass settings-card">
-          <p class="settings-section-label">Profile</p>
+          <p class="settings-section-label" data-i18n="settings.profile">Profile</p>
           <form id="profile-form" class="settings-form">
             <label class="settings-field">
-              <span>Name</span>
-              <input type="text" id="settings-display-name" placeholder="Your name" />
+              <span data-i18n="auth.name">Name</span>
+              <input type="text" id="settings-display-name" placeholder="Your name" data-i18n-placeholder="settings.yourName" />
             </label>
             <label class="settings-field">
-              <span>Email</span>
+              <span data-i18n="auth.email">Email</span>
               <input type="email" id="settings-email" disabled />
             </label>
             <p class="auth-error" id="profile-error"></p>
-            <p class="settings-saved" id="profile-saved" hidden>Saved.</p>
-            <button type="submit" class="pill-btn primary-btn settings-save-btn">Save profile</button>
+            <p class="settings-saved" id="profile-saved" data-i18n="settings.saved" hidden>Saved.</p>
+            <button type="submit" class="pill-btn primary-btn settings-save-btn" data-i18n="settings.saveProfile">Save profile</button>
           </form>
         </div>
 
         <div class="chat-card glass settings-card">
-          <p class="settings-section-label">Appearance</p>
-          <div class="theme-picker" id="theme-picker">
-            <button type="button" class="theme-option" data-theme="system">System</button>
-            <button type="button" class="theme-option" data-theme="light">Light</button>
-            <button type="button" class="theme-option" data-theme="dark">Dark</button>
+          <p class="settings-section-label" data-i18n="settings.language">Language</p>
+          <div class="theme-picker" id="language-picker">
+            <button type="button" class="theme-option" data-language="en">English</button>
+            <button type="button" class="theme-option" data-language="fa">فارسی</button>
           </div>
         </div>
 
         <div class="chat-card glass settings-card">
-          <p class="settings-section-label">Password</p>
+          <p class="settings-section-label" data-i18n="settings.appearance">Appearance</p>
+          <div class="theme-picker" id="theme-picker">
+            <button type="button" class="theme-option" data-theme="system" data-i18n="settings.themeSystem">System</button>
+            <button type="button" class="theme-option" data-theme="light" data-i18n="settings.themeLight">Light</button>
+            <button type="button" class="theme-option" data-theme="dark" data-i18n="settings.themeDark">Dark</button>
+          </div>
+        </div>
+
+        <div class="chat-card glass settings-card">
+          <p class="settings-section-label" data-i18n="settings.password">Password</p>
           <form id="password-form" class="settings-form">
             <label class="settings-field" id="current-password-field">
-              <span>Current password</span>
+              <span data-i18n="settings.currentPassword">Current password</span>
               <input type="password" id="settings-current-password" autocomplete="current-password" />
             </label>
             <label class="settings-field">
-              <span>New password</span>
-              <input type="password" id="settings-new-password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" />
+              <span data-i18n="settings.newPassword">New password</span>
+              <input type="password" id="settings-new-password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" data-i18n-placeholder="settings.min8" />
             </label>
             <p class="auth-error" id="password-error"></p>
-            <p class="settings-saved" id="password-saved" hidden>Password updated.</p>
-            <button type="submit" class="pill-btn primary-btn settings-save-btn">Update password</button>
+            <p class="settings-saved" id="password-saved" data-i18n="settings.passwordUpdated" hidden>Password updated.</p>
+            <button type="submit" class="pill-btn primary-btn settings-save-btn" data-i18n="settings.updatePassword">Update password</button>
           </form>
         </div>
 
         <div class="chat-card glass settings-card">
-          <p class="settings-section-label">AI key</p>
-          <p class="plan-desc" id="apikey-status">Checking...</p>
+          <p class="settings-section-label" data-i18n="settings.aiKey">AI key</p>
+          <p class="plan-desc" id="apikey-status" data-i18n="settings.checking">Checking...</p>
           <form class="settings-form" id="apikey-form">
             <label>
-              <span id="apikey-label">Your own AI key</span>
+              <span id="apikey-label" data-i18n="settings.yourOwnKey">Your own AI key</span>
               <input
                 type="password"
                 id="apikey-input"
                 autocomplete="off"
                 spellcheck="false"
-                placeholder="Paste your key from aistudio.google.com/apikey"
+                placeholder="Paste your key from your provider"
+                data-i18n-placeholder="settings.keyPlaceholder"
               />
             </label>
             <p class="auth-error" id="apikey-error"></p>
-            <p class="settings-saved" id="apikey-saved" hidden>Key saved.</p>
+            <p class="settings-saved" id="apikey-saved" data-i18n="settings.keySaved" hidden>Key saved.</p>
             <div class="apikey-actions">
-              <button type="submit" class="pill-btn primary-btn settings-save-btn" id="apikey-save">Save key</button>
-              <button type="button" class="pill-btn" id="apikey-remove" hidden>Remove</button>
+              <button type="submit" class="pill-btn primary-btn settings-save-btn" id="apikey-save" data-i18n="settings.saveKey">Save key</button>
+              <button type="button" class="pill-btn" id="apikey-remove" data-i18n="settings.remove" hidden>Remove</button>
             </div>
           </form>
           <p class="setup-note">
-            <span id="apikey-help">Get a free key at
+            <span id="apikey-help" data-i18n-html="settings.keyHelpHtml">Get a free key at
             <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">aistudio.google.com/apikey</a>.
             It's stored for your account only and used just for your own sessions.</span>
           </p>
         </div>
 
         <div class="chat-card glass settings-card">
-          <p class="settings-section-label">Plan</p>
+          <p class="settings-section-label" data-i18n="settings.plan">Plan</p>
           <div class="plan-row">
             <div>
-              <p class="plan-name" id="settings-plan-name">Free plan</p>
-              <p class="plan-desc" id="settings-plan-usage">Limited daily AI messages and monthly video summaries.</p>
+              <p class="plan-name" id="settings-plan-name" data-i18n="settings.planFree">Free plan</p>
+              <p class="plan-desc" id="settings-plan-usage" data-i18n="settings.planDefault">Limited daily AI messages and monthly video summaries.</p>
             </div>
-            <button type="button" id="settings-upgrade-btn" class="pill-btn primary-btn">Upgrade</button>
+            <button type="button" id="settings-upgrade-btn" class="pill-btn primary-btn" data-i18n="settings.upgrade">Upgrade</button>
           </div>
           <p class="auth-error" id="billing-error"></p>
         </div>
@@ -305,6 +337,7 @@
     </div>
   </div>
 
+  <script src="i18n.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

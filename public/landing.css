@@ -413,4 +413,7 @@
 @media (max-width: 560px) {
   .lp-nav-links { display: none; }
   .lp-seg b { display: none; }
+  /* The nav links carried the auto margin that pushed the group over; with
+     them hidden, the language switch has to take it on. */
+  .lp-nav .lang-toggle { margin-inline-start: auto; }
 }

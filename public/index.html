@@ -5,6 +5,31 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Study Buddy — study, train, eat better</title>
   <meta name="description" content="An AI coach that walks you through four phases — for studying, for training, and for eating better." />
+  <script>
+    // Set the language before the first paint. The alternative is rendering
+    // left-to-right and then flipping the whole layout once a script has run,
+    // which is far more jarring than a fraction of a second of nothing.
+    //
+    // Only Persian waits: the markup below is already English, so an English
+    // reader has nothing to wait for. The timeout is a safety net -- if
+    // i18n.js fails to load, the page appears in English rather than staying
+    // blank forever.
+    (function () {
+      var lang = null;
+      try { lang = localStorage.getItem('studybuddy.lang'); } catch (e) { /* blocked */ }
+      if (lang !== 'en' && lang !== 'fa') {
+        lang = String(navigator.language || '').toLowerCase().indexOf('fa') === 0 ? 'fa' : 'en';
+      }
+      var root = document.documentElement;
+      root.lang = lang;
+      root.dir = lang === 'fa' ? 'rtl' : 'ltr';
+      root.dataset.lang = lang;
+      if (lang === 'fa') {
+        root.dataset.i18nPending = '1';
+        setTimeout(function () { delete root.dataset.i18nPending; }, 1500);
+      }
+    })();
+  </script>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="landing.css" />
 </head>
@@ -19,42 +44,43 @@
   <header class="lp-nav">
     <span class="lp-brand">Study Buddy</span>
     <nav class="lp-nav-links">
-      <a href="#tracks">Tracks</a>
-      <a href="#phases">How it works</a>
-      <a href="#more">More</a>
+      <a href="#tracks" data-i18n="lp.nav.tracks">Tracks</a>
+      <a href="#phases" data-i18n="lp.nav.how">How it works</a>
+      <a href="#more" data-i18n="lp.nav.more">More</a>
     </nav>
-    <a class="lp-cta-pill" href="/app">Open the app</a>
+    <button type="button" class="lang-toggle" id="lang-toggle" data-i18n="lang.switch" data-i18n-aria="lang.switch.aria">فارسی</button>
+    <a class="lp-cta-pill" href="/app" data-i18n="lp.nav.open">Open the app</a>
   </header>
 
   <main>
     <section class="lp-hero">
-      <p class="lp-eyebrow reveal">Study · Train · Eat</p>
-      <h1 class="lp-title reveal">One coach.<br />Four phases.<br />Three parts of your life.</h1>
-      <p class="lp-lede reveal">Not a chatbot that answers and forgets. A coach that works out where you are, builds a plan, walks you through it, then adjusts — for a subject you're learning, a body you're training, or the way you eat.</p>
+      <p class="lp-eyebrow reveal" data-i18n="lp.eyebrow">Study · Train · Eat</p>
+      <h1 class="lp-title reveal" data-i18n-html="lp.titleHtml">One coach.<br />Four phases.<br />Three parts of your life.</h1>
+      <p class="lp-lede reveal" data-i18n="lp.lede">Not a chatbot that answers and forgets. A coach that works out where you are, builds a plan, walks you through it, then adjusts — for a subject you're learning, a body you're training, or the way you eat.</p>
       <div class="lp-hero-actions reveal">
-        <a class="lp-cta" href="/app">Start free</a>
-        <a class="lp-ghost" href="#phases">See how it works</a>
+        <a class="lp-cta" href="/app" data-i18n="lp.cta.start">Start free</a>
+        <a class="lp-ghost" href="#phases" data-i18n="lp.cta.how">See how it works</a>
       </div>
-      <p class="lp-scroll-hint reveal" aria-hidden="true">Scroll<span class="lp-scroll-line"></span></p>
+      <p class="lp-scroll-hint reveal" aria-hidden="true"><span data-i18n="lp.scroll">Scroll</span><span class="lp-scroll-line"></span></p>
     </section>
 
     <section class="lp-section" id="tracks">
-      <h2 class="lp-h2 reveal">Three tracks, one method</h2>
+      <h2 class="lp-h2 reveal" data-i18n="lp.tracks.h2">Three tracks, one method</h2>
       <div class="lp-cards">
         <article class="lp-card glass reveal">
-          <span class="lp-card-num">01</span>
-          <h3>Study</h3>
-          <p>Warm-Up, Learn, Practice, Review. It finds out what you already know, teaches in chunks, quizzes you until it sticks, then plans when to revisit.</p>
+          <span class="lp-card-num" data-i18n-num>01</span>
+          <h3 data-i18n="lp.tracks.study.h">Study</h3>
+          <p data-i18n="lp.tracks.study.p">Warm-Up, Learn, Practice, Review. It finds out what you already know, teaches in chunks, quizzes you until it sticks, then plans when to revisit.</p>
         </article>
         <article class="lp-card glass reveal">
-          <span class="lp-card-num">02</span>
-          <h3>Workout</h3>
-          <p>Assess, Plan, Train, Progress. Built around the kit and the hours you actually have — a three-day plan you keep beats a six-day plan you abandon.</p>
+          <span class="lp-card-num" data-i18n-num>02</span>
+          <h3 data-i18n="lp.tracks.workout.h">Workout</h3>
+          <p data-i18n="lp.tracks.workout.p">Assess, Plan, Train, Progress. Built around the kit and the hours you actually have — a three-day plan you keep beats a six-day plan you abandon.</p>
         </article>
         <article class="lp-card glass reveal">
-          <span class="lp-card-num">03</span>
-          <h3>Nutrition</h3>
-          <p>Check In, Shape, Meals, Adjust. Small changes that survive a real week. It adds before it subtracts, and never puts a number on your body.</p>
+          <span class="lp-card-num" data-i18n-num>03</span>
+          <h3 data-i18n="lp.tracks.diet.h">Nutrition</h3>
+          <p data-i18n="lp.tracks.diet.p">Check In, Shape, Meals, Adjust. Small changes that survive a real week. It adds before it subtracts, and never puts a number on your body.</p>
         </article>
       </div>
     </section>
@@ -64,71 +90,72 @@
     <section class="lp-phases" id="phases">
       <div class="lp-phases-inner">
         <div class="lp-sticky">
-          <p class="lp-eyebrow">How a session runs</p>
-          <div class="lp-tracker glass" role="list" aria-label="The four phases">
-            <span class="lp-seg" role="listitem" data-step="0"><b>1</b> Assess</span>
-            <span class="lp-seg" role="listitem" data-step="1"><b>2</b> Plan</span>
-            <span class="lp-seg" role="listitem" data-step="2"><b>3</b> Work</span>
-            <span class="lp-seg" role="listitem" data-step="3"><b>4</b> Adjust</span>
+          <p class="lp-eyebrow" data-i18n="lp.phases.eyebrow">How a session runs</p>
+          <div class="lp-tracker glass" role="list" data-i18n-aria="lp.phases.aria" aria-label="The four phases">
+            <span class="lp-seg" role="listitem" data-step="0"><b data-i18n-num>1</b> <span data-i18n="lp.seg.1">Assess</span></span>
+            <span class="lp-seg" role="listitem" data-step="1"><b data-i18n-num>2</b> <span data-i18n="lp.seg.2">Plan</span></span>
+            <span class="lp-seg" role="listitem" data-step="2"><b data-i18n-num>3</b> <span data-i18n="lp.seg.3">Work</span></span>
+            <span class="lp-seg" role="listitem" data-step="3"><b data-i18n-num>4</b> <span data-i18n="lp.seg.4">Adjust</span></span>
           </div>
-          <p class="lp-sticky-note">Every track follows the same four beats.</p>
+          <p class="lp-sticky-note" data-i18n="lp.sticky.note">Every track follows the same four beats.</p>
         </div>
 
         <ol class="lp-steps">
           <li class="lp-step" data-step="0">
-            <span class="lp-step-num">01</span>
-            <h3>It asks before it tells</h3>
-            <p>No plan until it knows what it's planning for. What you already understand, what equipment you can reach, what you actually like eating. Two or three questions, not a form.</p>
+            <span class="lp-step-num" data-i18n-num>01</span>
+            <h3 data-i18n="lp.step.1.h">It asks before it tells</h3>
+            <p data-i18n="lp.step.1.p">No plan until it knows what it's planning for. What you already understand, what equipment you can reach, what you actually like eating. Two or three questions, not a form.</p>
           </li>
           <li class="lp-step" data-step="1">
-            <span class="lp-step-num">02</span>
-            <h3>Then it builds the plan</h3>
-            <p>Concrete and sized to your week — the concepts to cover, the split to train, the handful of changes to make. Built to fit the constraints you gave it, not an ideal version of you.</p>
+            <span class="lp-step-num" data-i18n-num>02</span>
+            <h3 data-i18n="lp.step.2.h">Then it builds the plan</h3>
+            <p data-i18n="lp.step.2.p">Concrete and sized to your week — the concepts to cover, the split to train, the handful of changes to make. Built to fit the constraints you gave it, not an ideal version of you.</p>
           </li>
           <li class="lp-step" data-step="2">
-            <span class="lp-step-num">03</span>
-            <h3>It works through it with you</h3>
-            <p>One question at a time, one block at a time, one meal at a time. It checks how it's landing and slows down or pushes on based on your answers, not a script.</p>
+            <span class="lp-step-num" data-i18n-num>03</span>
+            <h3 data-i18n="lp.step.3.h">It works through it with you</h3>
+            <p data-i18n="lp.step.3.p">One question at a time, one block at a time, one meal at a time. It checks how it's landing and slows down or pushes on based on your answers, not a script.</p>
           </li>
           <li class="lp-step" data-step="3">
-            <span class="lp-step-num">04</span>
-            <h3>Then it changes its mind</h3>
-            <p>What stuck, what didn't, what to do differently. A missed week is information, not failure — the plan bends to you rather than the other way round.</p>
+            <span class="lp-step-num" data-i18n-num>04</span>
+            <h3 data-i18n="lp.step.4.h">Then it changes its mind</h3>
+            <p data-i18n="lp.step.4.p">What stuck, what didn't, what to do differently. A missed week is information, not failure — the plan bends to you rather than the other way round.</p>
           </li>
         </ol>
       </div>
     </section>
 
     <section class="lp-section" id="more">
-      <h2 class="lp-h2 reveal">And the rest of it</h2>
+      <h2 class="lp-h2 reveal" data-i18n="lp.more.h2">And the rest of it</h2>
       <div class="lp-cards lp-cards-3">
         <article class="lp-card glass reveal">
-          <h3>AI Teacher</h3>
-          <p>A freeform chat for the one-off question that doesn't need a whole session.</p>
+          <h3 data-i18n="lp.more.tutor.h">AI Teacher</h3>
+          <p data-i18n="lp.more.tutor.p">A freeform chat for the one-off question that doesn't need a whole session.</p>
         </article>
         <article class="lp-card glass reveal">
-          <h3>Planner</h3>
-          <p>A calendar and task list for assignments, deadlines and sessions — click a day to filter.</p>
+          <h3 data-i18n="lp.more.planner.h">Planner</h3>
+          <p data-i18n="lp.more.planner.p">A calendar and task list for assignments, deadlines and sessions — click a day to filter.</p>
         </article>
         <article class="lp-card glass reveal">
-          <h3>Video notes</h3>
-          <p>Paste a YouTube link and get structured study notes from it. Paste a transcript directly if the link won't load.</p>
+          <h3 data-i18n="lp.more.video.h">Video notes</h3>
+          <p data-i18n="lp.more.video.p">Paste a YouTube link and get structured study notes from it. Paste a transcript directly if the link won't load.</p>
         </article>
       </div>
     </section>
 
     <section class="lp-final">
-      <h2 class="lp-h2 reveal">Start with whichever one is bothering you today.</h2>
-      <a class="lp-cta lp-cta-big reveal" href="/app">Open Study Buddy</a>
-      <p class="lp-fineprint reveal">Free to use. Training and nutrition guidance here is general — anything medical belongs with a doctor.</p>
+      <h2 class="lp-h2 reveal" data-i18n="lp.final.h2">Start with whichever one is bothering you today.</h2>
+      <a class="lp-cta lp-cta-big reveal" href="/app" data-i18n="lp.final.cta">Open Study Buddy</a>
+      <p class="lp-fineprint reveal" data-i18n="lp.final.fine">Free to use. Training and nutrition guidance here is general — anything medical belongs with a doctor.</p>
     </section>
   </main>
 
   <footer class="lp-footer">
     <span>Study Buddy</span>
-    <a href="/app">Open the app</a>
+    <a href="/app" data-i18n="lp.nav.open">Open the app</a>
   </footer>
 
+  <script src="i18n.js"></script>
   <script src="landing.js"></script>
 </body>
 </html>

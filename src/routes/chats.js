@@ -135,13 +135,15 @@ router.post(
       .slice(-MAX_HISTORY_MESSAGES)
       .map((m) => ({ role: m.role, content: m.content }));
 
+    const lang = req.user.language;
     const system =
       chat.mode === 'tutor'
-        ? getTutorSystemPrompt(chat.topic)
+        ? getTutorSystemPrompt(chat.topic, lang)
         : getSystemPrompt(
             (getPhaseByKey(chat.phase_key, chat.mode) || getPhases(chat.mode)[0]).key,
             chat.topic,
-            chat.mode
+            chat.mode,
+            lang
           );
 
     // The user's turn is already stored so it can be part of the history above.
