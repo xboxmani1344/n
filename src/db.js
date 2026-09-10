@@ -2,10 +2,57 @@
 
 const fs = require('fs');
 const path = require('path');
-const { DatabaseSync } = require('node:sqlite');
+
+// The two ways this fails on a managed host are both silent-looking: the
+// runtime is older than the SQLite module needs, or the database path is not
+// writable because no disk was attached. Both surface as stack traces that say
+// nothing about the actual cause, so check for them by name first.
+
+function die(lines) {
+  console.error('\n' + lines.join('\n') + '\n');
+  process.exit(1);
+}
+
+let DatabaseSync;
+try {
+  ({ DatabaseSync } = require('node:sqlite'));
+} catch (err) {
+  const [major, minor] = process.versions.node.split('.').map(Number);
+  die([
+    'Study Buddy could not start: this Node.js is too old.',
+    '',
+    `  running:  Node ${process.versions.node}`,
+    '  required: Node 22.5 or newer',
+    '',
+    'The database uses Node\'s built-in SQLite, which was added in 22.5.',
+    major < 22 || (major === 22 && minor < 5)
+      ? 'Set a newer Node version in your host\'s settings and redeploy.'
+      : `Unexpected: ${err.code || err.message}`,
+  ]);
+}
 
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'study-buddy.db');
-fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+const DB_DIR = path.dirname(DB_PATH);
+
+// A read-only or missing directory almost always means DB_PATH points at a disk
+// that was never mounted. Saying that plainly is the difference between a
+// two-minute fix and an afternoon.
+try {
+  fs.mkdirSync(DB_DIR, { recursive: true });
+  fs.accessSync(DB_DIR, fs.constants.W_OK);
+} catch (err) {
+  die([
+    'Study Buddy could not start: the database folder is not writable.',
+    '',
+    `  DB_PATH:  ${DB_PATH}`,
+    `  folder:   ${DB_DIR}`,
+    `  error:    ${err.code || err.message}`,
+    '',
+    'On a hosted server this normally means no persistent disk is attached at',
+    'that path, or DB_PATH points somewhere outside the disk. Attach a disk and',
+    'set DB_PATH to a file inside it.',
+  ]);
+}
 
 const db = new DatabaseSync(DB_PATH);
 db.exec('PRAGMA journal_mode = WAL');

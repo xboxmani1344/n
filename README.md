@@ -94,6 +94,34 @@ Everyone who signs in then uses your key, and the Settings panel presents adding
 
 *A free tier will not survive more than one person.* Gemini's free tier allows roughly **5 requests per minute for the whole key**, so a second person chatting at the same time gets "wait about 30 seconds". Sharing a key only works in practice on a paid plan.
 
+## Deploying to a managed host (Liara, Render, etc.)
+
+The app is a normal long-running Node server with a SQLite file, so it runs on
+anything that gives it a persistent disk. It does **not** run on serverless
+platforms such as Vercel: there the filesystem is discarded between invocations,
+so every account, chat and task would vanish on each cold start — silently.
+
+Environment variables to set in the host's panel:
+
+| Variable | Value |
+|---|---|
+| `AI_API_KEY` | your provider key |
+| `AI_BASE_URL` | your provider's endpoint, if it isn't Google |
+| `MODEL_ID` | the model name your provider uses |
+| `SHARED_API_KEY` | `1` if you're paying for the key on your users' behalf |
+| `NODE_ENV` | `production` |
+| `DB_PATH` | a file **inside the mounted disk**, e.g. `/var/lib/data/study-buddy.db` |
+
+Two requirements are worth checking before the first deploy, because both are
+easy to miss and neither is obvious from a stack trace:
+
+- **Node 22.5 or newer.** The database uses Node's built-in SQLite, added in
+  22.5. On an older runtime the app now stops at boot and says so, naming the
+  version it found, rather than failing with `ERR_UNKNOWN_BUILTIN_MODULE`.
+- **A persistent disk, with `DB_PATH` pointing inside it.** Without one the
+  database is wiped on every redeploy. If the path isn't writable the app stops
+  at boot and says which folder it tried, rather than crashing deeper in.
+
 ## Deploy to a live URL (optional)
 
 The repo includes a `render.yaml` blueprint for [Render](https://render.com). Note that Blueprints are a paid Render feature — on the free plan, create a **Web Service** manually instead (build `npm ci`, start `npm start`, instance type **Free**) and set `AI_API_KEY` and `NODE_ENV=production` as environment variables.
