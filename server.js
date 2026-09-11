@@ -148,6 +148,34 @@ app.listen(PORT, () => {
   console.log(`Buddy running at http://localhost:${PORT}`);
   bootSummary();
 
+  // A malformed AI_BASE_URL fails on the first message with a network error
+  // that names nothing. It is worth one line here: a doubled scheme from a
+  // paste - "https:https://..." - is exactly the sort of thing that is
+  // invisible in a settings panel and obvious in a log.
+  //
+  // Checking it parses is not enough: "https:https://host/path" parses fine,
+  // as host "https" with the rest as a path. The tells are a hostname with no
+  // dot in it, and a second scheme further along.
+  let baseLooksWrong = false;
+  try {
+    const parsed = new URL(ai.BASE_URL);
+    baseLooksWrong =
+      !/^https?:$/.test(parsed.protocol) ||
+      !(parsed.hostname.includes('.') || parsed.hostname === 'localhost') ||
+      parsed.pathname.includes('//');
+  } catch {
+    baseLooksWrong = true;
+  }
+  if (baseLooksWrong) {
+    console.error(
+      `\n  WARNING: AI_BASE_URL is not a usable URL:\n    ${ai.BASE_URL}\n` +
+        '  Every message will fail until it is fixed. It should read\n' +
+        '  https://host/path - one scheme only, no trailing slash.\n' +
+        '  Not corrected automatically: your API key is sent to this address,\n' +
+        '  so it is not somewhere to guess at what you meant.\n'
+    );
+  }
+
   // Deployed with no AI settings at all means the defaults are in use, and the
   // default is Google. A server that cannot reach Google will fail every single
   // message with a network error that says nothing about the cause, so say it
