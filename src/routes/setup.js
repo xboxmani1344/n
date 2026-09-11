@@ -51,6 +51,70 @@ function normalizeKey(raw) {
 
 // ---- Server-level setup (local single-user install only) --------------------
 
+// A live test of the AI settings, in plain text, for the person running the
+// site to open on a phone.
+//
+// "Couldn't reach the AI service" is all a chat bubble can honestly say - the
+// person chatting can fix none of it and should not be shown internal
+// addresses. But then nobody could see whether the address was wrong, the key
+// was refused, or the host simply is not reachable from here. This makes one
+// real request and says which of those it was.
+//
+// Behind requireAuth, and it never prints the key - only whether one is set and
+// how long it is, which is enough to tell an empty variable from a truncated
+// paste.
+router.get(
+  '/ai-check',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const key = apiKeys.resolveKey(req.user.id);
+    const lines = [];
+
+    lines.push(`AI_BASE_URL  ${ai.BASE_URL}`);
+    if (ai.baseUrlLooksWrong()) {
+      lines.push('             ^ this is not a usable URL. It should be https://host/path,');
+      lines.push('               one scheme only. A doubled "https:https://" is the usual cause.');
+    }
+    lines.push(`MODEL_ID     ${ai.MODEL_ID}`);
+    lines.push(`API key      ${key ? `set, ${key.length} characters` : 'NOT SET'}`);
+    lines.push('');
+
+    if (!key) {
+      lines.push('No key, so there is nothing to test. Set AI_API_KEY.');
+      return res.type('text/plain').send(lines.join('\n'));
+    }
+
+    lines.push(`Sending one short message to ${ai.BASE_URL}/chat/completions ...`);
+    lines.push('');
+
+    const started = Date.now();
+    try {
+      await ai.complete({
+        system: 'Reply with the single word: ok',
+        messages: [{ role: 'user', content: 'ok' }],
+        maxTokens: 512,
+        apiKey: key,
+      });
+      lines.push(`WORKING — replied in ${Date.now() - started} ms.`);
+      lines.push('The address, the key and the model name are all good.');
+    } catch (err) {
+      lines.push(`FAILED after ${Date.now() - started} ms.`);
+      lines.push('');
+      lines.push(err.message);
+
+      // complete() already turned the cause into a sentence; show it here so it
+      // does not take a log dive to read.
+      if (err.networkDetail) {
+        lines.push('');
+        lines.push('It never connected, so this is the address - not the key and not the model.');
+        lines.push(err.networkDetail);
+      }
+    }
+
+    res.type('text/plain').send(lines.join('\n'));
+  })
+);
+
 router.get('/status', (req, res) => {
   res.json({ configured: ai.isConfigured(), local: serverSetupAvailable(req) });
 });

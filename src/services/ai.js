@@ -136,15 +136,89 @@ function translateHttpError(res, raw) {
   return fail(`The AI service returned an unexpected error (HTTP ${status}).`, 502);
 }
 
+// Node's fetch throws a bare "fetch failed" and puts the reason one level down
+// in err.cause. That reason is the whole diagnosis - ENOTFOUND is a wrong
+// address, ECONNREFUSED is a right address with nothing listening, a timeout is
+// a host this server cannot reach - and it was being thrown away.
+// Whether AI_BASE_URL is shaped like a URL this can actually post to.
+//
+// Checking it parses is not enough: "https:https://host/path" parses happily as
+// host "https" with the rest as a path, which is exactly the doubled-scheme
+// paste that started all this. The tells are a hostname with no dot in it, and
+// a second scheme showing up further along as a doubled slash.
+function baseUrlLooksWrong(url = BASE_URL) {
+  try {
+    const parsed = new URL(url);
+    return (
+      !/^https?:$/.test(parsed.protocol) ||
+      !(parsed.hostname.includes('.') || parsed.hostname === 'localhost') ||
+      parsed.pathname.includes('//')
+    );
+  } catch {
+    return true;
+  }
+}
+
+function networkCause(err) {
+  const cause = err && err.cause;
+  return (cause && (cause.code || cause.name)) || null;
+}
+
+// Plain English for the operator reading the log. Not shown to the person
+// chatting: they cannot fix any of it, and it names internal addresses.
+function explainNetworkCause(code, baseUrl) {
+  let host = null;
+  try {
+    host = new URL(baseUrl).hostname;
+  } catch {
+    /* the URL itself is the problem, which the caller already reports */
+  }
+
+  switch (code) {
+    case 'ENOTFOUND':
+    case 'EAI_AGAIN':
+      return (
+        `DNS could not find "${host || '?'}".` +
+        (host && !host.includes('.') && host !== 'localhost'
+          ? ` That is not a hostname - AI_BASE_URL probably has two schemes in it, like "https:https://...".`
+          : ' Check AI_BASE_URL for a typo.')
+      );
+    case 'ECONNREFUSED':
+      return `"${host}" answered and refused the connection. The address resolves but nothing is serving on that port.`;
+    case 'ECONNRESET':
+      return `The connection to "${host}" was cut mid-request.`;
+    case 'ETIMEDOUT':
+    case 'UND_ERR_CONNECT_TIMEOUT':
+      return `No answer from "${host}". It is probably not reachable from where this server runs.`;
+    case 'CERT_HAS_EXPIRED':
+    case 'UNABLE_TO_VERIFY_LEAF_SIGNATURE':
+    case 'DEPTH_ZERO_SELF_SIGNED_CERT':
+      return `The TLS certificate at "${host}" was rejected (${code}).`;
+    default:
+      return `Could not connect to "${host || baseUrl}"${code ? ` (${code})` : ''}.`;
+  }
+}
+
 function translateNetworkError(err) {
   if (err.name === 'AbortError') {
+    console.error(`AI request timed out after ${REQUEST_TIMEOUT_MS}ms — ${BASE_URL}`);
     return fail('The AI took too long to respond. Please try again.', 504);
   }
-  if (/fetch failed|ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EAI_AGAIN|certificate/i.test(err.message || '')) {
-    return fail(
+
+  const code = networkCause(err);
+  if (code || /fetch failed|ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EAI_AGAIN|certificate/i.test(err.message || '')) {
+    const detail = explainNetworkCause(code, BASE_URL);
+    // The log is where the person who can fix this is looking.
+    console.error(`AI request could not connect: ${detail}\n  AI_BASE_URL = ${BASE_URL}`);
+    const translated = fail(
       "Couldn't reach the AI service. Check the server's connection, and that AI_BASE_URL is reachable from where this is hosted.",
       502
     );
+    // fail() builds a fresh Error, so the reason would be lost here. Carried on
+    // the error rather than folded into the message: the message is rendered
+    // into a chat bubble, and this names internal addresses.
+    translated.networkDetail = detail;
+    return translated;
   }
   return err;
 }
@@ -223,4 +297,13 @@ async function complete({ system, messages, maxTokens = DEFAULT_MAX_TOKENS, apiK
   return text.trim();
 }
 
-module.exports = { complete, isConfigured, serverApiKey, MODEL_ID, BASE_URL };
+module.exports = {
+  complete,
+  isConfigured,
+  serverApiKey,
+  baseUrlLooksWrong,
+  explainNetworkCause,
+  networkCause,
+  MODEL_ID,
+  BASE_URL,
+};

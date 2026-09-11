@@ -47,6 +47,9 @@ const server = spawn(process.execPath, ['server.js'], {
     AI_API_KEY: 'smoke-test-placeholder',
     NODE_ENV: 'test',
     APP_URL: 'https://smoke.example',
+    // A closed port, so the AI diagnostic below fails instantly instead of
+    // waiting out a real provider timeout. No test makes a real AI call.
+    AI_BASE_URL: 'http://127.0.0.1:1/v1',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
 });
@@ -109,6 +112,32 @@ async function waitForListening() {
     );
   } catch (err) {
     report(false, 'track definitions parse', err.message);
+  }
+
+  // The diagnostic that tells the operator why the AI is unreachable. It names
+  // the base URL and the model, so it must not answer a stranger.
+  try {
+    const signedOut = await fetch(`http://127.0.0.1:${PORT}/api/setup/ai-check`);
+    report(signedOut.status === 401, 'the AI check refuses a signed-out request', `got ${signedOut.status}`);
+
+    const signup = await fetch(`http://127.0.0.1:${PORT}/api/auth/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: `aicheck-${Date.now()}@example.com`, password: 'password123' }),
+    });
+    const cookie = (signup.headers.get('set-cookie') || '').split(';')[0];
+    const text = await (
+      await fetch(`http://127.0.0.1:${PORT}/api/setup/ai-check`, { headers: { cookie } })
+    ).text();
+
+    // It must name what is wrong, and must never print the key itself.
+    const namesUrl = text.includes('http://127.0.0.1:1/v1');
+    const saysFailed = /FAILED/.test(text);
+    const leaksKey = text.includes('smoke-test-placeholder');
+    report(namesUrl && saysFailed && !leaksKey, 'the AI check diagnoses a dead endpoint',
+      leaksKey ? 'IT PRINTED THE API KEY' : (namesUrl && saysFailed ? 'names the URL, reports the failure, hides the key' : text.slice(0, 120)));
+  } catch (err) {
+    report(false, 'the AI check', err.message);
   }
 
   // The terms page states every price and every refund window. PLAN_LIMITS is

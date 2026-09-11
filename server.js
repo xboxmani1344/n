@@ -165,26 +165,16 @@ app.listen(PORT, () => {
   // paste - "https:https://..." - is exactly the sort of thing that is
   // invisible in a settings panel and obvious in a log.
   //
-  // Checking it parses is not enough: "https:https://host/path" parses fine,
-  // as host "https" with the rest as a path. The tells are a hostname with no
-  // dot in it, and a second scheme further along.
-  let baseLooksWrong = false;
-  try {
-    const parsed = new URL(ai.BASE_URL);
-    baseLooksWrong =
-      !/^https?:$/.test(parsed.protocol) ||
-      !(parsed.hostname.includes('.') || parsed.hostname === 'localhost') ||
-      parsed.pathname.includes('//');
-  } catch {
-    baseLooksWrong = true;
-  }
-  if (baseLooksWrong) {
+  // The shape check lives in ai.js, so the diagnostic endpoint below asks the
+  // same question rather than repeating the reasoning.
+  if (ai.baseUrlLooksWrong()) {
     console.error(
       `\n  WARNING: AI_BASE_URL is not a usable URL:\n    ${ai.BASE_URL}\n` +
         '  Every message will fail until it is fixed. It should read\n' +
         '  https://host/path - one scheme only, no trailing slash.\n' +
         '  Not corrected automatically: your API key is sent to this address,\n' +
-        '  so it is not somewhere to guess at what you meant.\n'
+        '  so it is not somewhere to guess at what you meant.\n' +
+        '  Signed in, open /api/setup/ai-check to test it live.\n'
     );
   }
 
