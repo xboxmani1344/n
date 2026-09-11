@@ -152,6 +152,10 @@ Environment variables to set in the host's panel:
 | `NODE_ENV` | `production` |
 | `DB_PATH` | a file **inside the mounted disk**, e.g. `/var/lib/data/study-buddy.db` |
 
+**For Liara specifically** there is a click-by-click walkthrough in Persian at
+[`docs/deploy-liara.md`](docs/deploy-liara.md), and a `liara.json` in the repo
+root that declares the platform, the port and the disk mount.
+
 Two requirements are worth checking before the first deploy, because both are
 easy to miss and neither is obvious from a stack trace:
 

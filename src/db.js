@@ -55,8 +55,20 @@ try {
 }
 
 const db = new DatabaseSync(DB_PATH);
-db.exec('PRAGMA journal_mode = WAL');
+
+// A managed host's disk is a network mount, and SQLite will quietly decline WAL
+// on one rather than failing: it stays in rollback-journal mode and carries on.
+// Nothing breaks, but nothing says so either, so read back what actually took
+// effect instead of assuming the PRAGMA above was honoured.
+const journalMode = db.prepare('PRAGMA journal_mode = WAL').get().journal_mode;
 db.exec('PRAGMA foreign_keys = ON');
+
+if (journalMode !== 'wal') {
+  console.warn(
+    `Note: SQLite is in "${journalMode}" mode, not WAL — usually because DB_PATH is on a network disk. ` +
+      'The app works either way; concurrent reads and writes just block each other more.'
+  );
+}
 
 function runMigrations() {
   db.exec(`
