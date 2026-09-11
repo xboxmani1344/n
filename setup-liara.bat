@@ -41,7 +41,18 @@ if not errorlevel 1 goto :havecli
 echo [1/4] Installing the Liara command line tool...
 echo.
 call npm install -g @liara/cli
+if not errorlevel 1 goto :cliinstalled
+
+REM npm's own registry is frequently unreachable from Iran, which shows up as
+REM ECONNRESET rather than as anything that names the cause. A public mirror
+REM usually is reachable, so try one before giving up.
+echo.
+echo       npmjs.org did not respond. Trying a mirror...
+echo.
+call npm install -g @liara/cli --registry=https://registry.npmmirror.com
 if errorlevel 1 goto :cliinstallfailed
+
+:cliinstalled
 echo.
 
 where liara >nul 2>nul
@@ -160,11 +171,25 @@ exit /b 1
 
 :cliinstallfailed
 echo.
-echo [X] Could not install the Liara tool. The error is above.
+echo [X] Could not download the Liara tool.
 echo.
-echo     Most often this is no internet connection, or npm
-echo     needing administrator rights. Try right-clicking this
-echo     file and choosing "Run as administrator".
+echo     If the error above says ECONNRESET, ETIMEDOUT or
+echo     "network", npm's servers are unreachable from your
+echo     connection - not a problem with this script or with
+echo     your account.
+echo.
+echo     Three ways round it, quickest first:
+echo.
+echo       1. Do it in the Liara panel instead. It is about
+echo          five clicks and always works, because the panel
+echo          itself clearly loads for you. See
+echo          docs\deploy-liara.md, steps 2 and 4.
+echo.
+echo       2. Turn your VPN on and run this again.
+echo.
+echo       3. If the error mentions permissions rather than
+echo          the network, right-click this file and choose
+echo          "Run as administrator".
 echo.
 pause
 exit /b 1
