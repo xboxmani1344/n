@@ -8,9 +8,15 @@ const path = require('path');
 // writable because no disk was attached. Both surface as stack traces that say
 // nothing about the actual cause, so check for them by name first.
 
+// Throws rather than exiting, so server.js can catch it and put the reason on
+// a web page. On a managed host the logs are not always easy to reach - the
+// panel's log view can come up empty - and "Application Error" on its own tells
+// nobody anything. The message is worth more in the browser than in a log file
+// no one can open.
 function die(lines) {
-  console.error('\n' + lines.join('\n') + '\n');
-  process.exit(1);
+  const message = lines.join('\n');
+  console.error('\n' + message + '\n');
+  throw Object.assign(new Error(message), { bootFailure: true });
 }
 
 let DatabaseSync;

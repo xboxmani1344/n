@@ -6,7 +6,38 @@ const path = require('path');
 const express = require('express');
 const cookieParser = require('cookie-parser');
 
-const { DB_PATH, onSeparateVolume } = require('./src/db');
+const PORT = process.env.PORT || 3000;
+
+// The database is opened at require time and refuses to start on an old
+// runtime or an unwritable path. Catch that here rather than letting the
+// process die, so the reason can be served instead of vanishing into a log.
+let DB_PATH;
+let onSeparateVolume;
+let bootFailure = null;
+try {
+  ({ DB_PATH, onSeparateVolume } = require('./src/db'));
+} catch (err) {
+  if (!err.bootFailure) throw err;
+  bootFailure = err;
+}
+if (bootFailure) {
+  const app = express();
+  const body = `Study Buddy cannot start.\n\n${bootFailure.message}\n`;
+
+  // Every path, so it does not matter where the reader lands. 503 rather than
+  // 500: this is a configuration problem that a redeploy fixes, and it keeps
+  // the page out of search results in the meantime.
+  app.use((_req, res) => {
+    res.status(503).type('text/plain; charset=utf-8').send(body);
+  });
+
+  app.listen(PORT, () => {
+    console.error(`Serving the failure above at http://localhost:${PORT} until it is fixed.`);
+  });
+
+  return;
+}
+
 const { attachUser } = require('./src/middleware/auth');
 const { errorHandler } = require('./src/middleware/errors');
 const { TRACKS, PHASES } = require('./src/prompts');
@@ -18,8 +49,6 @@ const videoRoutes = require('./src/routes/video');
 const settingsRoutes = require('./src/routes/settings');
 const billingRoutes = require('./src/routes/billing');
 const setupRoutes = require('./src/routes/setup');
-
-const PORT = process.env.PORT || 3000;
 
 const app = express();
 
