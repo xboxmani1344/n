@@ -682,6 +682,24 @@
     opacity: 1;
     transform: none;
   }
+
+  /* The phase walkthrough below still tracks the scroll - which step you are
+     on is state, not movement - it just changes without easing or sliding. */
+  .lp-seg,
+  .lp-seg b,
+  .lp-step {
+    transition: none;
+  }
+
+  .lp-seg.active {
+    transform: none;
+  }
+
+  /* Steps are dimmed until reached, and that stays: it is what shows which one
+     the tracker is pointing at. Only the movement between them goes. */
+  .lp-step.active {
+    transform: none;
+  }
 }
 
 @media (max-width: 560px) {
