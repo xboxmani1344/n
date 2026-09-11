@@ -66,6 +66,17 @@ app.use(cookieParser());
 app.use(attachUser);
 app.use(express.static(path.join(__dirname, 'public')));
 
+// KaTeX is served from the app rather than a CDN. Both this server and most of
+// its readers are in Iran, where a good many CDNs are unreachable - maths that
+// renders for only some visitors is worse than maths that renders for none.
+app.use(
+  '/vendor/katex',
+  express.static(path.join(__dirname, 'node_modules', 'katex', 'dist'), {
+    maxAge: '30d',
+    immutable: true,
+  })
+);
+
 // The marketing page is index.html at /; the application itself lives at /app.
 // Served explicitly because express.static only resolves index.html by
 // directory, and app.html has no directory of its own.

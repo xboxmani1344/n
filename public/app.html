@@ -23,6 +23,7 @@
       }
     })();
   </script>
+  <link rel="stylesheet" href="/vendor/katex/katex.min.css" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -345,7 +346,12 @@
     </div>
   </div>
 
+  <!-- Not deferred: deferred scripts run after the inline ones, so app.js would
+       render the first reply before katex existed and fall back to raw LaTeX.
+       It is served locally with a long cache, so the cost is one first load. -->
+  <script src="/vendor/katex/katex.min.js"></script>
   <script src="i18n.js"></script>
+  <script src="render.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

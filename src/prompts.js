@@ -411,6 +411,11 @@ const TOPIC_LABEL = {
 // interface with an English coach would be a translation of the buttons only.
 // The user still wins the argument: if they write in another language, the
 // model follows them rather than the setting.
+// The interface renders LaTeX, so asking for it consistently is the difference
+// between a real fraction and "d^2y/dx^2" typed out in the middle of a
+// sentence. Only worth saying where maths actually comes up.
+const MATHS_INSTRUCTION = `\n\nMATHS: Write any formula, symbol or equation in LaTeX - $inline$ for something inside a sentence, $$display$$ for one on its own line. That includes single symbols: write $\\Psi$, not Psi. It is rendered properly for the reader, so do not spell out fractions, roots or exponents as plain text.`;
+
 const LANGUAGE_INSTRUCTION = {
   fa: `\n\nLANGUAGE: Write every reply in Persian (Farsi), in natural conversational Persian rather than translated-sounding English. Use Persian numerals (\u06f0-\u06f9) in prose. Technical terms with no settled Persian equivalent may stay in English. If the user writes to you in a different language, reply in theirs instead.`,
   en: '',
@@ -420,6 +425,12 @@ function languageLine(lang) {
   return LANGUAGE_INSTRUCTION[lang] || LANGUAGE_INSTRUCTION.en;
 }
 
+// Study and code are where formulas turn up; a training or nutrition coach has
+// no use for it and the instruction would only be noise in the prompt.
+function mathsLine(trackKey) {
+  return trackKey === 'study' || trackKey === 'code' ? MATHS_INSTRUCTION : '';
+}
+
 function getSystemPrompt(phaseKey, topic, trackKey, lang) {
   const track = getTrack(trackKey);
   const prompts = TRACK_PROMPTS[track.key] || STUDY_PHASE_PROMPTS;
@@ -427,12 +438,12 @@ function getSystemPrompt(phaseKey, topic, trackKey, lang) {
   const topicLine = topic
     ? `\n\nThe ${TOPIC_LABEL[track.key] || TOPIC_LABEL.study} is: "${topic}".`
     : '';
-  return `${base}${topicLine}${languageLine(lang)}`;
+  return `${base}${topicLine}${mathsLine(track.key)}${languageLine(lang)}`;
 }
 
 function getTutorSystemPrompt(topic, lang) {
   const topicLine = topic ? `\n\nThe learner's current topic of interest is: "${topic}".` : '';
-  return `${TUTOR_PROMPT}${topicLine}${languageLine(lang)}`;
+  return `${TUTOR_PROMPT}${topicLine}${MATHS_INSTRUCTION}${languageLine(lang)}`;
 }
 
 module.exports = {

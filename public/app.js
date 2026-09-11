@@ -502,7 +502,10 @@
 
     const body = document.createElement('span');
     body.className = 'body';
-    body.textContent = text;
+    // Only the assistant's side. What the user typed is shown exactly as they
+    // typed it - nobody expects their own asterisks to disappear.
+    if (role === 'bot' && window.renderMessage) window.renderMessage(text, body);
+    else body.textContent = text;
 
     div.appendChild(who);
     div.appendChild(body);
