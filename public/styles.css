@@ -1426,57 +1426,72 @@ html[data-i18n-pending] body {
 }
 
 /* ==========================================================================
-   Per-track tint
+   Per-track colour
    ==========================================================================
-   Only the landing page sets data-track, and only while its tracks section
-   holds the viewport. The app never sets it, so none of this reaches /app.
+   Set on the root by the landing page as its carousel scrolls, and by the app
+   whenever a chat of that track is open. That is also what tells the three
+   apart at a glance: a workout session and a nutrition session no longer look
+   like the same screen with different words in it.
 
-   Kept deliberately faint. The site is monochrome by choice; this is a shift
-   in temperature, not a colour scheme - enough that scrolling from study to
-   training feels like moving somewhere else, not enough to read as "the blue
-   page" and "the orange page".
+   Study and the planner stay black and white - they are the reading surfaces,
+   and colour there would fight the text. Training takes green-blue, nutrition
+   orange-yellow.
 
-   Only the backdrop tokens are touched. Text, glass and fills stay exactly as
-   they are, so contrast is unchanged whatever track is showing. */
+   Only backdrop tokens move. Text, glass and fills are untouched, so contrast
+   is identical whichever track is showing. */
 
 :root[data-track='study'] {
-  --tint: 214 30%;
-  --tint-ground: #e6e9ed;
-  --tint-ground-dark: #080a0e;
+  /* Deliberately no tint: study is the monochrome one. */
+  --tint-ground: #e9e9e7;
+  --tint-ground-dark: #0a0a0a;
 }
 
 :root[data-track='workout'] {
-  --tint: 24 38%;
-  --tint-ground: #ede8e3;
-  --tint-ground-dark: #0e0906;
+  --tint: 187 58%;
+  --tint-ground: #dceaec;
+  --tint-ground-dark: #04100f;
 }
 
 :root[data-track='diet'] {
-  --tint: 146 26%;
-  --tint-ground: #e6ebe7;
-  --tint-ground-dark: #060c08;
+  --tint: 38 72%;
+  --tint-ground: #f3e9d8;
+  --tint-ground-dark: #120c03;
 }
 
 :root[data-track] {
   --bg-solid: var(--tint-ground);
-  --blob-strong: hsl(var(--tint) 38% / 0.17);
-  --blob-soft: hsl(var(--tint) 94% / 0.72);
+}
+
+/* Study defines no hue, so these only apply to the two coloured tracks. */
+:root[data-track='workout'],
+:root[data-track='diet'] {
+  --blob-strong: hsl(var(--tint) 44% / 0.30);
+  --blob-soft: hsl(var(--tint) 88% / 0.85);
+  --blob: hsl(var(--tint) 92% / 0.85);
 }
 
 @media (prefers-color-scheme: dark) {
   :root[data-track]:not([data-theme='light']) {
     --bg-solid: var(--tint-ground-dark);
-    --blob: hsl(var(--tint) 74% / 0.13);
-    --blob-strong: hsl(var(--tint) 68% / 0.08);
-    --blob-soft: hsl(var(--tint) 80% / 0.16);
+  }
+
+  :root[data-track='workout']:not([data-theme='light']),
+  :root[data-track='diet']:not([data-theme='light']) {
+    --blob: hsl(var(--tint) 62% / 0.24);
+    --blob-strong: hsl(var(--tint) 56% / 0.16);
+    --blob-soft: hsl(var(--tint) 70% / 0.28);
   }
 }
 
 :root[data-theme='dark'][data-track] {
   --bg-solid: var(--tint-ground-dark);
-  --blob: hsl(var(--tint) 74% / 0.13);
-  --blob-strong: hsl(var(--tint) 68% / 0.08);
-  --blob-soft: hsl(var(--tint) 80% / 0.16);
+}
+
+:root[data-theme='dark'][data-track='workout'],
+:root[data-theme='dark'][data-track='diet'] {
+  --blob: hsl(var(--tint) 62% / 0.24);
+  --blob-strong: hsl(var(--tint) 56% / 0.16);
+  --blob-soft: hsl(var(--tint) 70% / 0.28);
 }
 
 /* The retint is the transition. Slow enough to read as the room changing

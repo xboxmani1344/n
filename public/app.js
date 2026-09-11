@@ -406,8 +406,23 @@
     });
   }
 
+  // Colours the whole app for the track being worked on, using the same root
+  // attribute the landing page drives. It is what makes a workout session and a
+  // nutrition session read as different places rather than the same screen with
+  // different words in it.
+  //
+  // Cleared outside the chat view: the planner and the video pages belong to no
+  // track, and leaving the last one's colour behind would look like a bug.
+  function applyTrackColour(track) {
+    const root = document.documentElement;
+    if (track) root.dataset.track = track;
+    else delete root.dataset.track;
+  }
+
   function applyModeChrome() {
     const isTutor = currentMode === 'tutor';
+    // The tutor is freeform and belongs to no track, so it stays neutral.
+    applyTrackColour(isTutor ? null : trackKey(currentMode));
     phaseTracker.hidden = isTutor;
     nextPhaseBtn.hidden = isTutor;
 
@@ -624,6 +639,10 @@
     if (view === 'settings') {
       initSettings();
     }
+
+    // Only the chat view belongs to a track.
+    if (view === 'chats') applyModeChrome();
+    else applyTrackColour(null);
   }
 
   sidebarNavBtns.forEach((btn) => {
