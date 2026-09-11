@@ -1,9 +1,12 @@
 {
-  "platform": "node",
+  "app": "studybuddy",
+  "port": 3000,
+  "build": {
+    "location": "iran"
+  },
   "node": {
     "version": "22"
   },
-  "port": 3000,
   "disks": [
     {
       "name": "data",
