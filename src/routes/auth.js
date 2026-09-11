@@ -14,6 +14,7 @@ const {
 const { asyncHandler } = require('../middleware/errors');
 const discounts = require('../services/discounts');
 const welcomeEmail = require('../services/welcomeEmail');
+const { appOrigin, googleCallbackUrl } = require('../services/appUrl');
 
 const router = express.Router();
 const isProd = process.env.NODE_ENV === 'production';
@@ -77,8 +78,7 @@ function createUserWithFreeSubscription({ email, passwordHash, displayName, lang
 function sendWelcome(userId, req) {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
   if (!user) return;
-  const origin = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
-  welcomeEmail.sendWelcome(user, origin.replace(/\/$/, ''));
+  welcomeEmail.sendWelcome(user, appOrigin(req));
 }
 
 router.post(
@@ -145,11 +145,19 @@ router.get('/me', (req, res) => {
   res.json({ user: publicUser(req.user) });
 });
 
-function googleRedirectUri(req) {
-  if (process.env.GOOGLE_REDIRECT_URI) return process.env.GOOGLE_REDIRECT_URI;
-  const proto = req.headers['x-forwarded-proto'] || req.protocol;
-  return `${proto}://${req.get('host')}/api/auth/google/callback`;
-}
+// Prints the exact string this app sends to Google, so it can be copied into
+// the OAuth client's "Authorized redirect URIs" instead of guessed at.
+//
+// redirect_uri_mismatch names no value, and neither did this app, which left
+// no way to tell a wrong path from a wrong scheme from the wrong box in the
+// console. Open, select, paste.
+//
+// Not behind requireAuth and not gated on Google being configured: it is most
+// needed before sign-in works at all, and it discloses only this app's own
+// public address - the one already in the visitor's address bar.
+router.get('/google/redirect-uri', (req, res) => {
+  res.type('text/plain').send(googleCallbackUrl(req));
+});
 
 router.get('/google', (req, res) => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -167,7 +175,7 @@ router.get('/google', (req, res) => {
 
   const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   url.searchParams.set('client_id', clientId);
-  url.searchParams.set('redirect_uri', googleRedirectUri(req));
+  url.searchParams.set('redirect_uri', googleCallbackUrl(req));
   url.searchParams.set('response_type', 'code');
   url.searchParams.set('scope', 'openid email profile');
   url.searchParams.set('state', state);
@@ -198,7 +206,7 @@ router.get(
         code: String(code),
         client_id: clientId,
         client_secret: clientSecret,
-        redirect_uri: googleRedirectUri(req),
+        redirect_uri: googleCallbackUrl(req),
         grant_type: 'authorization_code',
       }),
     });

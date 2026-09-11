@@ -44,6 +44,7 @@ const server = spawn(process.execPath, ['server.js'], {
     DB_PATH: path.join(dbDir, 'smoke.db'),
     AI_API_KEY: 'smoke-test-placeholder',
     NODE_ENV: 'test',
+    APP_URL: 'https://smoke.example',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
 });
@@ -106,6 +107,18 @@ async function waitForListening() {
     );
   } catch (err) {
     report(false, 'track definitions parse', err.message);
+  }
+
+  // Google compares this string character for character and its error names no
+  // value, so a stray slash introduced by a future refactor should fail here
+  // rather than as a sign-in nobody can debug.
+  try {
+    const res = await fetch(`http://127.0.0.1:${PORT}/api/auth/google/redirect-uri`);
+    const got = await res.text();
+    const want = 'https://smoke.example/api/auth/google/callback';
+    report(got === want, 'the Google redirect URI is exact', got === want ? want : `got ${JSON.stringify(got)}`);
+  } catch (err) {
+    report(false, 'the Google redirect URI is exact', err.message);
   }
 
   // The welcome email goes out the instant the account exists, so the language

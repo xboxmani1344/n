@@ -7,6 +7,7 @@ const { requireAuth } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errors');
 const usage = require('../services/usage');
 const zarinpal = require('../services/zarinpal');
+const { appOrigin } = require('../services/appUrl');
 const discounts = require('../services/discounts');
 
 const router = express.Router();
@@ -18,14 +19,6 @@ function getStripe() {
   if (!key) return null;
   stripeClient = new Stripe(key);
   return stripeClient;
-}
-
-// Stripe needs absolute URLs to send the customer back to. Behind a TLS-terminating
-// proxy `req.protocol` only reports https once `trust proxy` is on (set in server.js);
-// APP_URL is an explicit override for hosts whose forwarded headers differ.
-function appOrigin(req) {
-  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, '');
-  return `${req.protocol}://${req.get('host')}`;
 }
 
 function billingNotConfigured(res) {

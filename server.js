@@ -196,6 +196,26 @@ app.listen(PORT, () => {
   }
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
     console.warn('Note: GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET not set — Google sign-in stays disabled until configured.');
+  } else {
+    // The other half of the same note. Google refuses with
+    // redirect_uri_mismatch and names no value, so the one string that has to
+    // match belongs in the log the operator is already reading after a deploy.
+    const { GOOGLE_CALLBACK_PATH } = require('./src/services/appUrl');
+    const known = process.env.GOOGLE_REDIRECT_URI
+      ? process.env.GOOGLE_REDIRECT_URI.trim().replace(/\/+$/, '')
+      : process.env.APP_URL
+        ? process.env.APP_URL.trim().replace(/\/+$/, '') + GOOGLE_CALLBACK_PATH
+        : null;
+    if (known) {
+      console.log(`Google sign-in: register this exact redirect URI\n  ${known}`);
+    } else {
+      // Without APP_URL the address depends on the request, so the app can only
+      // report it while answering one.
+      console.log(
+        'Google sign-in: register the redirect URI this app sends. To see it,\n' +
+          `  open <your site>${GOOGLE_CALLBACK_PATH.replace('/callback', '/redirect-uri')}`
+      );
+    }
   }
   const zarinpal = require('./src/services/zarinpal');
   if (!zarinpal.isConfigured() && !process.env.STRIPE_SECRET_KEY) {
