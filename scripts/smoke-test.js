@@ -114,6 +114,28 @@ async function waitForListening() {
     report(false, 'track definitions parse', err.message);
   }
 
+  // The doubled-scheme correction. A pure function, so checked directly - and
+  // worth pinning, because the one case that must NOT be corrected (a URL with
+  // no scheme at all, where defaulting to http would send the API key in the
+  // clear) looks similar enough to be broken by a careless edit.
+  try {
+    const { normalizeBaseUrl } = require('../src/services/ai');
+    const cases = [
+      ['https:https://ai.example/api/x/v1', 'https://ai.example/api/x/v1'],
+      ['https://https://ai.example/v1', 'https://ai.example/v1'],
+      ['https:http://internal.example/v1', 'http://internal.example/v1'],
+      ['https://ai.example/v1///', 'https://ai.example/v1'],
+      ['https://ai.example/v1', 'https://ai.example/v1'],
+      // Left exactly as it is: adding a scheme would be a guess, and the wrong
+      // guess sends the key unencrypted.
+      ['ai.example/v1', 'ai.example/v1'],
+    ];
+    const wrong = cases.filter(([input, want]) => normalizeBaseUrl(input) !== want);
+    report(wrong.length === 0, 'AI_BASE_URL normalisation', wrong.length ? wrong.map(([i]) => i).join(', ') : `${cases.length} shapes`);
+  } catch (err) {
+    report(false, 'AI_BASE_URL normalisation', err.message);
+  }
+
   // The diagnostic that tells the operator why the AI is unreachable. It names
   // the base URL and the model, so it must not answer a stranger.
   try {

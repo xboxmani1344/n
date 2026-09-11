@@ -70,7 +70,12 @@ router.get(
     const key = apiKeys.resolveKey(req.user.id);
     const lines = [];
 
-    lines.push(`AI_BASE_URL  ${ai.BASE_URL}`);
+    lines.push(`AI_BASE_URL  ${ai.RAW_BASE_URL}`);
+    if (ai.BASE_URL_WAS_CORRECTED) {
+      lines.push('             ^ this has two schemes in it. Being worked around by using:');
+      lines.push(`               ${ai.BASE_URL}`);
+      lines.push('               Still fix the variable - the workaround is not a promise.');
+    }
     if (ai.baseUrlLooksWrong()) {
       lines.push('             ^ this is not a usable URL. It should be https://host/path,');
       lines.push('               one scheme only. A doubled "https:https://" is the usual cause.');

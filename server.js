@@ -167,6 +167,16 @@ app.listen(PORT, () => {
   //
   // The shape check lives in ai.js, so the diagnostic endpoint below asks the
   // same question rather than repeating the reasoning.
+  // Corrected, not fixed. The variable in the panel is still wrong, and this
+  // says so on every single boot until someone changes it.
+  if (ai.BASE_URL_WAS_CORRECTED) {
+    console.warn(
+      `\n  WARNING: AI_BASE_URL has two schemes in it:\n    ${ai.RAW_BASE_URL}\n` +
+        `  Working around it by using:\n    ${ai.BASE_URL}\n` +
+        '  Fix the variable itself - this workaround is not a promise.\n'
+    );
+  }
+
   if (ai.baseUrlLooksWrong()) {
     console.error(
       `\n  WARNING: AI_BASE_URL is not a usable URL:\n    ${ai.BASE_URL}\n` +

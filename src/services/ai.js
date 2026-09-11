@@ -16,9 +16,32 @@
 
 const DEFAULT_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai';
 
-// Trailing slashes are the classic copy-paste error when a base URL comes out
-// of a dashboard, so normalise rather than producing a 404.
-const BASE_URL = (process.env.AI_BASE_URL || DEFAULT_BASE_URL).replace(/\/+$/, '');
+const RAW_BASE_URL = process.env.AI_BASE_URL || DEFAULT_BASE_URL;
+
+// A base URL pasted out of a dashboard arrives mangled in two predictable ways.
+//
+// Trailing slashes are the ordinary one. The other is a doubled scheme -
+// "https:https://host/path" - from pasting a full URL into a field that already
+// held one. It parses, as host "https" with the rest as a path, so it fails
+// later as a DNS error naming nothing.
+//
+// I did not correct that at first, on the grounds that the API key is sent to
+// this address and so it is no place to guess. On reflection that reasoning
+// does not apply here: nothing is being guessed. The second scheme states the
+// destination explicitly, https included, so there is exactly one reading. What
+// would deserve refusing is a *missing* scheme, where choosing http would send
+// the key in the clear - so that is still refused, not defaulted.
+//
+// The correction is loud: it is reported at boot and by the diagnostic every
+// time, because the variable itself is still wrong and wants fixing at source.
+function normalizeBaseUrl(raw) {
+  const trimmed = String(raw || '').trim().replace(/\/+$/, '');
+  const doubled = trimmed.match(/^https?:\/*(https?:\/\/.+)$/i);
+  return doubled ? doubled[1].replace(/\/+$/, '') : trimmed;
+}
+
+const BASE_URL = normalizeBaseUrl(RAW_BASE_URL);
+const BASE_URL_WAS_CORRECTED = BASE_URL !== RAW_BASE_URL.trim().replace(/\/+$/, '');
 
 const MODEL_ID = process.env.MODEL_ID || 'gemini-3.6-flash';
 
@@ -302,8 +325,11 @@ module.exports = {
   isConfigured,
   serverApiKey,
   baseUrlLooksWrong,
+  normalizeBaseUrl,
   explainNetworkCause,
   networkCause,
   MODEL_ID,
   BASE_URL,
+  RAW_BASE_URL,
+  BASE_URL_WAS_CORRECTED,
 };
