@@ -113,6 +113,10 @@ function bootSummary() {
     `  model     ${ai.MODEL_ID}${ai.isConfigured() ? '' : '   (no key set — the AI cannot reply yet)'}`,
   ];
 
+  if (require('./src/services/usage').UNLOCK_ALL) {
+    lines.push('  tracks    ALL UNLOCKED — every plan has every track (UNLOCK_ALL_TRACKS=1)');
+  }
+
   if (process.env.SHARED_API_KEY === '1') {
     lines.push('  shared    on — every signed-in user spends this key');
   }

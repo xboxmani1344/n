@@ -1482,6 +1482,11 @@ html[data-i18n-pending] body {
 
 :root[data-track] {
   --bg-solid: var(--tint-ground);
+  /* Secondary text is #6e6e6e, which clears 4.5:1 on the plain grey ground and
+     drops to 3.8:1 once the ground is tinted - measured against the painted
+     pixels, not the token. A tint is not worth making body text harder to
+     read, so it darkens while one is on. */
+  --muted: #585858;
 }
 
 /* Study defines no hue, so these only apply to the two coloured tracks. */

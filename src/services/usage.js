@@ -61,9 +61,18 @@ function limitsFor(plan) {
   return PLAN_LIMITS[plan] || PLAN_LIMITS.free;
 }
 
+// A switch for looking at everything without paying for it. Set
+// UNLOCK_ALL_TRACKS=1 to open every track on every plan, including free.
+//
+// An environment variable rather than an edit to the table above, so turning it
+// back off is one change in the host's panel and cannot be forgotten in the
+// code. It is also announced at boot, because a site quietly giving away the
+// thing it sells is worth noticing in a log.
+const UNLOCK_ALL = process.env.UNLOCK_ALL_TRACKS === '1';
+
 // Which coached tracks a plan opens. 'phased' is the old name for study.
 function tracksFor(plan) {
-  return limitsFor(plan).tracks;
+  return UNLOCK_ALL ? PLAN_LIMITS.pro.tracks : limitsFor(plan).tracks;
 }
 
 function canUseTrack(plan, mode) {
@@ -150,6 +159,7 @@ function getUsageSummary(userId) {
 
 module.exports = {
   PAID_PLANS,
+  UNLOCK_ALL,
   PLAN_LIMITS,
   tracksFor,
   canUseTrack,
