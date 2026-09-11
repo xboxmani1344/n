@@ -133,6 +133,19 @@ app.listen(PORT, () => {
   console.log(`Study Buddy running at http://localhost:${PORT}`);
   bootSummary();
 
+  // Deployed with no AI settings at all means the defaults are in use, and the
+  // default is Google. A server that cannot reach Google will fail every single
+  // message with a network error that says nothing about the cause, so say it
+  // here instead, while someone is still looking at the log.
+  if (process.env.NODE_ENV === 'production' && ai.BASE_URL.includes('googleapis.com')) {
+    console.warn(
+      '\n  WARNING: AI_BASE_URL is unset, so this is pointed at Google.\n' +
+        '  Google is unreachable from some regions - notably Iran - and every\n' +
+        '  message will fail with a connection error. Set AI_BASE_URL,\n' +
+        '  MODEL_ID and AI_API_KEY to your provider.\n'
+    );
+  }
+
   if (!ai.isConfigured()) {
     console.warn(
       `Note: no AI API key yet. You don't need to edit any files — open http://localhost:${PORT} and paste your key into the setup screen. Get a free one at https://aistudio.google.com/apikey`
@@ -141,7 +154,8 @@ app.listen(PORT, () => {
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
     console.warn('Note: GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET not set — Google sign-in stays disabled until configured.');
   }
-  if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_PRICE_ID) {
-    console.warn('Note: STRIPE_SECRET_KEY/STRIPE_PRICE_ID not set — upgrades stay disabled until configured.');
+  const zarinpal = require('./src/services/zarinpal');
+  if (!zarinpal.isConfigured() && !process.env.STRIPE_SECRET_KEY) {
+    console.warn('Note: no payment gateway configured — set ZARINPAL_MERCHANT_ID to enable upgrades.');
   }
 });
