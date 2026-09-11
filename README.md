@@ -95,7 +95,7 @@ Running this for one person and running it for strangers are different problems,
 
 That isn't bureaucracy — the free tier allows roughly **5 requests per minute per key**, so a shared key means two people studying simultaneously interfere with each other. Google also attributes every prompt to the key's owner, so a shared key means your account is credited with strangers' conversations.
 
-If you genuinely want everyone on one key — because you're paying for it and accept that attribution — set `SHARED_API_KEY=1`. Users can still add their own to opt out of the shared pool.
+**Setting `AI_API_KEY` on a deployment means everyone uses it.** That is the default, because configuring a server key and then still demanding one from every visitor is not something anyone wants. Users can add their own to opt out of the shared pool. For the opposite — a public deployment where each user must bring a key — set `SHARED_API_KEY=0` and leave `AI_API_KEY` unset.
 
 Keys are validated against Google before they're saved, so a mistyped key is rejected at entry rather than failing later mid-conversation.
 
@@ -122,7 +122,6 @@ If you'd rather your users didn't have to get their own key, set both:
 
 ```bash
 AI_API_KEY=your-key
-SHARED_API_KEY=1
 NODE_ENV=production
 ```
 
@@ -148,7 +147,7 @@ Environment variables to set in the host's panel:
 | `AI_API_KEY` | your provider key |
 | `AI_BASE_URL` | your provider's endpoint, if it isn't Google |
 | `MODEL_ID` | the model name your provider uses |
-| `SHARED_API_KEY` | `1` if you're paying for the key on your users' behalf |
+| `SHARED_API_KEY` | leave unset — a configured `AI_API_KEY` is used for everyone by default. `0` makes each user bring their own |
 | `NODE_ENV` | `production` |
 | `DB_PATH` | only if the disk is mounted somewhere other than `<app>/data` (which on Liara is `/app/data`) — the default already points there |
 
@@ -208,7 +207,7 @@ Environment variables (see `.env.example` for details on each):
 | `AI_BASE_URL` | Google's OpenAI-compatible endpoint | any OpenAI-compatible service — see *Choosing an AI provider* |
 | `PORT` | `3000` | port the server listens on |
 | `MODEL_ID` | `gemini-3.6-flash` | Gemini model to use (`gemini-flash-latest` tracks the newest release) |
-| `SHARED_API_KEY` | unset | Only read when `NODE_ENV=production`. Set to `1` to let every signed-in user spend the server's `AI_API_KEY`. Leave unset so each user supplies their own — see below. |
+| `SHARED_API_KEY` | unset | Setting `AI_API_KEY` already means everyone spends it. Set this to `0` for the opposite: a public deployment where each user brings their own key. |
 | `DB_PATH` | `./data/study-buddy.db` | where the SQLite database file lives |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REDIRECT_URI` | — | optional; enables "Continue with Google". Email/password works fully without it. |
 | `STRIPE_SECRET_KEY` / `STRIPE_PRICE_ID` / `STRIPE_WEBHOOK_SECRET` | — | optional; enables real paid-plan upgrades. The free plan (with usage limits) works fully without it — the Upgrade button just explains billing isn't set up yet. |

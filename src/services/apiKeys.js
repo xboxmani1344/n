@@ -3,19 +3,20 @@
 const { db } = require('../db');
 const ai = require('./ai');
 
-// Resolution order matters. A user's own key always wins; the server's
-// key (AI_API_KEY) is only a fallback so a single-person local install keeps
-// working exactly as before without anyone entering a key twice.
+// Resolution order matters. A user's own key always wins; the server's key
+// (AI_API_KEY) is what everyone else spends.
 //
-// On a public deployment you normally leave AI_API_KEY unset, which makes
-// every user supply their own. Set SHARED_API_KEY=1 to deliberately let
-// everyone spend the server's key instead — only sane if you're paying for it
-// and understand every user's prompts are attributed to you.
-const SHARED_KEY_ALLOWED = process.env.SHARED_API_KEY === '1' || !isPublicDeployment();
-
-function isPublicDeployment() {
-  return process.env.NODE_ENV === 'production';
-}
+// Configuring a key ON THE SERVER is taken as meaning it should be used. This
+// used to be the other way round - a deployment ignored its own key unless
+// SHARED_API_KEY=1 was also set - and that default was wrong. Setting a server
+// key and then having the site still demand one from every visitor is not a
+// thing anyone wants; forgetting the second flag just made the site quietly
+// behave the opposite of how it was configured.
+//
+// SHARED_API_KEY=0 turns it back off, for a public deployment where each user
+// really is meant to bring their own. That case now has to be asked for, which
+// is the right way round: it is the unusual one.
+const SHARED_KEY_ALLOWED = process.env.SHARED_API_KEY !== '0';
 
 function getUserKey(userId) {
   const row = db.prepare('SELECT api_key FROM user_api_keys WHERE user_id = ?').get(userId);
