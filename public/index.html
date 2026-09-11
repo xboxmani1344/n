@@ -64,24 +64,64 @@
       <p class="lp-scroll-hint reveal" aria-hidden="true"><span data-i18n="lp.scroll">Scroll</span><span class="lp-scroll-line"></span></p>
     </section>
 
-    <section class="lp-section" id="tracks">
-      <h2 class="lp-h2 reveal" data-i18n="lp.tracks.h2">Three tracks, one method</h2>
-      <div class="lp-cards">
-        <article class="lp-card glass reveal">
-          <span class="lp-card-num" data-i18n-num>01</span>
-          <h3 data-i18n="lp.tracks.study.h">Study</h3>
-          <p data-i18n="lp.tracks.study.p">Warm-Up, Learn, Practice, Review. It finds out what you already know, teaches in chunks, quizzes you until it sticks, then plans when to revisit.</p>
-        </article>
-        <article class="lp-card glass reveal">
-          <span class="lp-card-num" data-i18n-num>02</span>
-          <h3 data-i18n="lp.tracks.workout.h">Workout</h3>
-          <p data-i18n="lp.tracks.workout.p">Assess, Plan, Train, Progress. Built around the kit and the hours you actually have — a three-day plan you keep beats a six-day plan you abandon.</p>
-        </article>
-        <article class="lp-card glass reveal">
-          <span class="lp-card-num" data-i18n-num>03</span>
-          <h3 data-i18n="lp.tracks.diet.h">Nutrition</h3>
-          <p data-i18n="lp.tracks.diet.p">Check In, Shape, Meals, Adjust. Small changes that survive a real week. It adds before it subtracts, and never puts a number on your body.</p>
-        </article>
+    <!-- Scroll-driven track carousel. The section is tall and its inner panel
+         sticks, so the page appears to hold while study / workout / nutrition
+         take it in turn. No scroll is intercepted: this is ordinary scrolling
+         with a pinned child, which keeps momentum scrolling on phones intact.
+         Under reduced motion the CSS unpins it into three plain cards. -->
+    <section class="lp-tracks" id="tracks">
+      <div class="lp-tracks-sticky">
+        <p class="lp-eyebrow" data-i18n="lp.tracks.h2">Three tracks, one method</p>
+
+        <div class="lp-track-stage">
+          <article class="lp-track active" data-track-key="study">
+            <span class="lp-track-glow" aria-hidden="true"></span>
+            <span class="lp-track-emoji" aria-hidden="true">📚</span>
+            <p class="lp-track-count" data-track-count="1"></p>
+            <h3 data-i18n="lp.tracks.study.h">Study</h3>
+            <p class="lp-track-lede" data-i18n="lp.tracks.study.p">Warm-Up, Learn, Practice, Review. It finds out what you already know, teaches in chunks, quizzes you until it sticks, then plans when to revisit.</p>
+            <ul class="lp-track-phases" data-phases="lp.track.study.phases"><li>Warm-Up</li><li>Learn</li><li>Practice</li><li>Review</li></ul>
+            <div class="lp-motes" aria-hidden="true">
+              <span class="lp-mote" style="--i: 0" aria-hidden="true">📖</span>
+              <span class="lp-mote" style="--i: 1" aria-hidden="true">✏️</span>
+              <span class="lp-mote" style="--i: 2" aria-hidden="true">🧠</span>
+              <span class="lp-mote" style="--i: 3" aria-hidden="true">💡</span>
+              <span class="lp-mote" style="--i: 4" aria-hidden="true">🔖</span>
+              </div>
+          </article>
+          <article class="lp-track" data-track-key="workout" aria-hidden="true">
+            <span class="lp-track-glow" aria-hidden="true"></span>
+            <span class="lp-track-emoji" aria-hidden="true">🏋️</span>
+            <p class="lp-track-count" data-track-count="2"></p>
+            <h3 data-i18n="lp.tracks.workout.h">Workout</h3>
+            <p class="lp-track-lede" data-i18n="lp.tracks.workout.p">Assess, Plan, Train, Progress. Built around the kit and the hours you actually have — a three-day plan you keep beats a six-day plan you abandon.</p>
+            <ul class="lp-track-phases" data-phases="lp.track.workout.phases"><li>Assess</li><li>Plan</li><li>Train</li><li>Progress</li></ul>
+            <div class="lp-motes" aria-hidden="true">
+              <span class="lp-mote" style="--i: 0" aria-hidden="true">💪</span>
+              <span class="lp-mote" style="--i: 1" aria-hidden="true">🏃</span>
+              <span class="lp-mote" style="--i: 2" aria-hidden="true">🔥</span>
+              <span class="lp-mote" style="--i: 3" aria-hidden="true">⏱️</span>
+              <span class="lp-mote" style="--i: 4" aria-hidden="true">🥇</span>
+              </div>
+          </article>
+          <article class="lp-track" data-track-key="diet" aria-hidden="true">
+            <span class="lp-track-glow" aria-hidden="true"></span>
+            <span class="lp-track-emoji" aria-hidden="true">🥗</span>
+            <p class="lp-track-count" data-track-count="3"></p>
+            <h3 data-i18n="lp.tracks.diet.h">Nutrition</h3>
+            <p class="lp-track-lede" data-i18n="lp.tracks.diet.p">Check In, Shape, Meals, Adjust. Small changes that survive a real week. It adds before it subtracts, and never puts a number on your body.</p>
+            <ul class="lp-track-phases" data-phases="lp.track.diet.phases"><li>Check In</li><li>Shape</li><li>Meals</li><li>Adjust</li></ul>
+            <div class="lp-motes" aria-hidden="true">
+              <span class="lp-mote" style="--i: 0" aria-hidden="true">🍎</span>
+              <span class="lp-mote" style="--i: 1" aria-hidden="true">🥑</span>
+              <span class="lp-mote" style="--i: 2" aria-hidden="true">🍳</span>
+              <span class="lp-mote" style="--i: 3" aria-hidden="true">💧</span>
+              <span class="lp-mote" style="--i: 4" aria-hidden="true">🌿</span>
+              </div>
+          </article>
+        </div>
+
+        <div class="lp-track-dots" id="lp-track-dots" role="tablist" data-i18n-aria="lp.tracks.h2" aria-label="Three tracks, one method"></div>
       </div>
     </section>
 

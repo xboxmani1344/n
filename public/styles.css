@@ -1422,6 +1422,72 @@ html[data-i18n-pending] body {
   visibility: hidden;
 }
 
+/* ==========================================================================
+   Per-track tint
+   ==========================================================================
+   Only the landing page sets data-track, and only while its tracks section
+   holds the viewport. The app never sets it, so none of this reaches /app.
+
+   Kept deliberately faint. The site is monochrome by choice; this is a shift
+   in temperature, not a colour scheme - enough that scrolling from study to
+   training feels like moving somewhere else, not enough to read as "the blue
+   page" and "the orange page".
+
+   Only the backdrop tokens are touched. Text, glass and fills stay exactly as
+   they are, so contrast is unchanged whatever track is showing. */
+
+:root[data-track='study'] {
+  --tint: 214 30%;
+  --tint-ground: #e6e9ed;
+  --tint-ground-dark: #080a0e;
+}
+
+:root[data-track='workout'] {
+  --tint: 24 38%;
+  --tint-ground: #ede8e3;
+  --tint-ground-dark: #0e0906;
+}
+
+:root[data-track='diet'] {
+  --tint: 146 26%;
+  --tint-ground: #e6ebe7;
+  --tint-ground-dark: #060c08;
+}
+
+:root[data-track] {
+  --bg-solid: var(--tint-ground);
+  --blob-strong: hsl(var(--tint) 38% / 0.17);
+  --blob-soft: hsl(var(--tint) 94% / 0.72);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-track]:not([data-theme='light']) {
+    --bg-solid: var(--tint-ground-dark);
+    --blob: hsl(var(--tint) 74% / 0.13);
+    --blob-strong: hsl(var(--tint) 68% / 0.08);
+    --blob-soft: hsl(var(--tint) 80% / 0.16);
+  }
+}
+
+:root[data-theme='dark'][data-track] {
+  --bg-solid: var(--tint-ground-dark);
+  --blob: hsl(var(--tint) 74% / 0.13);
+  --blob-strong: hsl(var(--tint) 68% / 0.08);
+  --blob-soft: hsl(var(--tint) 80% / 0.16);
+}
+
+/* The retint is the transition. Slow enough to read as the room changing
+   rather than a flicker, and skipped entirely under reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .aurora {
+    transition: background-color 900ms ease;
+  }
+
+  .aurora-blob {
+    transition: background 900ms ease;
+  }
+}
+
 /* The user's bubble is notched on the side it sits against, which swaps. */
 [dir='rtl'] .msg.user .body {
   border-radius: 18px 18px 18px 4px;
@@ -1457,4 +1523,25 @@ html[data-i18n-pending] body {
 .auth-lang-toggle {
   display: block;
   margin: 14px auto 0;
+}
+
+/* --- Persian typography ---------------------------------------------------
+   Persian is a connected script: its letters join, and letter-spacing forces
+   gaps into the middle of words. Tracking that reads as refined in a Latin
+   uppercase label reads as broken text to a Persian reader, so every rule that
+   adds tracking gives it up when the page is in Persian.
+
+   Listed one by one rather than reset globally, because the numeric labels
+   (01, 02, the step numbers) are unaffected -- digits do not join -- and they
+   should keep the tracking that makes them read as a set. */
+:root[lang='fa'] .msg .who,
+:root[lang='fa'] .auth-divider,
+:root[lang='fa'] .sidebar-label,
+:root[lang='fa'] .calendar-weekdays span,
+:root[lang='fa'] .task-list-heading,
+:root[lang='fa'] .settings-section-label,
+:root[lang='fa'] .lp-eyebrow,
+:root[lang='fa'] .lp-scroll-hint,
+:root[lang='fa'] .lp-track-count {
+  letter-spacing: normal;
 }

@@ -217,6 +217,189 @@
   color: var(--muted);
 }
 
+/* --- scroll-driven track carousel ----------------------------------------- */
+/* A tall section with a sticky child. The page keeps scrolling normally - no
+   wheel or touch events are intercepted - but the panel stays put while the
+   three tracks take their turn, which is what reads as the page "holding".
+   Intercepting scroll would have broken momentum scrolling on phones for the
+   same visual result. */
+
+.lp-tracks {
+  position: relative;
+  /* One viewport per track, plus the one the sticky child occupies. */
+  height: 340vh;
+}
+
+.lp-tracks-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  padding: 0 clamp(16px, 5vw, 44px);
+  overflow: hidden;
+}
+
+.lp-track-stage {
+  position: relative;
+  display: grid;
+  width: 100%;
+  max-width: 640px;
+}
+
+/* Every track occupies the same cell, so they cross-fade in place instead of
+   pushing each other around and changing the panel's height. */
+.lp-track {
+  grid-area: 1 / 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0;
+  /* visibility, not display: it keeps the element out of the accessibility
+     tree and out of tab order while still being able to transition. */
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(30px) scale(0.96);
+  transition: opacity 520ms ease, transform 520ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear 520ms;
+}
+
+.lp-track.active {
+  visibility: visible;
+  opacity: 1;
+  transform: none;
+  transition-delay: 0s, 0s, 0s;
+}
+
+/* The one leaving goes up as the one arriving comes from below, so the set
+   reads as a stack being turned rather than a slideshow. */
+.lp-track.leaving {
+  opacity: 0;
+  transform: translateY(-30px) scale(0.96);
+}
+
+.lp-track-emoji {
+  display: block;
+  font-size: clamp(3.2rem, 11vw, 5rem);
+  line-height: 1;
+  margin-bottom: 18px;
+  /* Emoji arrive fully saturated and would be the loudest thing on a
+     monochrome page. Pulling the colour most of the way out lets them read as
+     illustration rather than decoration from another site. */
+  filter: grayscale(0.5);
+}
+
+.lp-track-glow {
+  position: absolute;
+  inset-block-start: -18%;
+  inset-inline-start: 50%;
+  width: min(360px, 70vw);
+  aspect-ratio: 1;
+  translate: -50% 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--blob-soft), transparent 68%);
+  opacity: 0;
+  transition: opacity 700ms ease;
+  pointer-events: none;
+}
+
+.lp-track.active .lp-track-glow { opacity: 1; }
+
+.lp-track-count {
+  margin: 0 0 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.lp-track h3 {
+  margin: 0 0 14px;
+  font-size: clamp(1.8rem, 5vw, 2.6rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.lp-track-lede {
+  margin: 0 0 24px;
+  max-width: 30rem;
+  font-size: clamp(0.94rem, 2.2vw, 1.05rem);
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.lp-track-phases {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lp-track-phases li {
+  padding: 7px 15px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--chip-bg);
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* --- the dots ------------------------------------------------------------- */
+
+.lp-track-dots {
+  display: flex;
+  gap: 10px;
+}
+
+.lp-track-dot {
+  width: 30px;
+  height: 4px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--divider);
+  cursor: pointer;
+  transition: background 300ms ease, width 300ms ease;
+}
+
+.lp-track-dot.active {
+  width: 46px;
+  background: var(--fill);
+}
+
+/* --- drifting emoji ------------------------------------------------------- */
+
+.lp-motes {
+  position: absolute;
+  inset: -10% -6%;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.lp-mote {
+  position: absolute;
+  font-size: clamp(1rem, 2.6vw, 1.5rem);
+  opacity: 0;
+  filter: grayscale(0.65) blur(0.3px);
+}
+
+/* Scattered by hand rather than randomly, so nothing lands on the heading. */
+.lp-mote:nth-child(1) { inset-block-start: 8%;  inset-inline-start: 6%; }
+.lp-mote:nth-child(2) { inset-block-start: 62%; inset-inline-start: 2%; }
+.lp-mote:nth-child(3) { inset-block-start: 22%; inset-inline-end: 5%; }
+.lp-mote:nth-child(4) { inset-block-start: 74%; inset-inline-end: 9%; }
+.lp-mote:nth-child(5) { inset-block-start: 44%; inset-inline-end: 1%; }
+
 /* --- scroll-driven phase walkthrough -------------------------------------- */
 
 .lp-phases {
@@ -377,6 +560,54 @@
   .lp-cards .reveal:nth-child(3) { transition-delay: 0.18s; }
 
   .lp-step.active { transform: translateX(3px); }
+
+  /* --- track carousel motion --------------------------------------------- */
+
+  /* "It rotates" - the emoji turns over as its track arrives, which is the
+     moment that sells the change. Once, on arrival, not on a loop. */
+  .lp-track.active .lp-track-emoji {
+    animation: track-flip 780ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @keyframes track-flip {
+    from { transform: rotateY(-180deg) scale(0.6); opacity: 0; }
+    60%  { transform: rotateY(10deg) scale(1.08); opacity: 1; }
+    to   { transform: none; opacity: 1; }
+  }
+
+  /* The phases land one at a time, so the eye reads them in order instead of
+     meeting four chips at once. */
+  .lp-track-phases li {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  .lp-track.active .lp-track-phases li {
+    animation: chip-in 460ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .lp-track.active .lp-track-phases li:nth-child(1) { animation-delay: 220ms; }
+  .lp-track.active .lp-track-phases li:nth-child(2) { animation-delay: 300ms; }
+  .lp-track.active .lp-track-phases li:nth-child(3) { animation-delay: 380ms; }
+  .lp-track.active .lp-track-phases li:nth-child(4) { animation-delay: 460ms; }
+
+  @keyframes chip-in {
+    to { opacity: 1; transform: none; }
+  }
+
+  /* Slow enough to be atmosphere. Each one is offset so they never pulse
+     together, which would look like a loading state. */
+  .lp-track.active .lp-mote {
+    animation: mote-drift 13s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 1.7s);
+  }
+
+  @keyframes mote-drift {
+    0%   { opacity: 0; transform: translateY(14px) rotate(-6deg); }
+    22%  { opacity: 0.22; }
+    78%  { opacity: 0.22; }
+    100% { opacity: 0; transform: translateY(-26px) rotate(6deg); }
+  }
 }
 
 /* --- narrow screens ------------------------------------------------------- */
@@ -408,6 +639,48 @@
   .lp-seg.active { transform: none; }
   .lp-sticky-note { display: none; }
   .lp-step { min-height: 34vh; }
+
+  /* One viewport has to hold the whole panel on a phone, so the section gets
+     shorter travel and the decoration gives up its space first. */
+  .lp-tracks { height: 300vh; }
+  .lp-tracks-sticky { gap: 16px; }
+  .lp-motes { display: none; }
+  .lp-track-lede { margin-bottom: 18px; }
+}
+
+/* With motion reduced there is nothing to pin: the section becomes the three
+   plain cards it replaced, all visible at once and in order. Nothing is lost -
+   the carousel was presentation, and every word is still on the page. */
+@media (prefers-reduced-motion: reduce) {
+  .lp-tracks { height: auto; }
+
+  .lp-tracks-sticky {
+    position: static;
+    height: auto;
+    padding-block: clamp(60px, 11vh, 120px);
+    overflow: visible;
+  }
+
+  .lp-track-stage {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    max-width: 1040px;
+  }
+
+  .lp-track {
+    grid-area: auto;
+    visibility: visible;
+    opacity: 1;
+    transform: none;
+    border-radius: var(--radius-card);
+    padding: 26px 24px 28px;
+  }
+
+  .lp-track-emoji { font-size: 2.4rem; }
+  .lp-track-glow,
+  .lp-motes,
+  .lp-track-dots { display: none; }
 }
 
 @media (max-width: 560px) {

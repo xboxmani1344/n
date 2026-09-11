@@ -253,6 +253,23 @@
       'Check In, Shape, Meals, Adjust. Small changes that survive a real week. It adds before it subtracts, and never puts a number on your body.',
       'شروع، چارچوب، وعده‌ها، تنظیم. تغییرهای کوچکی که یک هفته‌ی واقعی را دوام می‌آورند. اول اضافه می‌کند بعد کم، و هیچ‌وقت روی بدنت عدد نمی‌گذارد.',
     ],
+    // Phase names for the landing carousel. One string per track, split on the
+    // separator at render time, so a translator moves four names as a phrase
+    // rather than as four disconnected keys.
+    'lp.track.study.phases': [
+      'Warm-Up · Learn · Practice · Review',
+      'گرم‌کردن · یادگیری · تمرین · مرور',
+    ],
+    'lp.track.workout.phases': [
+      'Assess · Plan · Train · Progress',
+      'ارزیابی · برنامه · تمرین · پیشرفت',
+    ],
+    'lp.track.diet.phases': [
+      'Check In · Shape · Meals · Adjust',
+      'شروع · چارچوب · وعده‌ها · تنظیم',
+    ],
+    'lp.track.count': ['Track {n} of {total}', 'مسیر {n} از {total}'],
+    'lp.track.goto': ['Show the {name} track', 'نمایش مسیر {name}'],
     'lp.phases.eyebrow': ['How a session runs', 'یک جلسه چطور پیش می‌رود'],
     'lp.phases.aria': ['The four phases', 'چهار فاز'],
     'lp.seg.1': ['Assess', 'ارزیابی'],
