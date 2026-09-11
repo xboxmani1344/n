@@ -36,7 +36,7 @@ studybuddy   →   https://studybuddy.liara.run
   "port": 3000,
   "build": { "location": "iran" },
   "node": { "version": "22" },
-  "disks": [{ "name": "data", "mountTo": "/usr/src/app/data" }]
+  "disks": [{ "name": "data", "mountTo": "/app/data" }]
 }
 ```
 
@@ -100,7 +100,7 @@ data
 فایل `liara.json` که توی مخزن هست، دیسک را به این مسیر وصل می‌کند:
 
 ```
-/usr/src/app/data
+/app/data
 ```
 
 اگر پنل مسیر دیگری نشان داد، همان را بردار و به من بگو تا `liara.json` و
@@ -140,7 +140,7 @@ SHARED_API_KEY=1
 ```
 
 > **`DB_PATH` لازم نیست.** مسیر پیش‌فرض خود برنامه دقیقاً همان‌جایی است که دیسک
-> وصل می‌شود (`/usr/src/app/data/study-buddy.db`)، پس یکی کمتر برای اشتباه
+> وصل می‌شود (`/app/data/study-buddy.db`)، پس یکی کمتر برای اشتباه
 > نوشتن. اگر روزی دیسک را جای دیگری mount کردی، آن‌وقت این را هم اضافه کن.
 
 `SHARED_API_KEY=1` همان چیزی است که می‌خواستی: **هیچ کاربری لازم نیست کلید
@@ -188,7 +188,7 @@ xboxmani1344/n
 ```
 Study Buddy running at http://localhost:3000
   node      22.22.2
-  database  /usr/src/app/data/study-buddy.db  (on its own disk)
+  database  /app/data/study-buddy.db  (on its own disk)
   ai        https://ai.liara.ir/...
   model     <اسم مدلت>
   shared    on — every signed-in user spends this key

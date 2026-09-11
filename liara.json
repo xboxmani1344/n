@@ -7,7 +7,7 @@
   "disks": [
     {
       "name": "data",
-      "mountTo": "/usr/src/app/data"
+      "mountTo": "/app/data"
     }
   ]
 }
