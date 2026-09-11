@@ -395,21 +395,65 @@
 
   // ---------- Chat view ----------
 
-  function renderPhaseTracker() {
-    phaseTracker.innerHTML = '';
-    currentPhases().forEach((phase, i) => {
-      const span = document.createElement('span');
-      span.className = 'segment';
-      const numEl = document.createElement('span');
-      numEl.className = 'segment-num';
-      numEl.textContent = num(i + 1);
-      span.appendChild(numEl);
-      span.appendChild(document.createTextNode(phaseLabel(phase)));
-      if (i === phaseIndex) span.classList.add('active');
-      else if (i < phaseIndex) span.classList.add('done');
-      phaseTracker.appendChild(span);
-    });
+  // The moving pill behind the active phase. Measured rather than computed from
+  // a fraction, because the segments are flex children whose widths depend on
+  // their labels - which differ per track and per language.
+  function movePhaseIndicator() {
+    const indicator = phaseTracker.querySelector('.segment-indicator');
+    const active = phaseTracker.querySelector('.segment.active');
+    if (!indicator || !active) return;
+
+    // Hidden elements measure as zero, which would collapse the pill and then
+    // animate it back out from nothing when the view returns.
+    if (!active.offsetWidth) return;
+
+    indicator.style.width = `${active.offsetWidth}px`;
+    indicator.style.transform = `translateX(${active.offsetLeft - phaseTracker.clientLeft}px)`;
+    indicator.classList.add('placed');
   }
+
+  function renderPhaseTracker() {
+    const phases = currentPhases();
+    // Rebuilding on every phase change was why nothing animated: a brand new
+    // element has no previous value to transition from, so it simply appears in
+    // its final state. The markup is now built once per track, and moving on is
+    // a class change on elements that already exist.
+    const signature = `${trackKey(currentMode)}:${i18n.lang}`;
+
+    if (phaseTracker.dataset.signature !== signature) {
+      phaseTracker.innerHTML = '';
+
+      const indicator = document.createElement('span');
+      indicator.className = 'segment-indicator';
+      phaseTracker.appendChild(indicator);
+
+      phases.forEach((phase, i) => {
+        const span = document.createElement('span');
+        span.className = 'segment';
+        span.setAttribute('role', 'listitem');
+        const numEl = document.createElement('span');
+        numEl.className = 'segment-num';
+        numEl.textContent = num(i + 1);
+        span.appendChild(numEl);
+        span.appendChild(document.createTextNode(phaseLabel(phase)));
+        phaseTracker.appendChild(span);
+      });
+
+      phaseTracker.dataset.signature = signature;
+    }
+
+    [...phaseTracker.querySelectorAll('.segment')].forEach((el, i) => {
+      el.classList.toggle('active', i === phaseIndex);
+      el.classList.toggle('done', i < phaseIndex);
+    });
+
+    // After layout, so the widths are real.
+    requestAnimationFrame(movePhaseIndicator);
+  }
+
+  // The labels change width with the language, and the segments are flex, so
+  // the pill has to be re-measured on both.
+  window.addEventListener('resize', movePhaseIndicator, { passive: true });
 
   // Colours the whole app for the track being worked on, using the same root
   // attribute the landing page drives. It is what makes a workout session and a
@@ -668,6 +712,7 @@
     sidebarNavBtns.forEach((b) => b.classList.toggle('active', b.dataset.view === view));
 
     appShell.hidden = view !== 'chats';
+    if (view === 'chats') requestAnimationFrame(movePhaseIndicator);
     plannerShell.hidden = view !== 'planner';
     videoShell.hidden = view !== 'video';
     settingsShell.hidden = view !== 'settings';

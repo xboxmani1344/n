@@ -279,20 +279,43 @@ body {
 }
 
 .segmented {
+  position: relative;
   display: flex;
   border-radius: 999px;
   padding: 4px;
   gap: 2px;
 }
 
+/* The filled pill behind the active phase. One element that moves, rather than
+   a background appearing on one segment and disappearing from another - that
+   cross-fade is what made moving on feel like nothing had happened. */
+.segment-indicator {
+  position: absolute;
+  inset-block: 4px;
+  left: 0;
+  width: 0;
+  border-radius: 999px;
+  background: var(--fill);
+  box-shadow: 0 2px 10px var(--glass-shadow);
+  pointer-events: none;
+  opacity: 0;
+}
+
+/* Only once it has been measured, so it never animates out from zero width. */
+.segment-indicator.placed {
+  opacity: 1;
+}
+
 .segmented .segment {
+  position: relative;
+  z-index: 1;
   flex: 1;
   text-align: center;
   padding: 8px 6px;
   border-radius: 999px;
   font-size: 0.76rem;
   color: var(--muted);
-  transition: background 0.25s ease, color 0.25s ease;
+  transition: color 0.3s ease;
 }
 
 .segmented .segment .segment-num {
@@ -300,10 +323,9 @@ body {
   margin-inline-end: 4px;
 }
 
+/* The pill provides the background now. */
 .segmented .segment.active {
-  background: var(--fill);
   color: var(--fill-contrast);
-  box-shadow: 0 2px 10px var(--glass-shadow);
 }
 
 .segmented .segment.done {
@@ -1676,4 +1698,62 @@ html[data-i18n-pending] body {
 /* A code is typed off a screen or an email, so case should not matter. */
 .discount-field input {
   text-transform: uppercase;
+}
+
+/* --- Phase tracker motion ------------------------------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  /* Slightly past 1 on the way in, so the pill settles rather than stopping
+     dead. Width and position move together or it visibly stretches first. */
+  .segment-indicator {
+    transition: transform 0.5s cubic-bezier(0.34, 1.25, 0.64, 1),
+                width 0.5s cubic-bezier(0.34, 1.25, 0.64, 1),
+                opacity 0.2s ease;
+  }
+
+  /* The number of the phase you just reached. Once, on arrival. */
+  .segmented .segment.active .segment-num {
+    animation: phase-num 0.55s cubic-bezier(0.34, 1.4, 0.64, 1);
+  }
+
+  @keyframes phase-num {
+    from { transform: scale(0.4) rotate(-25deg); opacity: 0; }
+    60%  { transform: scale(1.18) rotate(4deg); opacity: 1; }
+    to   { transform: none; }
+  }
+
+  /* A phase already finished reads as behind you, not as another button. */
+  .segmented .segment.done {
+    transition: color 0.3s ease, opacity 0.3s ease;
+  }
+
+  /* The system note announcing the move slides in with it. */
+  .msg.system-note {
+    animation: note-in 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @keyframes note-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  /* New messages arrive rather than appear. */
+  .msg.user,
+  .msg.bot {
+    animation: msg-in 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @keyframes msg-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  /* The thinking indicator, so a wait looks like a wait. */
+  .msg.typing .body {
+    animation: thinking 1.4s ease-in-out infinite;
+  }
+
+  @keyframes thinking {
+    0%, 100% { opacity: 0.4; }
+    50%      { opacity: 1; }
+  }
 }
