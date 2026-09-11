@@ -648,39 +648,40 @@
   .lp-track-lede { margin-bottom: 18px; }
 }
 
-/* With motion reduced there is nothing to pin: the section becomes the three
-   plain cards it replaced, all visible at once and in order. Nothing is lost -
-   the carousel was presentation, and every word is still on the page. */
+/* Reduced motion takes the movement out, not the page apart.
+   
+   This used to unpin the section into a static grid of cards. That meant
+   someone with the setting turned on - which is a common default on Windows -
+   saw a different site from everyone else, and never saw the colours at all,
+   since the scroll driver that sets them was skipped along with the animation.
+   
+   The carousel still holds and the tracks still colour the page. They just
+   change instantly rather than sliding, and nothing drifts or spins. */
 @media (prefers-reduced-motion: reduce) {
-  .lp-tracks { height: auto; }
-
-  .lp-tracks-sticky {
-    position: static;
-    height: auto;
-    padding-block: clamp(60px, 11vh, 120px);
-    overflow: visible;
+  .lp-track,
+  .lp-track-glow,
+  .lp-track-dot,
+  .aurora,
+  .aurora-blob {
+    transition: none;
   }
 
-  .lp-track-stage {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 16px;
-    max-width: 1040px;
+  .lp-track-emoji,
+  .lp-track-phases li,
+  .lp-mote {
+    animation: none;
   }
 
-  .lp-track {
-    grid-area: auto;
-    visibility: visible;
+  /* The drifting emoji are decoration whose only content is movement. */
+  .lp-motes {
+    display: none;
+  }
+
+  /* Chips animate in with a stagger otherwise, and start invisible. */
+  .lp-track-phases li {
     opacity: 1;
     transform: none;
-    border-radius: var(--radius-card);
-    padding: 26px 24px 28px;
   }
-
-  .lp-track-emoji { font-size: 2.4rem; }
-  .lp-track-glow,
-  .lp-motes,
-  .lp-track-dots { display: none; }
 }
 
 @media (max-width: 560px) {
