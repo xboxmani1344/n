@@ -112,6 +112,15 @@
           <button type="submit" class="pill-btn primary-btn" data-i18n="auth.create">Create Account</button>
         </form>
 
+        <!-- Where consent actually happens, so it says so here rather than
+             only in a footer two pages away. -->
+        <p class="auth-consent">
+          <span data-i18n="auth.consent">By creating an account you agree to the</span>
+          <a href="/terms" target="_blank" rel="noopener" data-i18n="legal.terms">Terms</a>
+          <span data-i18n="auth.consentAnd">and</span>
+          <a href="/privacy" target="_blank" rel="noopener" data-i18n="legal.privacy">Privacy</a><span data-i18n="auth.consentEnd">.</span>
+        </p>
+
         <div class="auth-divider"><span data-i18n="auth.or">or</span></div>
         <a href="/api/auth/google" class="pill-btn google-btn" id="google-btn" data-i18n="auth.google">Continue with Google</a>
 
@@ -348,6 +357,21 @@
           </label>
 
           <p class="auth-error" id="billing-error"></p>
+        </div>
+
+        <div class="chat-card glass settings-card danger-card">
+          <p class="settings-section-label" data-i18n="settings.danger">Delete account</p>
+          <p class="plan-desc" data-i18n="settings.dangerBody">This deletes your account and everything in it — every chat and message, your planner, your saved settings. It cannot be undone. Records of payments you have made are kept for accounting, with your account no longer attached to them.</p>
+          <form id="delete-account-form" class="settings-form">
+            <label class="settings-field">
+              <!-- Which of the two is asked for depends on whether the account
+                   has a password at all; app.js sets this from hasPassword. -->
+              <span id="delete-account-label" data-i18n="settings.dangerConfirmPassword">Type your password to confirm</span>
+              <input type="password" id="delete-account-input" autocomplete="off" />
+            </label>
+            <p class="auth-error" id="delete-account-error"></p>
+            <button type="submit" class="pill-btn danger-btn" data-i18n="settings.dangerButton">Delete my account</button>
+          </form>
         </div>
       </div>
     </div>

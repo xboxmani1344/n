@@ -39,6 +39,13 @@
     'auth.name': ['Name', 'نام'],
     'auth.passwordMin': ['Password (min. 8 characters)', 'رمز عبور (حداقل ۸ کاراکتر)'],
     'auth.or': ['or', 'یا'],
+    // --- legal pages ---------------------------------------------------------
+    'legal.privacy': ['Privacy', 'حریم خصوصی'],
+    'legal.terms': ['Terms', 'شرایط استفاده'],
+    'auth.consent': ['By creating an account you agree to the', 'با ساختن حساب،'],
+    'auth.consentAnd': ['and', 'و'],
+    'auth.consentEnd': ['.', 'را می‌پذیری.'],
+
     'auth.google': ['Continue with Google', 'ادامه با گوگل'],
     'auth.googleOff': ['Google sign-in not configured yet', 'ورود با گوگل هنوز تنظیم نشده'],
 
@@ -201,6 +208,17 @@
     'plan.choose': ['Choose', 'انتخاب'],
     'plan.messages': ['{n} messages a day', '{n} پیام در روز'],
     'plan.includes': ['Study', 'درس'],
+    // --- deleting an account -------------------------------------------------
+    'settings.danger': ['Delete account', 'حذف حساب'],
+    'settings.dangerBody': [
+      'This deletes your account and everything in it — every chat and message, your planner, your saved settings. It cannot be undone. Records of payments you have made are kept for accounting, with your account no longer attached to them.',
+      'این کار حساب و همه‌چیز داخلش را پاک می‌کند — همه‌ی گفتگوها و پیام‌ها، برنامه‌ریز، و تنظیماتت. برگشتی ندارد. سابقه‌ی پرداخت‌هایت برای حسابداری نگه داشته می‌شود، بدون اینکه دیگر به حساب تو وصل باشد.',
+    ],
+    'settings.dangerConfirmPassword': ['Type your password to confirm', 'برای تأیید، رمزت را بنویس'],
+    'settings.dangerConfirmEmail': ['Type your email address to confirm', 'برای تأیید، ایمیلت را بنویس'],
+    'settings.dangerButton': ['Delete my account', 'حساب من را حذف کن'],
+    'settings.dangerDeleting': ['Deleting…', 'در حال حذف…'],
+
     'plan.discountLabel': ['Discount code', 'کد تخفیف'],
     'plan.discountYours': ['Your code {code} — {percent}% off', 'کد تو: {code} — {percent}٪ تخفیف'],
     'plan.opening': ['Opening the payment page…', 'در حال باز کردن صفحه‌ی پرداخت…'],

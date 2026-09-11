@@ -28,6 +28,8 @@ const checks = [
   ['/site.webmanifest', 200, 'installable manifest'],
   ['/brand/icon-180.png', 200, 'home-screen icon'],
   ['/brand/og.png', 200, 'link preview image'],
+  ['/privacy', 200, 'privacy policy'],
+  ['/terms', 200, 'terms of service'],
 ];
 
 let failures = 0;
@@ -107,6 +109,50 @@ async function waitForListening() {
     );
   } catch (err) {
     report(false, 'track definitions parse', err.message);
+  }
+
+  // The terms page states every price and every refund window. PLAN_LIMITS is
+  // where both actually live, and a document that disagrees with the checkout
+  // is the one kind of drift that costs money to be wrong about. So the numbers
+  // are read back out of the page and compared, in both languages - the Persian
+  // half is written in Persian numerals and is just as easy to fumble.
+  try {
+    const { PLAN_LIMITS } = require('../src/services/usage');
+    const html = await (await fetch(`http://127.0.0.1:${PORT}/terms`)).text();
+    // Persian digits back to ASCII, so one comparison covers both halves.
+    const ascii = html.replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
+
+    let wrong = [];
+    for (const plan of ['basic', 'plus', 'pro']) {
+      const toman = (PLAN_LIMITS[plan].priceRial / 10).toLocaleString('en-US');
+      const days = PLAN_LIMITS[plan].refundDays;
+      // Twice: once in the English table, once in the Persian one.
+      const prices = (ascii.match(new RegExp(toman.replace(/,/g, ','), 'g')) || []).length;
+      if (prices < 2) wrong.push(`${plan} price ${toman} appears ${prices}x, expected 2`);
+      const windows = (ascii.match(new RegExp(`${days} (days|روز)`, 'g')) || []).length;
+      if (windows < 2) wrong.push(`${plan} refund window ${days} appears ${windows}x, expected 2`);
+    }
+    report(wrong.length === 0, 'terms match PLAN_LIMITS', wrong.length ? wrong.join('; ') : 'prices and refund windows, both languages');
+  } catch (err) {
+    report(false, 'terms match PLAN_LIMITS', err.message);
+  }
+
+  // The contact address is a placeholder until someone fills it in. Failing
+  // only in production makes CI the thing that remembers, rather than a person.
+  try {
+    const pages = await Promise.all(
+      ['/privacy', '/terms'].map(async (r) => [r, await (await fetch(`http://127.0.0.1:${PORT}${r}`)).text()])
+    );
+    const stillPlaceholder = pages.filter(([, html]) => html.includes('legal-todo')).map(([r]) => r);
+    if (process.env.NODE_ENV === 'production') {
+      report(stillPlaceholder.length === 0, 'legal pages name a contact address', stillPlaceholder.join(', ') || 'both filled in');
+    } else {
+      console.log(
+        `skip  legal contact address${stillPlaceholder.length ? '  (still a placeholder on ' + stillPlaceholder.join(', ') + ' - this fails in production)' : ''}`
+      );
+    }
+  } catch (err) {
+    report(false, 'legal pages name a contact address', err.message);
   }
 
   // Google compares this string character for character and its error names no

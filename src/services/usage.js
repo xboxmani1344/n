@@ -14,24 +14,29 @@ const { db } = require('../db');
 // one enthusiastic user and the bill.
 const PLAN_LIMITS = {
   free: {
+    // Nothing was paid, so there is nothing to refund.
+    refundDays: 0,
     priceRial: 0,
     tracks: ['study'],
     ai_messages: { period: 'day', limit: 20 },
     video_summaries: { period: 'month', limit: 3 },
   },
   basic: {
+    refundDays: 3,
     priceRial: 2000000,     // 200,000 Toman
     tracks: ['study', 'workout'],
     ai_messages: { period: 'day', limit: 100 },
     video_summaries: { period: 'month', limit: 15 },
   },
   plus: {
+    refundDays: 5,
     priceRial: 5500000,     // 550,000 Toman
     tracks: ['study', 'workout', 'diet'],
     ai_messages: { period: 'day', limit: 300 },
     video_summaries: { period: 'month', limit: 40 },
   },
   pro: {
+    refundDays: 7,
     priceRial: 12000000,    // 1,200,000 Toman
     tracks: ['study', 'workout', 'diet', 'code'],
     ai_messages: { period: 'day', limit: 1000 },
@@ -53,6 +58,14 @@ function isPaidPlan(plan) {
 function planPriceRial(plan) {
   const entry = PLAN_LIMITS[plan];
   return entry ? entry.priceRial : 0;
+}
+
+// How long after paying this plan can be refunded, in days. Stated in the terms
+// of service, and cross-checked against that page by the smoke test - a
+// document that disagrees with the checkout is expensive to be wrong about.
+function refundDaysFor(plan) {
+  const entry = PLAN_LIMITS[plan];
+  return entry ? entry.refundDays : 0;
 }
 
 // Anything unrecognised - an old row, a hand-edited database - falls back to
@@ -158,6 +171,7 @@ function getUsageSummary(userId) {
 }
 
 module.exports = {
+  refundDaysFor,
   PAID_PLANS,
   UNLOCK_ALL,
   PLAN_LIMITS,

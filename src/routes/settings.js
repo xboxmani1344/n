@@ -4,7 +4,8 @@ const express = require('express');
 const { db } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errors');
-const { hashPassword, verifyPassword } = require('../services/auth');
+const { hashPassword, verifyPassword, SESSION_COOKIE } = require('../services/auth');
+const { transaction } = require('../db');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -85,6 +86,49 @@ router.patch(
     const newHash = await hashPassword(newPassword);
     db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, user.id);
 
+    res.json({ ok: true });
+  })
+);
+
+// Deleting an account, for real: every row belonging to this person goes.
+//
+// Re-authenticated rather than taken on the session cookie alone. The cookie is
+// SameSite=Lax, so a cross-site POST cannot reach here, but a shared or
+// unattended browser can - and this is the one action in the app with nothing
+// behind it.
+router.delete(
+  '/account',
+  asyncHandler(async (req, res) => {
+    const user = req.user;
+    const { password, email } = req.body || {};
+
+    if (user.password_hash) {
+      const ok = typeof password === 'string' && (await verifyPassword(password, user.password_hash));
+      if (!ok) return res.status(401).json({ error: 'That password is not correct.' });
+    } else {
+      // Signed up through Google, so there is no password to ask for. Typing
+      // the address is the confirmation instead - deliberately something to
+      // type rather than a button to click.
+      const typed = typeof email === 'string' && email.trim().toLowerCase();
+      if (typed !== user.email) {
+        return res.status(401).json({ error: 'Type your email address exactly to confirm.' });
+      }
+    }
+
+    // Every per-user table hangs off users(id) with ON DELETE CASCADE, so one
+    // delete empties the lot: sessions, the Google link, the subscription,
+    // chats and their messages, planner tasks, video views, usage counters, a
+    // stored API key, discount codes.
+    //
+    // payments is the deliberate exception. Migration 011 made it ON DELETE SET
+    // NULL: the record that money moved stays, with the person detached from
+    // it, because the operator needs it for accounting and ZarinPal keeps its
+    // side regardless. The privacy policy says so in as many words.
+    transaction(() => {
+      db.prepare('DELETE FROM users WHERE id = ?').run(user.id);
+    });
+
+    res.clearCookie(SESSION_COOKIE);
     res.json({ ok: true });
   })
 );

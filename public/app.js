@@ -150,6 +150,13 @@
   const settingsNewPassword = document.getElementById('settings-new-password');
   const passwordError = document.getElementById('password-error');
   const passwordSaved = document.getElementById('password-saved');
+  const deleteAccountForm = document.getElementById('delete-account-form');
+  const deleteAccountLabel = document.getElementById('delete-account-label');
+  const deleteAccountInput = document.getElementById('delete-account-input');
+  const deleteAccountError = document.getElementById('delete-account-error');
+  // Set when settings load: decides whether the confirmation asks for the
+  // password or, for a Google-only account, the email address.
+  let hasPassword = true;
   const settingsPlanName = document.getElementById('settings-plan-name');
   const settingsPlanUsage = document.getElementById('settings-plan-usage');
   const planGrid = document.getElementById('plan-grid');
@@ -1283,6 +1290,21 @@
       settingsDisplayName.value = data.settings.displayName || '';
       settingsEmail.value = data.settings.email;
       currentPasswordField.hidden = !data.settings.hasPassword;
+
+      // An account created through Google has no password to ask for, so the
+      // confirmation is typing the address instead. Both are something to type;
+      // neither is a button that deletes on one click.
+      hasPassword = data.settings.hasPassword;
+      deleteAccountInput.type = hasPassword ? 'password' : 'email';
+      deleteAccountInput.value = '';
+      deleteAccountLabel.setAttribute(
+        'data-i18n',
+        hasPassword ? 'settings.dangerConfirmPassword' : 'settings.dangerConfirmEmail'
+      );
+      deleteAccountLabel.textContent = tr(
+        hasPassword ? 'settings.dangerConfirmPassword' : 'settings.dangerConfirmEmail'
+      );
+      deleteAccountError.textContent = '';
       applyTheme(data.settings.theme);
       markActiveLanguage();
     }
@@ -1325,6 +1347,36 @@
       applyTheme(theme);
       await api('/api/settings', { method: 'PATCH', body: { theme } });
     });
+  });
+
+  // Deleting the account. The server re-checks whatever is typed here - this
+  // form is a confirmation step, not the security boundary.
+  deleteAccountForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    deleteAccountError.textContent = '';
+
+    const typed = deleteAccountInput.value.trim();
+    if (!typed) return;
+
+    const button = deleteAccountForm.querySelector('button[type="submit"]');
+    button.disabled = true;
+    button.textContent = tr('settings.dangerDeleting');
+
+    const { ok, data } = await api('/api/settings/account', {
+      method: 'DELETE',
+      body: hasPassword ? { password: typed } : { email: typed },
+    });
+
+    if (!ok) {
+      button.disabled = false;
+      button.textContent = tr('settings.dangerButton');
+      deleteAccountError.textContent = (data && data.error) || tr('err.retry');
+      return;
+    }
+
+    // Straight out, rather than back to a signed-in view of an account that no
+    // longer exists. A full load also drops every bit of state this page holds.
+    window.location.href = '/';
   });
 
   passwordForm.addEventListener('submit', async (e) => {

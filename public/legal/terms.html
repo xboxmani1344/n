@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terms of service — Buddy</title>
+  <meta name="description" content="Plans, prices, refunds, and what Buddy is and is not." />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/brand/icon-180.png" />
+  <link rel="manifest" href="/site.webmanifest" />
+  <meta name="theme-color" content="#e9e9e7" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
+  <script>
+    // Set the language before the first paint, so a Persian reader never sees
+    // the page render left-to-right and then flip.
+    //
+    // Unlike the other pages this one does NOT set data-i18n-pending: both
+    // languages are already in the markup and legal.css hides the wrong one
+    // immediately, so there is nothing to wait for. Setting it would blank the
+    // page for up to a second and a half for no reason.
+    (function () {
+      var lang = null;
+      try { lang = localStorage.getItem('studybuddy.lang'); } catch (e) { /* blocked */ }
+      if (lang !== 'en' && lang !== 'fa') {
+        lang = String(navigator.language || '').toLowerCase().indexOf('fa') === 0 ? 'fa' : 'en';
+      }
+      var root = document.documentElement;
+      root.lang = lang;
+      root.dir = lang === 'fa' ? 'rtl' : 'ltr';
+      root.dataset.lang = lang;
+    })();
+  </script>
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/legal.css" />
+</head>
+<body>
+  <main class="legal-page">
+    <nav class="legal-nav">
+      <a class="lp-brand" href="/"><svg class="brand-mark" viewBox="0 0 64 64" fill="none" aria-hidden="true" focusable="false"><rect x="13" y="8" width="10" height="48" rx="5" fill="currentColor"/><circle cx="33" cy="38" r="13" stroke="currentColor" stroke-width="10"/></svg>Buddy</a>
+      <span class="legal-nav-spacer"></span>
+      <a href="/privacy"><span lang="en">Privacy</span><span lang="fa">حریم خصوصی</span></a>
+      <button type="button" class="lang-toggle" id="lang-toggle"><span lang="en">فارسی</span><span lang="fa">English</span></button>
+    </nav>
+
+    <h1><span lang="en">Terms of service</span><span lang="fa">شرایط استفاده</span></h1>
+    <p class="legal-updated"><span lang="en">Last updated: September 2026</span><span lang="fa">آخرین به‌روزرسانی: شهریور ۱۴۰۵</span></p>
+
+    <div lang="en">
+      <h2>What Buddy is</h2>
+      <p>Buddy is an AI coach that works in four phases across four tracks: studying, training, eating better, and learning to code. Using it means agreeing to what is on this page. If you do not agree with something here, do not use it.</p>
+
+      <h2>Buddy is not a professional, and this is the part to read</h2>
+      <div class="legal-callout">
+        <p><strong>Buddy is not a doctor, a dietitian, a personal trainer, or a teacher.</strong> It is a language model. It writes meal plans and training plans because you asked it to, not because it examined you, and it can be confidently wrong about all of it.</p>
+        <p>Do not follow a plan from Buddy in place of medical advice. Talk to a doctor first if you are pregnant, under 18, recovering from injury or surgery, or living with any condition — diabetes, a heart condition, an eating disorder, anything affecting what you can safely eat or how hard you can train. If a plan hurts, stop.</p>
+        <p>Nothing Buddy writes is medical, nutritional, psychological, legal, or financial advice. What you do with it is your decision and your responsibility.</p>
+      </div>
+      <p>The same caution applies more mildly everywhere else. Buddy gets facts wrong, invents sources, and makes mistakes in code. Check anything that matters before you rely on it — particularly anything you are about to be examined on.</p>
+
+      <h2>Your account</h2>
+      <ul>
+        <li>One account per person. Do not share your password or let someone else use your account.</li>
+        <li>The email address must be one you actually control — it is how your discount code, and anything else that matters, reaches you.</li>
+        <li>You must be old enough to agree to this. If you are under 18, use Buddy with a parent or guardian's permission.</li>
+        <li>Tell us if you think someone else has got into your account.</li>
+      </ul>
+
+      <h2>Using it fairly</h2>
+      <p>Do not use Buddy to produce anything illegal, to harass anyone, to break into anything, or to generate material that harms other people. Do not resell access, script it in bulk, or try to work around the plan limits. Do not submit other people's private information.</p>
+      <p>Accounts doing any of that can be suspended or closed.</p>
+
+      <h2>Plans and prices</h2>
+      <div class="legal-scroll">
+      <table class="legal-table">
+        <thead><tr><th>Plan</th><th>Price</th><th>Tracks included</th><th>Refund window</th></tr></thead>
+        <tbody>
+          <tr><td>Free</td><td>Free</td><td>Study</td><td>—</td></tr>
+          <tr><td>Basic</td><td>200,000 Toman</td><td>Study, Workout</td><td>3 days</td></tr>
+          <tr><td>Plus</td><td>550,000 Toman</td><td>Study, Workout, Diet</td><td>5 days</td></tr>
+          <tr><td>Pro</td><td>1,200,000 Toman</td><td>Study, Workout, Diet, Buddy Code</td><td>7 days</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p>Every plan has a daily limit on AI messages and a monthly limit on video summaries; the current numbers for your plan are shown in Settings. Asking the tutor a free-form question is available on every plan, including Free.</p>
+      <p>Prices are charged in Rial, at ten times the Toman figure above. Prices can change; a change never affects a period you have already paid for.</p>
+
+      <h2>Paying</h2>
+      <p>Payment goes through ZarinPal. Buddy never sees your card details. The amount charged is always the one this server holds for the plan you chose — it is not taken from anything your browser sends.</p>
+      <p>A plan is activated when ZarinPal confirms the payment. If money leaves your account and the plan does not activate, contact us with the bank reference and we will sort it out.</p>
+
+      <h2>Refunds</h2>
+      <p>You can ask for a full refund within the window for your plan — <strong>3 days for Basic, 5 days for Plus, 7 days for Pro</strong>, counted from the moment the payment succeeds — provided you have not used the paid features the plan unlocked. Email us from the address on the account with the bank reference.</p>
+      <p>After the window, or once the paid tracks have been used, a payment is not refundable. The exception is our fault: if the service was unusable because of a problem on our side, tell us and we will refund it regardless of the window.</p>
+      <p>Refunds return by the route the payment came in and take as long as the bank takes.</p>
+
+      <h2>Discount codes</h2>
+      <p>A code issued when you sign up is worth 10%, lasts 30 days, works only on the account it was issued to, and can be used once. It cannot be combined with another code, sold, or transferred.</p>
+
+      <h2>Availability</h2>
+      <p>Buddy is provided as it is. We do not promise it will always be available, always be fast, or never lose anything — it depends on an AI provider, a payment gateway, and a host, all outside our control. We will not pretend otherwise in order to sound more reassuring.</p>
+      <p>Features can change. If something you paid for is removed during a period you paid for, you get a refund for the rest of that period.</p>
+
+      <h2>Ending it</h2>
+      <p>You can delete your account whenever you like, from Settings, and it really is deleted — the privacy page describes exactly what goes and the two things that stay. Deleting mid-period does not by itself entitle you to a refund outside the window above.</p>
+      <p>We can suspend or close an account that breaks these terms. If we close one without cause, we refund whatever is left of the period.</p>
+
+      <h2>Liability</h2>
+      <p>To the extent the law allows, our liability for any claim connected with Buddy is limited to what you paid us in the twelve months before it arose. Nothing here limits liability that cannot legally be limited.</p>
+
+      <h2>These terms</h2>
+      <p>If these terms change, the date at the top changes. Continuing to use Buddy after that means accepting the new version; if you do not, delete your account. These terms are governed by the law of the Islamic Republic of Iran.</p>
+
+      <h2>Contact</h2>
+      <p><span class="legal-todo">[contact email — to be filled in]</span></p>
+    </div>
+
+    <div lang="fa">
+      <h2>Buddy چیست</h2>
+      <p>Buddy یک مربی هوش مصنوعی است که در چهار فاز و روی چهار مسیر کار می‌کند: درس، تمرین، تغذیه، و کدنویسی. استفاده از آن یعنی پذیرفتن چیزی که در این صفحه نوشته شده. اگر با چیزی اینجا موافق نیستی، استفاده نکن.</p>
+
+      <h2>Buddy متخصص نیست — این بخش را حتماً بخوان</h2>
+      <div class="legal-callout">
+        <p><strong>Buddy نه پزشک است، نه متخصص تغذیه، نه مربی بدنسازی، نه معلم.</strong> یک مدل زبانی است. برنامه‌ی غذایی و تمرینی می‌نویسد چون تو خواسته‌ای، نه چون تو را معاینه کرده — و می‌تواند با اطمینان کامل، اشتباه بگوید.</p>
+        <p>برنامه‌ی Buddy را جای توصیه‌ی پزشک نگذار. اگر باردار هستی، زیر ۱۸ سال داری، از آسیب یا جراحی در حال بهبودی هستی، یا هر بیماری‌ای داری — دیابت، بیماری قلبی، اختلال خوردن، هر چیزی که روی غذایی که می‌توانی بخوری یا شدت تمرینی که می‌توانی بکنی اثر دارد — اول با پزشک حرف بزن. اگر برنامه‌ای درد داشت، متوقفش کن.</p>
+        <p>هیچ چیزی که Buddy می‌نویسد توصیه‌ی پزشکی، تغذیه‌ای، روان‌شناختی، حقوقی یا مالی نیست. کاری که با آن می‌کنی تصمیم خودت و مسئولیت خودت است.</p>
+      </div>
+      <p>همین احتیاط، ملایم‌تر، همه‌جای دیگر هم هست. Buddy حقایق را اشتباه می‌گوید، منبع از خودش درمی‌آورد، و در کد اشتباه می‌کند. هر چیزی که برایت مهم است را قبل از اتکا به آن بررسی کن — مخصوصاً چیزی که قرار است امتحانش را بدهی.</p>
+
+      <h2>حساب کاربری</h2>
+      <ul>
+        <li>هر نفر یک حساب. رمزت را با کسی در میان نگذار و اجازه نده کس دیگری از حسابت استفاده کند.</li>
+        <li>ایمیل باید واقعاً مال خودت باشد — کد تخفیف و هر چیز مهم دیگری از همان راه به تو می‌رسد.</li>
+        <li>باید سنت آن‌قدر باشد که بتوانی این شرایط را بپذیری. اگر زیر ۱۸ سال داری، با اجازه‌ی پدر یا مادرت استفاده کن.</li>
+        <li>اگر فکر می‌کنی کسی به حسابت دسترسی پیدا کرده، به ما بگو.</li>
+      </ul>
+
+      <h2>استفاده‌ی منصفانه</h2>
+      <p>از Buddy برای تولید چیز غیرقانونی، آزار دیگران، نفوذ به جایی، یا ساختن محتوایی که به کسی آسیب بزند استفاده نکن. دسترسی را نفروش، به‌صورت انبوه اسکریپت نزن، و سعی نکن سقف اشتراک را دور بزنی. اطلاعات خصوصی دیگران را وارد نکن.</p>
+      <p>حسابی که این کارها را بکند، معلق یا بسته می‌شود.</p>
+
+      <h2>اشتراک‌ها و قیمت‌ها</h2>
+      <div class="legal-scroll">
+      <table class="legal-table">
+        <thead><tr><th>اشتراک</th><th>قیمت</th><th>مسیرها</th><th>مهلت استرداد</th></tr></thead>
+        <tbody>
+          <tr><td>رایگان</td><td>رایگان</td><td>درس</td><td>—</td></tr>
+          <tr><td>پایه</td><td>۲۰۰,۰۰۰ تومان</td><td>درس، تمرین</td><td>۳ روز</td></tr>
+          <tr><td>پلاس</td><td>۵۵۰,۰۰۰ تومان</td><td>درس، تمرین، تغذیه</td><td>۵ روز</td></tr>
+          <tr><td>پرو</td><td>۱,۲۰۰,۰۰۰ تومان</td><td>درس، تمرین، تغذیه، Buddy Code</td><td>۷ روز</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p>هر اشتراک یک سقف روزانه برای پیام‌های هوش مصنوعی و یک سقف ماهانه برای خلاصه‌ی ویدیو دارد؛ عددهای اشتراک خودت را توی تنظیمات می‌بینی. پرسیدن سؤال آزاد از مربی روی همه‌ی اشتراک‌ها، از جمله رایگان، هست.</p>
+      <p>مبلغ به ریال دریافت می‌شود، ده برابر عدد تومانی بالا. قیمت‌ها می‌توانند تغییر کنند؛ تغییر قیمت هیچ‌وقت روی دوره‌ای که قبلاً پولش را داده‌ای اثر ندارد.</p>
+
+      <h2>پرداخت</h2>
+      <p>پرداخت از طریق زرین‌پال انجام می‌شود. Buddy هیچ‌وقت اطلاعات کارتت را نمی‌بیند. مبلغی که کم می‌شود همیشه همان مبلغی است که این سرور برای اشتراک انتخابی نگه داشته — از چیزی که مرورگرت می‌فرستد گرفته نمی‌شود.</p>
+      <p>اشتراک وقتی فعال می‌شود که زرین‌پال پرداخت را تأیید کند. اگر پول از حسابت کم شد و اشتراک فعال نشد، با شماره‌ی پیگیری بانکی به ما پیام بده تا درستش کنیم.</p>
+
+      <h2>استرداد وجه</h2>
+      <p>تا مهلت اشتراک خودت می‌توانی کل مبلغ را پس بگیری — <strong>پایه ۳ روز، پلاس ۵ روز، پرو ۷ روز</strong>، از لحظه‌ی موفق‌شدن پرداخت — به شرطی که از قابلیت‌های پولی که آن اشتراک باز کرده استفاده نکرده باشی. از همان ایمیل حساب، با شماره‌ی پیگیری بانکی برایمان بنویس.</p>
+      <p>بعد از مهلت، یا وقتی مسیرهای پولی استفاده شده باشند، پرداخت برگشتی نیست. استثنا وقتی است که تقصیر ما باشد: اگر سرویس به خاطر مشکلی از سمت ما قابل استفاده نبوده، بگو تا بدون توجه به مهلت برگردانیم.</p>
+      <p>استرداد از همان مسیری که پرداخت آمده برمی‌گردد و به اندازه‌ای که بانک طول بدهد زمان می‌برد.</p>
+
+      <h2>کد تخفیف</h2>
+      <p>کدی که موقع ثبت‌نام می‌گیری ۱۰٪ است، ۳۰ روز اعتبار دارد، فقط روی همان حسابی که برایش صادر شده کار می‌کند، و یک بار قابل استفاده است. با کد دیگری جمع نمی‌شود، فروختنی و انتقال‌دادنی نیست.</p>
+
+      <h2>در دسترس بودن</h2>
+      <p>Buddy همان‌طور که هست ارائه می‌شود. قول نمی‌دهیم همیشه بالا باشد، همیشه سریع باشد، یا هیچ‌وقت چیزی گم نکند — به یک سرویس هوش مصنوعی، یک درگاه پرداخت و یک هاست وابسته است که هیچ‌کدام دست ما نیستند. برای اینکه خیال‌ت را راحت‌تر کنیم، خلافش را نمی‌گوییم.</p>
+      <p>قابلیت‌ها می‌توانند عوض شوند. اگر چیزی که پولش را داده‌ای وسط دوره حذف شود، باقی‌مانده‌ی آن دوره برمی‌گردد.</p>
+
+      <h2>پایان‌دادن</h2>
+      <p>هر وقت خواستی می‌توانی از تنظیمات حسابت را حذف کنی، و واقعاً حذف می‌شود — صفحه‌ی حریم خصوصی دقیقاً می‌گوید چه چیزی می‌رود و آن دو چیزی که می‌ماند چیست. حذف‌کردن وسط دوره، به خودی خود، حق استرداد خارج از مهلت بالا نمی‌دهد.</p>
+      <p>ما می‌توانیم حسابی را که این شرایط را زیر پا بگذارد معلق یا ببندیم. اگر بدون دلیل حسابی را ببندیم، باقی‌مانده‌ی دوره را برمی‌گردانیم.</p>
+
+      <h2>مسئولیت</h2>
+      <p>تا جایی که قانون اجازه می‌دهد، مسئولیت ما در برابر هر ادعای مرتبط با Buddy محدود است به مبلغی که در دوازده ماه قبل از آن به ما پرداخت کرده‌ای. هیچ چیزی در اینجا مسئولیتی را که قانوناً قابل محدودکردن نیست محدود نمی‌کند.</p>
+
+      <h2>همین شرایط</h2>
+      <p>اگر این شرایط عوض شوند، تاریخ بالای صفحه عوض می‌شود. ادامه‌ی استفاده بعد از آن یعنی پذیرفتن نسخه‌ی جدید؛ اگر نمی‌پذیری، حسابت را حذف کن. این شرایط تابع قوانین جمهوری اسلامی ایران است.</p>
+
+      <h2>تماس</h2>
+      <p><span class="legal-todo">[ایمیل تماس — پر شود]</span></p>
+    </div>
+
+  </main>
+
+  <script src="/i18n.js"></script>
+  <script>
+    // The same toggle as every other page, so the choice made here is the one
+    // the app and the landing page read.
+    (function () {
+      var i18n = window.I18N;
+      if (!i18n) return;
+      i18n.applyLanguage(i18n.detect(), { persist: false });
+      var toggle = document.getElementById('lang-toggle');
+      if (toggle) {
+        toggle.addEventListener('click', function () {
+          i18n.applyLanguage(i18n.lang === 'fa' ? 'en' : 'fa');
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

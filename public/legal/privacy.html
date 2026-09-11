@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy — Buddy</title>
+  <meta name="description" content="What Buddy stores, who else receives it, and how to delete it." />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/brand/icon-180.png" />
+  <link rel="manifest" href="/site.webmanifest" />
+  <meta name="theme-color" content="#e9e9e7" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
+  <script>
+    // Set the language before the first paint, so a Persian reader never sees
+    // the page render left-to-right and then flip.
+    //
+    // Unlike the other pages this one does NOT set data-i18n-pending: both
+    // languages are already in the markup and legal.css hides the wrong one
+    // immediately, so there is nothing to wait for. Setting it would blank the
+    // page for up to a second and a half for no reason.
+    (function () {
+      var lang = null;
+      try { lang = localStorage.getItem('studybuddy.lang'); } catch (e) { /* blocked */ }
+      if (lang !== 'en' && lang !== 'fa') {
+        lang = String(navigator.language || '').toLowerCase().indexOf('fa') === 0 ? 'fa' : 'en';
+      }
+      var root = document.documentElement;
+      root.lang = lang;
+      root.dir = lang === 'fa' ? 'rtl' : 'ltr';
+      root.dataset.lang = lang;
+    })();
+  </script>
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/legal.css" />
+</head>
+<body>
+  <main class="legal-page">
+    <nav class="legal-nav">
+      <a class="lp-brand" href="/"><svg class="brand-mark" viewBox="0 0 64 64" fill="none" aria-hidden="true" focusable="false"><rect x="13" y="8" width="10" height="48" rx="5" fill="currentColor"/><circle cx="33" cy="38" r="13" stroke="currentColor" stroke-width="10"/></svg>Buddy</a>
+      <span class="legal-nav-spacer"></span>
+      <a href="/terms"><span lang="en">Terms of service</span><span lang="fa">شرایط استفاده</span></a>
+      <button type="button" class="lang-toggle" id="lang-toggle"><span lang="en">فارسی</span><span lang="fa">English</span></button>
+    </nav>
+
+    <h1><span lang="en">Privacy</span><span lang="fa">حریم خصوصی</span></h1>
+    <p class="legal-updated"><span lang="en">Last updated: September 2026</span><span lang="fa">آخرین به‌روزرسانی: شهریور ۱۴۰۵</span></p>
+
+    <div lang="en">
+      <h2>The short version</h2>
+      <p>Buddy stores your account, your chats, your planner, and what you have paid for. The one thing worth knowing before anything else: <strong>what you type into a chat is sent to an AI company to be answered.</strong> There is no way to run this service without that. Everything else below is detail.</p>
+      <p>We do not sell anything to anyone, we run no advertising, and there is not a single analytics or tracking script on this site.</p>
+
+      <h2>What is stored</h2>
+      <ul>
+        <li><strong>Your account</strong> — email address, your password stored only as a bcrypt hash, the name you chose to display, your theme and language, and when you signed up.</li>
+        <li><strong>Sign-in sessions</strong> — a random token, the browser's user-agent string, and the times it was created, last used, and expires.</li>
+        <li><strong>Google sign-in</strong>, only if you use it — a link between your Buddy account and the account identifier Google gives us.</li>
+        <li><strong>Your chats</strong> — every message, yours and Buddy's, and the topic and phase of each session.</li>
+        <li><strong>Your planner</strong> — task titles, notes, subjects, due dates, and whether they are done.</li>
+        <li><strong>Video summaries</strong> — which YouTube videos were summarised for you.</li>
+        <li><strong>Usage counts</strong> — how many messages and summaries you have used against your plan's limits.</li>
+        <li><strong>Your plan</strong> — which one, whether it is active, and when the period ends.</li>
+        <li><strong>Payments</strong> — the amount, the gateway's reference, the bank reference shown to you, any discount code used, and the dates.</li>
+        <li><strong>Your discount code</strong> — the code, its percentage, and whether it has been used.</li>
+      </ul>
+      <p>If you add your own AI key in settings, it is stored so your sessions can use it. It is never shown back to you in full and never sent anywhere except the AI service it belongs to.</p>
+
+      <h2>Who else receives it</h2>
+      <div class="legal-callout">
+        <p><strong>The AI provider.</strong> To answer you, Buddy sends the text of your messages — and the transcript of any video you ask about — to the AI service it is configured to use. That company processes it under its own terms. Do not type anything into Buddy that you would not want a third company to hold: identity numbers, bank details, medical records, someone else's private information.</p>
+      </div>
+      <ul>
+        <li><strong>Google</strong>, only if you sign in with Google: Google tells us your email address, your name, and an account identifier. We ask for nothing else.</li>
+        <li><strong>ZarinPal</strong>, when you pay: the amount, a description of what is being bought, and your email address, which is attached to the transaction so the payment can be matched to your account.</li>
+        <li><strong>Our email provider</strong>, when we send you the welcome message: your address and the message itself.</li>
+        <li><strong>YouTube</strong>, when you submit a video: the video address, in order to fetch it.</li>
+      </ul>
+      <p>That is the complete list. Nobody else receives anything.</p>
+
+      <h2>Cookies</h2>
+      <p>One cookie, holding your sign-in session. It is httpOnly, so no script can read it. There are no advertising cookies and no third-party cookies of any kind.</p>
+      <p>Your language and theme are kept in your browser's local storage. They never leave your device.</p>
+
+      <h2>What is not done</h2>
+      <ul>
+        <li>Nothing is sold, rented, or shared for marketing.</li>
+        <li>There is no advertising.</li>
+        <li>There is no analytics, no tag manager, no tracking pixel, no session recording. Not one.</li>
+        <li>Your chats are not read to train anyone's model by us. What the AI provider does under its own terms is between you and them, which is why it is stated so plainly above.</li>
+      </ul>
+
+      <h2>Deleting your account</h2>
+      <p>Settings → Delete account. It asks for your password — or, if you signed up with Google and so have no password, for your email address — and then removes your account and everything attached to it: chats and messages, planner tasks, sessions, usage counts, your stored AI key, your discount code, and the Google link. This cannot be undone.</p>
+      <p>Two honest exceptions:</p>
+      <ul>
+        <li><strong>Payment records are kept</strong> — the amount, date, and bank reference — with your account no longer attached to them. They are needed for accounting, and the payment gateway holds its own copy regardless.</li>
+        <li><strong>Cached video transcripts and summaries stay.</strong> They are stored per video, not per person, are drawn from public YouTube pages, and contain nothing about you. The record of which of them you viewed is deleted with your account.</li>
+      </ul>
+      <p>Anything already sent to the AI provider to answer a message is in their hands, under their retention policy, and cannot be recalled by us.</p>
+
+      <h2>Keeping it safe</h2>
+      <p>Passwords are stored only as bcrypt hashes — we cannot read yours, and neither could anyone who obtained the database. Sessions are random tokens with an expiry, not anything derived from your password. Traffic to the site is over HTTPS.</p>
+      <p>No service can promise it will never be broken into, and this one does not. What it can promise is that a break-in would not reveal anybody's password.</p>
+
+      <h2>Age</h2>
+      <p>Buddy is built for studying, so younger students will use it. If you are under 13, please use it with a parent or guardian. If we learn that an account belongs to a child under 13 set up without a guardian, we will delete it.</p>
+
+      <h2>Changes</h2>
+      <p>If this policy changes in a way that matters — a new company receiving your data, a new kind of data collected — the date at the top changes and the change is described here rather than slipped in.</p>
+
+      <h2>Contact</h2>
+      <p>Questions about any of this, or a request about your data: <span class="legal-todo">[contact email — to be filled in]</span></p>
+    </div>
+
+    <div lang="fa">
+      <h2>خلاصه</h2>
+      <p>Buddy حساب کاربری، گفتگوها، برنامه‌ریز و اینکه چه چیزی خریده‌ای را ذخیره می‌کند. مهم‌ترین چیزی که باید قبل از هر چیز بدانی: <strong>هر چه توی گفتگو می‌نویسی، برای جواب‌دادن به یک شرکت هوش مصنوعی فرستاده می‌شود.</strong> بدون این کار، این سرویس اصلاً کار نمی‌کند. بقیه‌ی این صفحه جزئیات همین است.</p>
+      <p>هیچ چیزی به کسی فروخته نمی‌شود، تبلیغاتی در کار نیست، و روی این سایت حتی یک اسکریپت آمارگیری یا ردیابی وجود ندارد.</p>
+
+      <h2>چه چیزی ذخیره می‌شود</h2>
+      <ul>
+        <li><strong>حساب کاربری</strong> — ایمیل، رمز عبور فقط به شکل هش bcrypt، نامی که برای نمایش انتخاب کرده‌ای، تم و زبان، و تاریخ ثبت‌نام.</li>
+        <li><strong>نشست‌های ورود</strong> — یک توکن تصادفی، مشخصات مرورگر، و زمان ساخت، آخرین استفاده و انقضا.</li>
+        <li><strong>ورود با گوگل</strong>، فقط اگر استفاده کنی — پیوندی بین حساب Buddy تو و شناسه‌ای که گوگل می‌دهد.</li>
+        <li><strong>گفتگوها</strong> — همه‌ی پیام‌ها، هم مال تو هم مال Buddy، و موضوع و فاز هر جلسه.</li>
+        <li><strong>برنامه‌ریز</strong> — عنوان کارها، یادداشت‌ها، درس، موعد، و انجام‌شده یا نه.</li>
+        <li><strong>خلاصه‌ی ویدیوها</strong> — اینکه چه ویدیوهایی برایت خلاصه شده است.</li>
+        <li><strong>شمارش استفاده</strong> — چند پیام و چند خلاصه از سقف اشتراکت استفاده کرده‌ای.</li>
+        <li><strong>اشتراک</strong> — کدام طرح، فعال بودن یا نبودن، و پایان دوره.</li>
+        <li><strong>پرداخت‌ها</strong> — مبلغ، شناسه‌ی درگاه، شماره‌ی پیگیری بانکی که به خودت نشان داده می‌شود، کد تخفیف در صورت استفاده، و تاریخ‌ها.</li>
+        <li><strong>کد تخفیف</strong> — خود کد، درصدش، و اینکه استفاده شده یا نه.</li>
+      </ul>
+      <p>اگر کلید هوش مصنوعی خودت را توی تنظیمات بگذاری، ذخیره می‌شود تا جلسه‌های خودت با آن کار کنند. هیچ‌وقت کامل به تو نشان داده نمی‌شود و به جایی جز همان سرویسی که مال آن است فرستاده نمی‌شود.</p>
+
+      <h2>چه کسی دیگری آن را می‌گیرد</h2>
+      <div class="legal-callout">
+        <p><strong>سرویس هوش مصنوعی.</strong> برای اینکه جوابت را بدهد، Buddy متن پیام‌هایت — و متن هر ویدیویی که درباره‌اش می‌پرسی — را به سرویس هوش مصنوعی تنظیم‌شده می‌فرستد. آن شرکت طبق شرایط خودش با این داده رفتار می‌کند. چیزی توی Buddy ننویس که نمی‌خواهی یک شرکت ثالث داشته باشد: کد ملی، اطلاعات بانکی، سوابق پزشکی، اطلاعات خصوصی دیگران.</p>
+      </div>
+      <ul>
+        <li><strong>گوگل</strong>، فقط اگر با گوگل وارد شوی: گوگل ایمیل، نام و یک شناسه‌ی حساب به ما می‌دهد. چیز دیگری نمی‌خواهیم.</li>
+        <li><strong>زرین‌پال</strong>، موقع پرداخت: مبلغ، توضیح خرید، و ایمیلت — که به تراکنش پیوست می‌شود تا پرداخت به حسابت وصل شود.</li>
+        <li><strong>سرویس ایمیل ما</strong>، موقع فرستادن ایمیل خوش‌آمد: آدرست و خود پیام.</li>
+        <li><strong>یوتیوب</strong>، وقتی ویدیویی می‌دهی: آدرس ویدیو، برای گرفتنش.</li>
+      </ul>
+      <p>لیست همین است و تمام. هیچ‌کس دیگری چیزی نمی‌گیرد.</p>
+
+      <h2>کوکی</h2>
+      <p>یک کوکی، برای نگه‌داشتن نشست ورودت. httpOnly است، یعنی هیچ اسکریپتی نمی‌تواند بخواندش. هیچ کوکی تبلیغاتی و هیچ کوکی شخص ثالثی وجود ندارد.</p>
+      <p>زبان و تم توی حافظه‌ی محلی مرورگرت می‌مانند و هیچ‌وقت از دستگاهت بیرون نمی‌روند.</p>
+
+      <h2>کارهایی که نمی‌کنیم</h2>
+      <ul>
+        <li>هیچ چیزی فروخته، اجاره داده یا برای بازاریابی به اشتراک گذاشته نمی‌شود.</li>
+        <li>تبلیغاتی در کار نیست.</li>
+        <li>هیچ آمارگیری، tag manager، پیکسل ردیاب یا ضبط جلسه‌ای وجود ندارد. حتی یکی.</li>
+        <li>ما گفتگوهایت را برای آموزش مدل کسی نمی‌خوانیم. اینکه سرویس هوش مصنوعی طبق شرایط خودش چه می‌کند بین تو و آن‌هاست — دقیقاً به همین دلیل بالا این‌قدر صریح نوشته شده.</li>
+      </ul>
+
+      <h2>حذف حساب</h2>
+      <p>تنظیمات ← حذف حساب. رمزت را می‌پرسد — یا اگر با گوگل ثبت‌نام کرده‌ای و رمزی نداری، ایمیلت را — و بعد حسابت را با هر چه به آن وصل است پاک می‌کند: گفتگوها و پیام‌ها، کارهای برنامه‌ریز، نشست‌ها، شمارش استفاده، کلید هوش مصنوعی ذخیره‌شده، کد تخفیف، و پیوند گوگل. برگشتی ندارد.</p>
+      <p>دو استثنا، که صادقانه می‌گوییم:</p>
+      <ul>
+        <li><strong>سابقه‌ی پرداخت‌ها می‌ماند</strong> — مبلغ، تاریخ و شماره‌ی پیگیری — بدون اینکه دیگر به حساب تو وصل باشد. برای حسابداری لازم است، و درگاه پرداخت هم نسخه‌ی خودش را در هر حال نگه می‌دارد.</li>
+        <li><strong>متن و خلاصه‌ی ذخیره‌شده‌ی ویدیوها می‌ماند.</strong> این‌ها به‌ازای هر ویدیو ذخیره می‌شوند نه هر آدم، از صفحه‌های عمومی یوتیوب می‌آیند، و هیچ چیزی درباره‌ی تو ندارند. اینکه تو کدامشان را دیده‌ای با حسابت پاک می‌شود.</li>
+      </ul>
+      <p>هر چیزی که قبلاً برای جواب‌دادن به سرویس هوش مصنوعی رفته، دست آن‌هاست و طبق سیاست نگهداری خودشان می‌ماند؛ ما نمی‌توانیم پسش بگیریم.</p>
+
+      <h2>امنیت</h2>
+      <p>رمزها فقط به شکل هش bcrypt ذخیره می‌شوند — نه ما می‌توانیم رمزت را بخوانیم، نه کسی که دیتابیس را به دست بیاورد. نشست‌ها توکن تصادفی با تاریخ انقضا هستند، نه چیزی که از رمزت ساخته شده باشد. ارتباط با سایت روی HTTPS است.</p>
+      <p>هیچ سرویسی نمی‌تواند قول بدهد هیچ‌وقت نفوذ نمی‌شود، و این یکی هم نمی‌دهد. چیزی که می‌تواند قول بدهد این است که نفوذ، رمز هیچ‌کس را لو نمی‌دهد.</p>
+
+      <h2>سن</h2>
+      <p>Buddy برای درس‌خواندن ساخته شده، پس دانش‌آموزهای کم‌سن هم استفاده می‌کنند. اگر زیر ۱۳ سال داری، با اجازه و همراهی پدر یا مادرت استفاده کن. اگر بفهمیم حسابی متعلق به کودکی زیر ۱۳ سال است که بدون سرپرست ساخته شده، حذفش می‌کنیم.</p>
+
+      <h2>تغییرات</h2>
+      <p>اگر این متن به شکلی تغییر کند که مهم باشد — شرکت جدیدی داده بگیرد، یا نوع تازه‌ای از داده جمع شود — تاریخ بالای صفحه عوض می‌شود و تغییر همین‌جا نوشته می‌شود، نه اینکه بی‌صدا جا داده شود.</p>
+
+      <h2>تماس</h2>
+      <p>سؤالی درباره‌ی هر کدام از این‌ها، یا درخواستی درباره‌ی داده‌هایت: <span class="legal-todo">[ایمیل تماس — پر شود]</span></p>
+    </div>
+
+  </main>
+
+  <script src="/i18n.js"></script>
+  <script>
+    // The same toggle as every other page, so the choice made here is the one
+    // the app and the landing page read.
+    (function () {
+      var i18n = window.I18N;
+      if (!i18n) return;
+      i18n.applyLanguage(i18n.detect(), { persist: false });
+      var toggle = document.getElementById('lang-toggle');
+      if (toggle) {
+        toggle.addEventListener('click', function () {
+          i18n.applyLanguage(i18n.lang === 'fa' ? 'en' : 'fa');
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

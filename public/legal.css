@@ -1,0 +1,95 @@
+/* Prose for the two legal pages. Colours, fonts and the dark palette all come
+   from styles.css - this file only sets the shape of a document: a readable
+   measure, heading rhythm, and the language switching below. */
+
+.legal-page {
+  max-width: 44rem;
+  margin: 0 auto;
+  /* padding-block, never a shorthand: the side gutter has to survive at phone
+     width. */
+  padding-block: 28px 72px;
+  padding-inline: clamp(18px, 5vw, 32px);
+  line-height: 1.85;
+}
+
+.legal-nav {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-block-end: 40px;
+}
+
+.legal-nav .lp-brand {
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.legal-nav .legal-nav-spacer { margin-inline-start: auto; }
+
+.legal-page h1 {
+  font-size: clamp(1.7rem, 4vw, 2.3rem);
+  letter-spacing: -0.02em;
+  margin: 0 0 8px;
+}
+
+.legal-updated {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0 0 36px;
+}
+
+.legal-page h2 {
+  font-size: 1.12rem;
+  margin: 40px 0 10px;
+  padding-block-start: 22px;
+  border-block-start: 1px solid var(--divider);
+}
+
+.legal-page h2:first-of-type { border-block-start: none; padding-block-start: 0; }
+
+.legal-page p,
+.legal-page li { color: var(--text); }
+
+.legal-page ul { padding-inline-start: 1.3em; margin: 12px 0; }
+.legal-page li { margin-block-end: 8px; }
+
+.legal-page a { color: var(--text); }
+
+/* The one clause here with real consequences: an LLM writing meal plans and
+   training plans. It is set apart rather than left as one paragraph among
+   forty, because burying it would be the whole problem. */
+.legal-callout {
+  border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--control-border));
+  border-radius: 18px;
+  padding: 18px 20px;
+  margin: 22px 0;
+  background: var(--chip-bg);
+}
+
+.legal-callout p:last-child { margin-block-end: 0; }
+
+/* Filled in before this goes live. Loud on purpose. */
+.legal-todo {
+  background: color-mix(in srgb, var(--danger) 22%, transparent);
+  border-radius: 6px;
+  padding: 1px 7px;
+  font-weight: 700;
+}
+
+.legal-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.95rem; }
+.legal-table th,
+.legal-table td { text-align: start; padding: 9px 12px; border-block-end: 1px solid var(--divider); }
+.legal-table th { color: var(--muted); font-weight: 600; }
+
+/* A table is the one thing allowed to be wider than the page. */
+.legal-scroll { overflow-x: auto; }
+
+/* --- one document, both languages ----------------------------------------
+   Legal prose belongs in the page as prose. Splitting forty paragraphs across
+   i18n keys would make both versions unreadable in the source, which is where
+   they have to be checked. The inline script in the head sets data-lang before
+   the first paint, so neither version flashes. */
+:root[data-lang='fa'] [lang='en'] { display: none; }
+:root:not([data-lang='fa']) [lang='fa'] { display: none; }

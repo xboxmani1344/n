@@ -84,6 +84,18 @@ app.get('/app', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'app.html'));
 });
 
+// Clean URLs for the two legal pages, the way /app is served above. They are
+// linked from the footer, from the signup screen, and - the reason the tidy URL
+// matters - pasted into Google's OAuth consent screen and ZarinPal's merchant
+// form, where a visible .html looks like something half-finished.
+app.get('/privacy', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'legal', 'privacy.html'));
+});
+
+app.get('/terms', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'legal', 'terms.html'));
+});
+
 app.get('/api/phases', (_req, res) => {
   // `phases` is the study track, kept so an older cached client still works.
   res.json({ phases: PHASES, tracks: TRACKS });

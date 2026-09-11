@@ -71,6 +71,11 @@
   --blob-strong: rgba(0, 0, 0, 0.13);
   --blob-soft: rgba(255, 255, 255, 0.7);
   --divider: rgba(0, 0, 0, 0.08);
+  /* Deleting an account is the one irreversible thing in here. Dark enough to
+     clear 4.5:1 against white button text. */
+  --danger: #a3231d;
+  --danger-strong: #851c17;
+  --danger-ink: #ffffff;
   --radius-card: 30px;
   --shadow-soft: 0 1px 2px var(--glass-shadow), 0 18px 44px -20px var(--glass-shadow);
   --shadow-lift: 0 2px 6px var(--glass-shadow), 0 26px 60px -24px var(--glass-shadow);
@@ -93,6 +98,9 @@
     --blob-strong: rgba(255, 255, 255, 0.07);
     --blob-soft: rgba(255, 255, 255, 0.16);
     --divider: rgba(255, 255, 255, 0.1);
+    --danger: #e2645c;
+    --danger-strong: #ef7d75;
+    --danger-ink: #0a0a0a;
   }
 }
 
@@ -112,6 +120,9 @@
   --blob-strong: rgba(255, 255, 255, 0.07);
   --blob-soft: rgba(255, 255, 255, 0.16);
   --divider: rgba(255, 255, 255, 0.1);
+  --danger: #e2645c;
+  --danger-strong: #ef7d75;
+  --danger-ink: #0a0a0a;
 }
 
 * {
@@ -1900,3 +1911,39 @@ html[data-i18n-pending] body {
 .lp-brand .brand-mark {
   vertical-align: baseline;
 }
+
+/* --- deleting an account -------------------------------------------------- */
+
+/* Set apart from the cards above it, which are all things you can change your
+   mind about. A red tint on the border rather than a red card: the section is
+   a warning, not an error, and a fully red panel in a monochrome interface
+   reads as something already having gone wrong. */
+.danger-card {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--control-border));
+}
+
+.danger-btn {
+  background: var(--danger);
+  color: var(--danger-ink);
+  border: 1px solid transparent;
+}
+
+.danger-btn:hover:not(:disabled) {
+  background: var(--danger-strong);
+}
+
+.danger-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* The line under the signup button pointing at the two legal pages. */
+.auth-consent {
+  margin: 14px 0 0;
+  font-size: 0.78rem;
+  line-height: 1.7;
+  color: var(--muted);
+  text-align: center;
+}
+
+.auth-consent a { color: var(--text); }

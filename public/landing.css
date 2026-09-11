@@ -709,3 +709,9 @@
      them hidden, the language switch has to take it on. */
   .lp-nav .lang-toggle { margin-inline-start: auto; }
 }
+
+.lp-footer-links {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
