@@ -12,6 +12,8 @@ const {
   SESSION_TTL_MS,
 } = require('../services/auth');
 const { asyncHandler } = require('../middleware/errors');
+const discounts = require('../services/discounts');
+const welcomeEmail = require('../services/welcomeEmail');
 
 const router = express.Router();
 const isProd = process.env.NODE_ENV === 'production';
@@ -47,7 +49,20 @@ function createUserWithFreeSubscription({ email, passwordHash, displayName }) {
     'INSERT INTO subscriptions (user_id, plan, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'
   ).run(userId, 'free', 'active', now, now);
 
+  // Their welcome discount. Issued here rather than at the first upgrade so it
+  // exists in time to be emailed, and so it is the same code either way.
+  discounts.issueForUser(userId);
+
   return userId;
+}
+
+// Sent without being waited on: a mail server having a bad afternoon must not
+// turn into a failed signup.
+function sendWelcome(userId, req) {
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+  if (!user) return;
+  const origin = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+  welcomeEmail.sendWelcome(user, origin.replace(/\/$/, ''));
 }
 
 router.post(
@@ -67,6 +82,7 @@ router.post(
 
     const passwordHash = await hashPassword(password);
     const userId = createUserWithFreeSubscription({ email, passwordHash, displayName });
+    sendWelcome(userId, req);
 
     const session = createSession(userId, req.headers['user-agent']);
     setSessionCookie(res, session.id);
@@ -199,6 +215,7 @@ router.get(
             passwordHash: null,
             displayName: profile.name,
           });
+      if (!existingUser) sendWelcome(userId, req);
 
       db.prepare(
         'INSERT INTO oauth_accounts (user_id, provider, provider_user_id, created_at) VALUES (?, ?, ?, ?)'

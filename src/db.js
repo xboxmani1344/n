@@ -117,4 +117,19 @@ function onSeparateVolume() {
   }
 }
 
-module.exports = { db, DB_PATH, onSeparateVolume };
+// node:sqlite has no transaction() helper of its own - that is better-sqlite3's
+// API - so this is the wrapper the rest of the code uses. Without it, a run of
+// related writes can be left half-applied by a throw in the middle.
+function transaction(fn) {
+  db.exec('BEGIN');
+  try {
+    const result = fn();
+    db.exec('COMMIT');
+    return result;
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+}
+
+module.exports = { db, DB_PATH, onSeparateVolume, transaction };
