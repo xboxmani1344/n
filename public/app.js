@@ -62,6 +62,7 @@
   const apiKeySaved = document.getElementById('apikey-saved');
   const apiKeyRemove = document.getElementById('apikey-remove');
   const apiKeyLabel = document.getElementById('apikey-label');
+  const apiKeyCard = document.getElementById('apikey-card');
 
   const setupShell = document.getElementById('setup-shell');
   const setupForm = document.getElementById('setup-form');
@@ -640,6 +641,12 @@
     if (!ok || !data) return;
 
     keyBanner.hidden = data.ready;
+
+    // When the site pays for the AI, the whole section goes away. Leaving it
+    // visible - even worded as optional - reads as something the user is meant
+    // to deal with, and the entire point of the site supplying the key is that
+    // nobody has to go and get one.
+    if (apiKeyCard) apiKeyCard.hidden = data.usingServerKey && !data.hasOwnKey;
 
     if (data.hasOwnKey) {
       apiKeyStatus.textContent = tr('settings.keySet');

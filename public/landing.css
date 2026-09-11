@@ -347,7 +347,7 @@
 .lp-track-phases li {
   padding: 7px 15px;
   border-radius: 999px;
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--control-border);
   background: var(--chip-bg);
   font-size: 0.8rem;
   font-weight: 500;
