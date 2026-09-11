@@ -15,8 +15,8 @@
     // --- first-run key setup -------------------------------------------------
     'setup.tagline': ['One quick thing before we start', 'قبل از شروع، فقط یک کار'],
     'setup.lead': [
-      'Study Buddy needs an AI key to do the actual teaching. A free Google Gemini key works and takes about a minute — no credit card.',
-      'Study Buddy برای درس‌دادن به یک کلید هوش مصنوعی نیاز دارد. کلید رایگان Google Gemini کار می‌کند و گرفتنش حدود یک دقیقه طول می‌کشد — بدون کارت بانکی.',
+      'Buddy needs an AI key to do the actual teaching. A free Google Gemini key works and takes about a minute — no credit card.',
+      'Buddy برای درس‌دادن به یک کلید هوش مصنوعی نیاز دارد. کلید رایگان Google Gemini کار می‌کند و گرفتنش حدود یک دقیقه طول می‌کشد — بدون کارت بانکی.',
     ],
     'setup.step1': ['Open', 'برو به'],
     'setup.step2html': ['Click <strong>Create API key</strong>', 'روی <strong>Create API key</strong> بزن'],
@@ -94,9 +94,9 @@
     'track.tutor.foot': ['AI Teacher — freeform chat', 'معلم هوش مصنوعی — گفتگوی آزاد'],
 
     // --- chat ----------------------------------------------------------------
-    'chat.brand': ['Study Buddy', 'Study Buddy'],
+    'chat.brand': ['Buddy', 'Buddy'],
     'chat.phasesAria': ['Session phases', 'فازهای جلسه'],
-    'chat.placeholder': ['Message Study Buddy…', 'پیامت را بنویس…'],
+    'chat.placeholder': ['Message Buddy…', 'پیامت را بنویس…'],
     'chat.send': ['Send', 'ارسال'],
     'chat.nextPhase': ['Next Phase', 'فاز بعدی'],
     'chat.thinking': ['Thinking', 'در حال فکر کردن'],
@@ -256,10 +256,10 @@
     'lp.nav.how': ['How it works', 'چطور کار می‌کند'],
     'lp.nav.more': ['More', 'بیشتر'],
     'lp.nav.open': ['Open the app', 'ورود به برنامه'],
-    'lp.eyebrow': ['Study · Train · Eat', 'درس · تمرین · تغذیه'],
+    'lp.eyebrow': ['Study · Train · Eat · Build', 'درس · تمرین · تغذیه · کد'],
     'lp.titleHtml': [
-      'One coach.<br />Four phases.<br />Three parts of your life.',
-      'یک مربی.<br />چهار فاز.<br />سه بخش از زندگی‌ات.',
+      'One coach.<br />Four phases.<br />Four parts of your life.',
+      'یک مربی.<br />چهار فاز.<br />چهار بخش از زندگی‌ات.',
     ],
     'lp.lede': [
       "Not a chatbot that answers and forgets. A coach that works out where you are, builds a plan, walks you through it, then adjusts — for a subject you're learning, a body you're training, or the way you eat.",
@@ -357,7 +357,7 @@
       'Start with whichever one is bothering you today.',
       'از همانی شروع کن که امروز بیشتر اذیتت می‌کند.',
     ],
-    'lp.final.cta': ['Open Study Buddy', 'ورود به Study Buddy'],
+    'lp.final.cta': ['Open Buddy', 'ورود به Buddy'],
     'lp.final.fine': [
       'Free to use. Training and nutrition guidance here is general — anything medical belongs with a doctor.',
       'استفاده از آن رایگان است. راهنمایی تمرین و تغذیه اینجا عمومی است — هر چیز پزشکی را باید از دکتر بپرسی.',

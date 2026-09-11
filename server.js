@@ -22,7 +22,7 @@ try {
 }
 if (bootFailure) {
   const app = express();
-  const body = `Study Buddy cannot start.\n\n${bootFailure.message}\n`;
+  const body = `Buddy cannot start.\n\n${bootFailure.message}\n`;
 
   // Every path, so it does not matter where the reader lands. 503 rather than
   // 500: this is a configuration problem that a redeploy fixes, and it keeps
@@ -145,7 +145,7 @@ function bootSummary() {
 }
 
 app.listen(PORT, () => {
-  console.log(`Study Buddy running at http://localhost:${PORT}`);
+  console.log(`Buddy running at http://localhost:${PORT}`);
   bootSummary();
 
   // Deployed with no AI settings at all means the defaults are in use, and the

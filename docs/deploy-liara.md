@@ -53,7 +53,7 @@ studybuddy   →   https://studybuddy.liara.run
 دقیقاً می‌گوید چه شد:
 
 ```
-Study Buddy could not start: this Node.js is too old.
+Buddy could not start: this Node.js is too old.
 
   running:  Node 20.11.0
   required: Node 22.5 or newer
@@ -185,7 +185,7 @@ xboxmani1344/n
 برنامه موقع بالا آمدن می‌گوید با چه تنظیماتی دارد کار می‌کند. حالت سالم:
 
 ```
-Study Buddy running at http://localhost:3000
+Buddy running at http://localhost:3000
   node      22.22.2
   database  /app/data/study-buddy.db  (on its own disk)
   ai        https://ai.liara.ir/...

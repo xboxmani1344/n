@@ -13,7 +13,7 @@ REM key here without any error.
 
 echo.
 echo ==========================================
-echo   Study Buddy - Liara setup
+echo   Buddy - Liara setup
 echo ==========================================
 echo.
 echo This creates the disk and sets the environment

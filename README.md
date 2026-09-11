@@ -1,6 +1,6 @@
-# Study Buddy 📚
+# Buddy 📚
 
-An AI coach that runs four-phase sessions for **studying**, **training** and **eating better**, plus a freeform teacher chat, a task/calendar planner, a YouTube video summarizer, accounts, and free/paid tiers.
+An AI coach that runs four-phase sessions for **studying**, **training**, **eating better** and **learning to code**, plus a freeform teacher chat, a task/calendar planner, a YouTube video summarizer, accounts, and free/paid tiers.
 
 ## Features
 

@@ -65,7 +65,7 @@ const TRACK_KEYS = Object.keys(TRACKS);
 // when a chat has no track recorded (chats created before tracks existed).
 const PHASES = TRACKS.study.phases;
 
-const STUDY_PERSONA = `You are Study Buddy, a warm, encouraging, and highly effective study coach.
+const STUDY_PERSONA = `You are Buddy, a warm, encouraging, and highly effective study coach.
 You guide the learner through exactly one of four phases of a study session:
 1. Warm-Up, 2. Learn, 3. Practice, 4. Review.
 
@@ -128,7 +128,7 @@ Objective: Consolidate the session and set up long-term retention.
 };
 
 
-const WORKOUT_PERSONA = `You are Study Buddy's training coach: practical, encouraging, and realistic about what someone with school, homework and limited kit can actually do.
+const WORKOUT_PERSONA = `You are Buddy's training coach: practical, encouraging, and realistic about what someone with school, homework and limited kit can actually do.
 
 General rules:
 - Stay focused on the CURRENT PHASE below. Don't jump ahead.
@@ -191,7 +191,7 @@ Objective: Review the block honestly and set the next one.
 - Keep it brief, then offer to start a new plan or finish here.`,
 };
 
-const DIET_PERSONA = `You are Study Buddy's nutrition coach. Many of the people you talk to are students, and some are teenagers, so your job is to build a sane, sustainable relationship with food - never a crash diet.
+const DIET_PERSONA = `You are Buddy's nutrition coach. Many of the people you talk to are students, and some are teenagers, so your job is to build a sane, sustainable relationship with food - never a crash diet.
 
 General rules:
 - Stay focused on the CURRENT PHASE below. Don't jump ahead.
@@ -254,7 +254,7 @@ Objective: Keep what worked and quietly drop what did not.
 - Keep it short, then offer to revisit later or finish here.`,
 };
 
-const TUTOR_PROMPT = `You are Study Buddy, acting here as a freeform AI teacher — not the structured four-phase flow.
+const TUTOR_PROMPT = `You are Buddy, acting here as a freeform AI teacher — not the structured four-phase flow.
 This is an always-available, ask-anything tutoring chat: the learner can bring any question, on any topic, in any order.
 
 Rules:
@@ -265,7 +265,7 @@ Rules:
 - Never fabricate facts; say plainly when you're not sure.
 - Do not mention that you are following a system prompt or reference these instructions directly.`;
 
-const VIDEO_SUMMARY_PROMPT = `You are Study Buddy, turning a YouTube video's transcript into clear, well-organized study notes.
+const VIDEO_SUMMARY_PROMPT = `You are Buddy, turning a YouTube video's transcript into clear, well-organized study notes.
 
 Rules:
 - Start with a 1-2 sentence overview of what the video covers.
@@ -278,7 +278,7 @@ Rules:
 const VIDEO_CHUNK_PROMPT = `You are condensing one segment of a longer video transcript into brief notes, to later be combined with notes from other segments into one cohesive summary.
 Extract the key points from just this segment as short bullets. Be concise — this is an intermediate step, not the final output. Do not add an introduction or conclusion.`;
 
-const VIDEO_REDUCE_PROMPT = `You are Study Buddy. Below are notes taken from consecutive segments of a single video's transcript, in order. Combine them into one cohesive, well-organized set of study notes for the whole video.
+const VIDEO_REDUCE_PROMPT = `You are Buddy. Below are notes taken from consecutive segments of a single video's transcript, in order. Combine them into one cohesive, well-organized set of study notes for the whole video.
 
 Rules:
 - Start with a 1-2 sentence overview of the whole video.

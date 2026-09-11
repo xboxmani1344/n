@@ -25,7 +25,7 @@ try {
 } catch (err) {
   const [major, minor] = process.versions.node.split('.').map(Number);
   die([
-    'Study Buddy could not start: this Node.js is too old.',
+    'Buddy could not start: this Node.js is too old.',
     '',
     `  running:  Node ${process.versions.node}`,
     '  required: Node 22.5 or newer',
@@ -48,7 +48,7 @@ try {
   fs.accessSync(DB_DIR, fs.constants.W_OK);
 } catch (err) {
   die([
-    'Study Buddy could not start: the database folder is not writable.',
+    'Buddy could not start: the database folder is not writable.',
     '',
     `  DB_PATH:  ${DB_PATH}`,
     `  folder:   ${DB_DIR}`,

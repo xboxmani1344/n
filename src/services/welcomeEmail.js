@@ -23,11 +23,11 @@ function content(lang, { name, code, percent, url }) {
   if (lang === 'fa') {
     percent = faNum(percent);
     return {
-      subject: `${percent}٪ تخفیف برای شروع — Study Buddy`,
+      subject: `${percent}٪ تخفیف برای شروع — Buddy`,
       text: [
         `${name ? name + ' جان، س' : 'س'}لام!`,
         '',
-        'خوش آمدی به Study Buddy — مربی‌ای که برای درس، تمرین و تغذیه کنارت است.',
+        'خوش آمدی به Buddy — مربی‌ای که برای درس، تمرین، تغذیه و کدنویسی کنارت است.',
         '',
         `به عنوان هدیه‌ی شروع، ${percent}٪ تخفیف روی اشتراک برایت گذاشتیم:`,
         '',
@@ -41,11 +41,11 @@ function content(lang, { name, code, percent, url }) {
   }
 
   return {
-    subject: `${percent}% off to get started — Study Buddy`,
+    subject: `${percent}% off to get started — Buddy`,
     text: [
       `Hi${name ? ' ' + name : ''},`,
       '',
-      'Welcome to Study Buddy — a coach for studying, training and eating better.',
+      'Welcome to Buddy — a coach for studying, training, eating better and learning to code.',
       '',
       `Here is ${percent}% off your first subscription:`,
       '',

@@ -60,7 +60,7 @@ async function startZarinpalCheckout(req, res) {
   const { authority, url } = await zarinpal.requestPayment({
     amountRial,
     callbackUrl: `${origin}/api/billing/callback`,
-    description: `Study Buddy — ${plan}`,
+    description: `Buddy — ${plan}`,
     email: req.user.email,
   });
 

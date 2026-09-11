@@ -7,7 +7,7 @@ cd /d "%~dp0"
 
 echo.
 echo ==========================================
-echo   Study Buddy
+echo   Buddy
 echo ==========================================
 echo.
 
@@ -114,7 +114,7 @@ REM npm start only returns once the server stops. If that was a crash rather
 REM than the user closing it, pause so the error stays readable instead of the
 REM window vanishing.
 echo.
-echo Study Buddy has stopped.
+echo Buddy has stopped.
 echo.
 pause
 exit /b 0
