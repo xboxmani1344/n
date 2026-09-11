@@ -4,9 +4,6 @@
   "build": {
     "location": "iran"
   },
-  "node": {
-    "version": "22"
-  },
   "disks": [
     {
       "name": "data",
