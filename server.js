@@ -6,7 +6,7 @@ const path = require('path');
 const express = require('express');
 const cookieParser = require('cookie-parser');
 
-require('./src/db');
+const { DB_PATH, onSeparateVolume } = require('./src/db');
 const { attachUser } = require('./src/middleware/auth');
 const { errorHandler } = require('./src/middleware/errors');
 const { TRACKS, PHASES } = require('./src/prompts');
@@ -65,8 +65,45 @@ app.use('/api/setup', setupRoutes);
 
 app.use(errorHandler);
 
+// On a managed host the boot log is the only window into what the app actually
+// resolved, and it is the first thing anyone asks for when a deploy misbehaves.
+// Printing the settings that decide behaviour turns "it doesn't work" into a
+// question that answers itself.
+//
+// Deliberately never the key itself, only whether one arrived: deploy logs get
+// pasted into chats and issues.
+function bootSummary() {
+  const separate = onSeparateVolume();
+  const disk =
+    separate === true ? 'on its own disk' : separate === false ? 'on the container filesystem' : 'location unknown';
+
+  const lines = [
+    `  node      ${process.versions.node}`,
+    `  database  ${DB_PATH}  (${disk})`,
+    `  ai        ${ai.BASE_URL}`,
+    `  model     ${ai.MODEL_ID}${ai.isConfigured() ? '' : '   (no key set — the AI cannot reply yet)'}`,
+  ];
+
+  if (process.env.SHARED_API_KEY === '1') {
+    lines.push('  shared    on — every signed-in user spends this key');
+  }
+
+  console.log(lines.join('\n'));
+
+  // The one that silently destroys data rather than just failing.
+  if (separate === false && process.env.NODE_ENV === 'production') {
+    console.warn(
+      '\n  WARNING: the database is not on a mounted disk.\n' +
+        '  Every account, chat and task will be erased on the next deploy.\n' +
+        '  Attach a disk to the folder above and redeploy.\n'
+    );
+  }
+}
+
 app.listen(PORT, () => {
   console.log(`Study Buddy running at http://localhost:${PORT}`);
+  bootSummary();
+
   if (!ai.isConfigured()) {
     console.warn(
       `Note: no AI API key yet. You don't need to edit any files — open http://localhost:${PORT} and paste your key into the setup screen. Get a free one at https://aistudio.google.com/apikey`

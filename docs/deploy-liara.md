@@ -103,8 +103,11 @@ AI_API_KEY=<کلید هوش مصنوعی لیارا>
 AI_BASE_URL=<آدرس سرویس لیارا>
 MODEL_ID=<اسم مدل>
 SHARED_API_KEY=1
-DB_PATH=/usr/src/app/data/study-buddy.db
 ```
+
+> **`DB_PATH` لازم نیست.** مسیر پیش‌فرض خود برنامه دقیقاً همان‌جایی است که دیسک
+> وصل می‌شود (`/usr/src/app/data/study-buddy.db`)، پس یکی کمتر برای اشتباه
+> نوشتن. اگر روزی دیسک را جای دیگری mount کردی، آن‌وقت این را هم اضافه کن.
 
 `SHARED_API_KEY=1` همان چیزی است که می‌خواستی: **هیچ کاربری لازم نیست کلید
 بخرد**، همه از کلید تو استفاده می‌کنند. (کسی که بخواهد، همچنان می‌تواند از
@@ -146,26 +149,46 @@ xboxmani1344/n
 
 ## ۶. لاگ اولین انتشار را بخوان
 
-بعد از انتشار، لاگ را باز کن. حالت سالم این است:
+برنامه موقع بالا آمدن می‌گوید با چه تنظیماتی دارد کار می‌کند. حالت سالم:
 
 ```
-Applied migration: 001_users_sessions.sql
-...
-Applied migration: 008_language.sql
 Study Buddy running at http://localhost:3000
+  node      22.22.2
+  database  /usr/src/app/data/study-buddy.db  (on its own disk)
+  ai        https://ai.liara.ir/...
+  model     <اسم مدلت>
+  shared    on — every signed-in user spends this key
 ```
 
-اگر به‌جایش یکی از این‌ها را دیدی، خودِ پیام می‌گوید چه کار کنی:
+سه چیز را از همین چند خط چک کن:
+
+| خط | چه چیزی را ثابت می‌کند |
+|---|---|
+| `node 22.x` | نسخه درست است (باید ۲۲.۵ به بالا باشد) |
+| `on its own disk` | **دیسک واقعاً وصل است** |
+| `ai …liara…` | به سرویس لیارا وصل می‌شود، نه گوگل |
+
+اگر به‌جای `on its own disk` نوشت `on the container filesystem`، این را هم زیرش
+می‌بینی:
+
+```
+  WARNING: the database is not on a mounted disk.
+  Every account, chat and task will be erased on the next deploy.
+```
+
+یعنی دیسک وصل نشده. الان که سایت خالی است ضرری ندارد، ولی قبل از اینکه کاربر
+بگیری حتماً درستش کن.
+
+و اگر اصلاً بالا نیامد، پیام خودش می‌گوید چه کار کنی:
 
 | پیام | یعنی |
 |---|---|
-| `this Node.js is too old` | نسخه‌ی نود را در تنظیمات ببر بالاتر از ۲۲.۵ |
-| `the database folder is not writable` | دیسک وصل نشده، یا `DB_PATH` بیرون از دیسک است |
-| `SQLite is in "delete" mode, not WAL` | ایرادی نیست — فقط خبر می‌دهد که دیسک شبکه‌ای است |
+| `this Node.js is too old` | `liara.json` را نگاه کن، `node.version` باید `22` باشد |
+| `the database folder is not writable` | مسیر دیسک با آنچه برنامه می‌خواهد نمی‌خواند |
+| `SQLite is in "delete" mode, not WAL` | ایرادی نیست — فقط خبر می‌دهد دیسک شبکه‌ای است |
 
-اگر چیز دیگری دیدی، لاگ را برایم بفرست.
-
----
+> کلید هوش مصنوعی هیچ‌وقت توی لاگ چاپ نمی‌شود، فقط اینکه ست شده یا نه. پس
+> می‌توانی لاگ را بدون نگرانی برای من بفرستی.
 
 ## بعد از بالا آمدن
 

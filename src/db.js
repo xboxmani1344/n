@@ -96,4 +96,19 @@ function runMigrations() {
 
 runMigrations();
 
-module.exports = { db };
+// Is the database on a disk of its own, or on the container's own filesystem
+// that the next deploy throws away? A mounted volume is a different device, so
+// comparing device ids answers it without needing to know anything about the
+// host. Returns null where the check itself is not possible.
+//
+// This is the failure that costs the most and announces itself the least: the
+// app runs perfectly, and then one redeploy later every account is gone.
+function onSeparateVolume() {
+  try {
+    return fs.statSync(DB_DIR).dev !== fs.statSync(path.join(__dirname, '..')).dev;
+  } catch {
+    return null;
+  }
+}
+
+module.exports = { db, DB_PATH, onSeparateVolume };

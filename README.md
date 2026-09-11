@@ -150,7 +150,7 @@ Environment variables to set in the host's panel:
 | `MODEL_ID` | the model name your provider uses |
 | `SHARED_API_KEY` | `1` if you're paying for the key on your users' behalf |
 | `NODE_ENV` | `production` |
-| `DB_PATH` | a file **inside the mounted disk**, e.g. `/var/lib/data/study-buddy.db` |
+| `DB_PATH` | only if the disk is mounted somewhere other than `<app>/data` — the default already points there |
 
 **For Liara specifically** there is a click-by-click walkthrough in Persian at
 [`docs/deploy-liara.md`](docs/deploy-liara.md), and a `liara.json` in the repo
