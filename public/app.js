@@ -288,6 +288,11 @@
         email: formData.get('email'),
         password: formData.get('password'),
         displayName: formData.get('displayName'),
+        // Sent with the signup rather than left to the settings PATCH that
+        // follows: the welcome email goes out the moment the account exists,
+        // so by the time the preference is saved the wrong-language email has
+        // already been posted.
+        language: i18n.lang,
       },
     });
     if (!ok) {

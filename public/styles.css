@@ -1868,3 +1868,35 @@ html[data-i18n-pending] body {
 .msg .body .katex {
   font-size: 1.05em;
 }
+
+/* --- brand mark ----------------------------------------------------------- */
+
+/* The mark sits next to the wordmark and is drawn in currentColor, so it
+   follows the text it stands beside through both themes and every track tint
+   without a second copy of the file.
+
+   Sized in em rather than px: wherever the wordmark is set, the mark comes out
+   in proportion to it. The glyph carries about 12% padding inside its own
+   viewBox, so 1.35em of box gives a mark that matches the cap height of the
+   text rather than towering over it. */
+.brand-mark {
+  width: 1.35em;
+  height: 1.35em;
+  flex: none;
+  /* Nudged onto the text baseline: the glyph's own descender-less shape
+     otherwise floats slightly high next to a capital B. */
+  vertical-align: -0.28em;
+}
+
+.sidebar-title,
+.lp-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+}
+
+/* Inside a flex line the baseline nudge above is not what positions it. */
+.sidebar-title .brand-mark,
+.lp-brand .brand-mark {
+  vertical-align: baseline;
+}

@@ -32,17 +32,33 @@ function publicUser(user) {
   return { id: user.id, email: user.email, displayName: user.display_name, theme: user.theme };
 }
 
+// The language the person is actually reading. Sent by the signup form, which
+// knows what it is showing; the header is the fallback for a client that does
+// not send it. The account's own preference takes over from the first save.
+function requestedLanguage(req, body) {
+  if (body && (body.language === 'fa' || body.language === 'en')) return body.language;
+  return /(^|,)\s*fa\b/i.test(req.headers['accept-language'] || '') ? 'fa' : 'en';
+}
+
 function isValidEmail(email) {
   return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-function createUserWithFreeSubscription({ email, passwordHash, displayName }) {
+function createUserWithFreeSubscription({ email, passwordHash, displayName, language }) {
   const now = new Date().toISOString();
   const info = db
     .prepare(
-      'INSERT INTO users (email, password_hash, display_name, theme, created_at) VALUES (?, ?, ?, ?, ?)'
+      'INSERT INTO users (email, password_hash, display_name, theme, language, created_at)' +
+        ' VALUES (?, ?, ?, ?, ?, ?)'
     )
-    .run(email.toLowerCase(), passwordHash, displayName || null, 'system', now);
+    .run(
+      email.toLowerCase(),
+      passwordHash,
+      displayName || null,
+      'system',
+      language === 'fa' ? 'fa' : 'en',
+      now
+    );
   const userId = Number(info.lastInsertRowid);
 
   db.prepare(
@@ -81,7 +97,12 @@ router.post(
     }
 
     const passwordHash = await hashPassword(password);
-    const userId = createUserWithFreeSubscription({ email, passwordHash, displayName });
+    const userId = createUserWithFreeSubscription({
+      email,
+      passwordHash,
+      displayName,
+      language: requestedLanguage(req, req.body),
+    });
     sendWelcome(userId, req);
 
     const session = createSession(userId, req.headers['user-agent']);
@@ -208,12 +229,28 @@ router.get(
       userId = existingAccount.user_id;
     } else {
       const existingUser = db.prepare('SELECT * FROM users WHERE email = ?').get(profile.email.toLowerCase());
+
+      // Matching on the email address is how a Google sign-in joins up with an
+      // account someone already made with a password. That match is only safe
+      // if Google says it verified the address: an unverified one is a string
+      // the signer-in typed, so honouring it would hand over any account whose
+      // email could be guessed. Google sends email_verified for exactly this.
+      if (existingUser && profile.email_verified !== true) {
+        return res
+          .status(409)
+          .send(
+            'An account already uses this email address. Sign in with your password instead.'
+          );
+      }
+
       userId = existingUser
         ? existingUser.id
         : createUserWithFreeSubscription({
             email: profile.email,
             passwordHash: null,
             displayName: profile.name,
+            // No form to read here, so the browser's own header decides.
+            language: requestedLanguage(req, null),
           });
       if (!existingUser) sendWelcome(userId, req);
 
@@ -224,7 +261,9 @@ router.get(
 
     const session = createSession(userId, req.headers['user-agent']);
     setSessionCookie(res, session.id);
-    res.redirect('/');
+    // Not '/': that is the marketing page, and someone who has just signed in
+    // has already read it.
+    res.redirect('/app');
   })
 );
 

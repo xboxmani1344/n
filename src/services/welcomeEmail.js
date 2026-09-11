@@ -58,16 +58,29 @@ function content(lang, { name, code, percent, url }) {
   };
 }
 
+// The code paragraph becomes the code block, in place. Lifting it to the end
+// instead - as this did - left the HTML reading "here is your discount:" and
+// then "enter it when you upgrade" with nothing between them, and the code
+// stranded below the link. Almost everyone reads the HTML part.
+const CODE_BLOCK =
+  'display:inline-block;padding:12px 20px;border-radius:10px;background:#f2f2f0;' +
+  // The code is Latin even in the Persian email, so it is set left-to-right
+  // inside an RTL message rather than inheriting the paragraph direction.
+  'font-size:19px;font-weight:700;letter-spacing:0.08em;direction:ltr';
+
 function htmlFor(lang, body, code) {
   const dir = lang === 'fa' ? 'rtl' : 'ltr';
   const paragraphs = body
     .split('\n\n')
-    .map((p) => (p.trim() === code ? '' : `<p style="margin:0 0 14px">${escapeHtml(p).replace(/\n/g, '<br>')}</p>`))
+    .map((p) =>
+      p.trim() === code
+        ? `<p style="margin:22px 0"><code style="${CODE_BLOCK}">${escapeHtml(code)}</code></p>`
+        : `<p style="margin:0 0 14px">${escapeHtml(p).replace(/\n/g, '<br>')}</p>`
+    )
     .join('');
 
   return `<div dir="${dir}" style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.7;color:#111;max-width:34rem">
 ${paragraphs}
-<p style="margin:22px 0"><code style="display:inline-block;padding:12px 20px;border-radius:10px;background:#f2f2f0;font-size:19px;font-weight:700;letter-spacing:0.08em">${escapeHtml(code)}</code></p>
 </div>`;
 }
 

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- A tab favicon cannot inherit currentColor, and a tab strip is light or
+       dark depending on the browser's theme, so the two cases are drawn here.
+       A bare glyph rather than a tile: a coloured square is the loudest thing
+       in a row of tabs, and this identity is not loud. -->
+  <style>
+    .g { fill: #111111; stroke: #111111; }
+    @media (prefers-color-scheme: dark) { .g { fill: #f3f3f3; stroke: #f3f3f3; } }
+  </style>
+  <rect class="g" x="13" y="8" width="10" height="48" rx="5" stroke="none"/>
+  <circle class="g" cx="33" cy="38" r="13" stroke-width="10" fill="none"/>
+</svg>

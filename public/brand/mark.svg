@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-label="Buddy">
+  <!-- A geometric lowercase b: a stem standing beside a ring. Two shapes side
+       by side, which is the whole idea. Drawn in currentColor so it takes the
+       page's text colour and needs no separate dark-theme copy. -->
+  <rect x="13" y="8" width="10" height="48" rx="5" fill="currentColor"/>
+  <circle cx="33" cy="38" r="13" stroke="currentColor" stroke-width="10"/>
+</svg>

@@ -22,6 +22,12 @@ const checks = [
   ['/api/phases', 200, 'track definitions'],
   ['/api/config', 200, 'client config'],
   ['/api/chats', 401, 'signed-out chats are refused, not crashed'],
+  // Branding: a missing favicon or manifest is a 404 nobody notices in
+  // development, because nothing on the page depends on it rendering.
+  ['/favicon.svg', 200, 'tab icon'],
+  ['/site.webmanifest', 200, 'installable manifest'],
+  ['/brand/icon-180.png', 200, 'home-screen icon'],
+  ['/brand/og.png', 200, 'link preview image'],
 ];
 
 let failures = 0;
@@ -100,6 +106,32 @@ async function waitForListening() {
     );
   } catch (err) {
     report(false, 'track definitions parse', err.message);
+  }
+
+  // The welcome email goes out the instant the account exists, so the language
+  // has to be on the row by then. Signing up in Persian and reading back English
+  // means every Iranian signup gets an English discount email.
+  try {
+    const res = await fetch(`http://127.0.0.1:${PORT}/api/auth/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: `smoke-${Date.now()}@example.com`,
+        password: 'password123',
+        language: 'fa',
+      }),
+    });
+    const cookie = (res.headers.get('set-cookie') || '').split(';')[0];
+    const settings = await (
+      await fetch(`http://127.0.0.1:${PORT}/api/settings`, { headers: { cookie } })
+    ).json();
+    report(
+      settings.settings && settings.settings.language === 'fa',
+      'signing up in Persian stores Persian',
+      settings.settings ? settings.settings.language : 'no settings'
+    );
+  } catch (err) {
+    report(false, 'signup language', err.message);
   }
 
   server.kill();
