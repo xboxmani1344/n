@@ -13,14 +13,14 @@ const START_PAY_URL = 'https://payment.zarinpal.com/pg/StartPay';
 
 const TIMEOUT_MS = 20000;
 
-// Prices are written in Toman because that is what Iranians quote, and the
-// currency is stated explicitly rather than left to the gateway's default.
+// ZarinPal's own unit is Rial, and the currency is stated explicitly so it
+// never depends on an account default.
 //
-// This direction is deliberate. If the explicit currency were ever ignored and
-// the amount read as Rial, the customer is charged a tenth - annoying, and ours
-// to fix. Sending Rial and having it read as Toman would charge them ten times
-// what they agreed to, which is not a mistake worth risking.
-const CURRENCY = 'IRT';
+// The one rule that matters: whatever is charged here is what the customer was
+// shown. Prices are configured in Rial, and the interface divides by ten to
+// display Toman, because Toman is what Iranians read prices in. One number,
+// converted for display only - never two numbers that could drift apart.
+const CURRENCY = 'IRR';
 
 function merchantId() {
   return process.env.ZARINPAL_MERCHANT_ID || null;
@@ -28,13 +28,6 @@ function merchantId() {
 
 function isConfigured() {
   return Boolean(merchantId());
-}
-
-// Price of the paid plan, in Toman. Kept here so there is one place to change
-// it and no chance of the checkout and the verification disagreeing.
-function planPriceToman() {
-  const raw = Number(process.env.PAID_PLAN_PRICE_TOMAN);
-  return Number.isFinite(raw) && raw > 0 ? Math.round(raw) : 50000;
 }
 
 function startPayUrl(authority) {
@@ -91,14 +84,14 @@ async function post(url, body) {
 }
 
 // Returns { authority, url } - send the payer to url.
-async function requestPayment({ amountToman, callbackUrl, description, email }) {
+async function requestPayment({ amountRial, callbackUrl, description, email }) {
   if (!isConfigured()) {
     throw fail('Online payment is not set up yet.', 'payment_not_configured', 503);
   }
 
   const data = await post(REQUEST_URL, {
     merchant_id: merchantId(),
-    amount: amountToman,
+    amount: amountRial,
     currency: CURRENCY,
     callback_url: callbackUrl,
     description,
@@ -115,14 +108,14 @@ async function requestPayment({ amountToman, callbackUrl, description, email }) 
 
 // Returns { paid, refId, alreadyVerified }. The amount must match the one sent
 // at request time, which is why it is stored rather than recalculated.
-async function verifyPayment({ amountToman, authority }) {
+async function verifyPayment({ amountRial, authority }) {
   if (!isConfigured()) {
     throw fail('Online payment is not set up yet.', 'payment_not_configured', 503);
   }
 
   const data = await post(VERIFY_URL, {
     merchant_id: merchantId(),
-    amount: amountToman,
+    amount: amountRial,
     currency: CURRENCY,
     authority,
   });
@@ -138,9 +131,14 @@ async function verifyPayment({ amountToman, authority }) {
   return { paid: false, refId: null, alreadyVerified: false };
 }
 
+// Display only. The charge is always the Rial figure above.
+function toToman(rial) {
+  return Math.round(rial / 10);
+}
+
 module.exports = {
   isConfigured,
-  planPriceToman,
+  toToman,
   requestPayment,
   verifyPayment,
   CURRENCY,
