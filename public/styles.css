@@ -1603,3 +1603,77 @@ html[data-i18n-pending] body {
   margin-inline-start: 6px;
   font-size: 0.72em;
 }
+
+/* --- Plans ---------------------------------------------------------------- */
+
+.plan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.plan-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 14px 14px;
+  border: 1px solid var(--control-border);
+  border-radius: 18px;
+  background: var(--chip-bg);
+}
+
+/* The one they already have is stated, not sold. */
+.plan-card.current {
+  border-color: var(--fill);
+}
+
+.plan-card-name {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.plan-card-price {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.plan-card-tracks,
+.plan-card-msgs {
+  margin: 0;
+  font-size: 0.74rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.plan-card-btn {
+  margin-top: 10px;
+  width: 100%;
+}
+
+.discount-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.discount-field input {
+  border: 1px solid var(--control-border);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  padding: 10px 12px;
+}
+
+/* A code is typed off a screen or an email, so case should not matter. */
+.discount-field input {
+  text-transform: uppercase;
+}

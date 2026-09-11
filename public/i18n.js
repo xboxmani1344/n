@@ -196,6 +196,22 @@
       '{used}/{limit} AI messages today · {vUsed}/{vLimit} video summaries this month',
       '{used}/{limit} پیام امروز · {vUsed}/{vLimit} خلاصه‌ی ویدیو این ماه',
     ],
+    'plan.perMonth': ['{price} Toman / month', '{price} تومان در ماه'],
+    'plan.current': ['Your plan', 'اشتراک فعلی تو'],
+    'plan.choose': ['Choose', 'انتخاب'],
+    'plan.messages': ['{n} messages a day', '{n} پیام در روز'],
+    'plan.includes': ['Study', 'درس'],
+    'plan.discountLabel': ['Discount code', 'کد تخفیف'],
+    'plan.discountYours': ['Your code {code} — {percent}% off', 'کد تو: {code} — {percent}٪ تخفیف'],
+    'plan.opening': ['Opening the payment page…', 'در حال باز کردن صفحه‌ی پرداخت…'],
+    'plan.notConfigured': [
+      'Online payment is not set up on this site yet.',
+      'پرداخت آنلاین روی این سایت هنوز راه‌اندازی نشده.',
+    ],
+    'plan.discountBad': ['That discount code cannot be used.', 'این کد تخفیف قابل استفاده نیست.'],
+    'payment.ok': ['Payment received — your plan is active.', 'پرداخت انجام شد — اشتراکت فعال شد.'],
+    'payment.cancelled': ['Payment cancelled. Nothing was charged.', 'پرداخت لغو شد. مبلغی کم نشد.'],
+    'payment.failed': ['The payment did not go through.', 'پرداخت انجام نشد.'],
     'settings.upgrade': ['Upgrade', 'ارتقا'],
 
     // --- relative time -------------------------------------------------------
@@ -252,7 +268,7 @@
     'lp.cta.start': ['Start free', 'رایگان شروع کن'],
     'lp.cta.how': ['See how it works', 'ببین چطور کار می‌کند'],
     'lp.scroll': ['Scroll', 'اسکرول کن'],
-    'lp.tracks.h2': ['Three tracks, one method', 'سه مسیر، یک روش'],
+    'lp.tracks.h2': ['Four tracks, one method', 'چهار مسیر، یک روش'],
     'lp.tracks.study.h': ['Study', 'درس'],
     'lp.tracks.study.p': [
       'Warm-Up, Learn, Practice, Review. It finds out what you already know, teaches in chunks, quizzes you until it sticks, then plans when to revisit.',
@@ -285,6 +301,15 @@
     ],
     'lp.track.count': ['Track {n} of {total}', 'مسیر {n} از {total}'],
     'lp.track.goto': ['Show the {name} track', 'نمایش مسیر {name}'],
+    'lp.tracks.code.h': ['Buddy Code', 'بادی کد'],
+    'lp.tracks.code.p': [
+      'Brief, Design, Build, Debug. It will not hand you the finished answer - it gives you the next piece, and teaches you to read the error instead of pasting the fix.',
+      'صورت مسئله، طراحی، ساخت، اشکال‌زدایی. جواب آماده بهت نمی‌دهد — تکه‌ی بعدی را می‌دهد و یادت می‌دهد خودت ارور را بخوانی، نه اینکه فقط کپی کنی.',
+    ],
+    'lp.track.code.phases': [
+      'Brief · Design · Build · Debug',
+      'صورت مسئله · طراحی · ساخت · اشکال‌زدایی',
+    ],
     'lp.phases.eyebrow': ['How a session runs', 'یک جلسه چطور پیش می‌رود'],
     'lp.phases.aria': ['The four phases', 'چهار فاز'],
     'lp.seg.1': ['Assess', 'ارزیابی'],

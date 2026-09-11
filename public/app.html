@@ -330,8 +330,15 @@
               <p class="plan-name" id="settings-plan-name" data-i18n="settings.planFree">Free plan</p>
               <p class="plan-desc" id="settings-plan-usage" data-i18n="settings.planDefault">Limited daily AI messages and monthly video summaries.</p>
             </div>
-            <button type="button" id="settings-upgrade-btn" class="pill-btn primary-btn" data-i18n="settings.upgrade">Upgrade</button>
           </div>
+
+          <div class="plan-grid" id="plan-grid"></div>
+
+          <label class="discount-field" id="discount-field" hidden>
+            <span id="discount-label" data-i18n="plan.discountLabel">Discount code</span>
+            <input type="text" id="discount-input" autocomplete="off" spellcheck="false" placeholder="SB-XXXX-XXXX" />
+          </label>
+
           <p class="auth-error" id="billing-error"></p>
         </div>
       </div>

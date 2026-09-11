@@ -227,7 +227,7 @@
 .lp-tracks {
   position: relative;
   /* One viewport per track, plus the one the sticky child occupies. */
-  height: 340vh;
+  height: 440vh;
 }
 
 .lp-tracks-sticky {
@@ -642,7 +642,7 @@
 
   /* One viewport has to hold the whole panel on a phone, so the section gets
      shorter travel and the decoration gives up its space first. */
-  .lp-tracks { height: 300vh; }
+  .lp-tracks { height: 390vh; }
   .lp-tracks-sticky { gap: 16px; }
   .lp-motes { display: none; }
   .lp-track-lede { margin-bottom: 18px; }

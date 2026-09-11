@@ -152,7 +152,10 @@
   const passwordSaved = document.getElementById('password-saved');
   const settingsPlanName = document.getElementById('settings-plan-name');
   const settingsPlanUsage = document.getElementById('settings-plan-usage');
-  const settingsUpgradeBtn = document.getElementById('settings-upgrade-btn');
+  const planGrid = document.getElementById('plan-grid');
+  const discountField = document.getElementById('discount-field');
+  const discountLabel = document.getElementById('discount-label');
+  const discountInput = document.getElementById('discount-input');
   const billingError = document.getElementById('billing-error');
 
   let chats = [];
@@ -1058,6 +1061,113 @@
 
   // ---------- Settings ----------
 
+
+  // ---------- Plans ----------
+
+  // Prices arrive in Rial because that is what the gateway is sent; Toman is
+  // what gets shown, because that is what people read prices in. Converted
+  // here at the last step so the figure charged and the figure shown are the
+  // same number.
+  function tomanFromRial(rial) {
+    const grouped = Math.round(rial / 10).toLocaleString('en-US');
+    // The thousands separator is a different character in Persian. Swapping it
+    // unconditionally put the Persian one into the English prices too.
+    return i18n.lang === 'fa' ? num(grouped).replace(/,/g, '\u066c') : grouped;
+  }
+
+  function trackNames(tracks) {
+    return tracks.map((t) => tr(`track.${t}.title`)).join(' · ');
+  }
+
+  function renderPlans(billing) {
+    planGrid.innerHTML = '';
+    if (!billing.plans) return;
+
+    const own = billing.discountCode;
+    discountField.hidden = !own;
+    if (own) {
+      discountLabel.textContent = tr('plan.discountYours', { code: own.code, percent: num(own.percent) });
+      // Pre-filled, because a code someone has to go and find in an email is a
+      // code most people will not use.
+      if (!discountInput.value) discountInput.value = own.code;
+    }
+
+    billing.plans.forEach((plan) => {
+      const isCurrent = plan.key === billing.plan;
+      const card = document.createElement('div');
+      card.className = 'plan-card' + (isCurrent ? ' current' : '');
+
+      const name = document.createElement('p');
+      name.className = 'plan-card-name';
+      name.textContent = tr(`plan.${plan.key}`);
+
+      const price = document.createElement('p');
+      price.className = 'plan-card-price';
+      price.textContent = tr('plan.perMonth', { price: tomanFromRial(plan.priceRial) });
+
+      const what = document.createElement('p');
+      what.className = 'plan-card-tracks';
+      what.textContent = trackNames(plan.tracks);
+
+      const msgs = document.createElement('p');
+      msgs.className = 'plan-card-msgs';
+      msgs.textContent = tr('plan.messages', { n: num(plan.messagesPerDay) });
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'pill-btn primary-btn plan-card-btn';
+      btn.textContent = tr(isCurrent ? 'plan.current' : 'plan.choose');
+      btn.disabled = isCurrent;
+      btn.addEventListener('click', () => startCheckout(plan.key, btn));
+
+      card.append(name, price, what, msgs, btn);
+      planGrid.appendChild(card);
+    });
+  }
+
+  async function startCheckout(plan, btn) {
+    billingError.textContent = '';
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = tr('plan.opening');
+
+    const { ok, data } = await api('/api/billing/checkout', {
+      method: 'POST',
+      body: { plan, code: discountInput.value.trim() || undefined },
+    });
+
+    if (!ok) {
+      btn.disabled = false;
+      btn.textContent = original;
+      const code = data && data.code;
+      billingError.textContent =
+        code === 'billing_not_configured' || code === 'payment_not_configured'
+          ? tr('plan.notConfigured')
+          : code && code.startsWith('discount_')
+            ? tr('plan.discountBad')
+            : (data && data.error) || tr('err.generic');
+      return;
+    }
+
+    window.location.href = data.url;
+  }
+
+  // The gateway sends the payer back to /app?payment=... - tell them what
+  // happened rather than dropping them on a page that looks unchanged.
+  function reportPaymentOutcome() {
+    const outcome = new URLSearchParams(window.location.search).get('payment');
+    if (!outcome) return;
+
+    // Cleared so a refresh does not repeat the message.
+    const url = new URL(window.location.href);
+    url.searchParams.delete('payment');
+    window.history.replaceState({}, '', url);
+
+    const key = { ok: 'payment.ok', cancelled: 'payment.cancelled' }[outcome] || 'payment.failed';
+    window.setTimeout(() => window.alert(tr(key)), 100);
+    if (outcome === 'ok') switchView('settings');
+  }
+
   function markActiveLanguage() {
     languageOptions.forEach((btn) => btn.classList.toggle('active', btn.dataset.language === i18n.lang));
   }
@@ -1126,8 +1236,7 @@
 
     const { data: billing } = await api('/api/billing');
     if (billing) {
-      settingsPlanName.textContent = tr(billing.plan === 'paid' ? 'settings.planPaid' : 'settings.planFree');
-      settingsUpgradeBtn.hidden = billing.plan === 'paid';
+      settingsPlanName.textContent = billing.plan === 'free' ? tr('settings.planFree') : tr(`plan.${billing.plan}`);
       const msgs = billing.usage.ai_messages;
       const vids = billing.usage.video_summaries;
       settingsPlanUsage.textContent = tr('settings.usage', {
@@ -1136,24 +1245,9 @@
         vUsed: num(vids.used),
         vLimit: num(vids.limit),
       });
+      renderPlans(billing);
     }
   }
-
-  settingsUpgradeBtn.addEventListener('click', async () => {
-    billingError.textContent = '';
-    settingsUpgradeBtn.disabled = true;
-    const { ok, data } = await api('/api/billing/checkout', { method: 'POST' });
-    settingsUpgradeBtn.disabled = false;
-
-    if (!ok) {
-      billingError.textContent =
-        (data && data.code === 'billing_not_configured' ? tr('err.billingOff') : data && data.error) ||
-        tr('err.generic');
-      return;
-    }
-
-    window.location.href = data.url;
-  });
 
   profileForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1244,6 +1338,7 @@
         else setLanguage(data.settings.language, { persist: false });
       }
       await initApp();
+      reportPaymentOutcome();
     } else {
       showAuthView();
     }
