@@ -90,8 +90,8 @@ async function waitForListening() {
     const { tracks } = await (await fetch(`http://127.0.0.1:${PORT}/api/phases`)).json();
     const keys = Object.keys(tracks || {});
     report(
-      keys.length === 3 && keys.every((k) => tracks[k].phases.length === 4),
-      'three tracks of four phases each',
+      keys.length === 4 && keys.every((k) => tracks[k].phases.length === 4),
+      'four tracks of four phases each',
       keys.join(', ')
     );
     report(

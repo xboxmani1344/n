@@ -41,6 +41,13 @@ router.get('/', requireAuth, (req, res) => {
     status: sub ? sub.status : 'active',
     currentPeriodEnd: sub ? sub.current_period_end : null,
     usage: usageSummary,
+    tracks: usage.tracksFor(plan),
+    plans: usage.PAID_PLANS.map((key) => ({
+      key,
+      priceRial: usage.PLAN_LIMITS[key].priceRial,
+      tracks: usage.PLAN_LIMITS[key].tracks,
+      messagesPerDay: usage.PLAN_LIMITS[key].ai_messages.limit,
+    })),
     billingConfigured: Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PRICE_ID),
   });
 });

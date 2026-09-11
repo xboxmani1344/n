@@ -43,7 +43,7 @@
   // keys to read. 'phased' is the old name for study.
   function trackKey(mode) {
     const key = mode === 'phased' || !mode ? 'study' : mode;
-    return ['study', 'workout', 'diet', 'tutor'].includes(key) ? key : 'study';
+    return ['study', 'workout', 'diet', 'code', 'tutor'].includes(key) ? key : 'study';
   }
 
   function trackText(mode, part) {
@@ -81,7 +81,9 @@
   const newSessionBtn = document.getElementById('new-session-btn');
   const newWorkoutBtn = document.getElementById('new-workout-btn');
   const newDietBtn = document.getElementById('new-diet-btn');
+  const newCodeBtn = document.getElementById('new-code-btn');
   const newTutorBtn = document.getElementById('new-tutor-btn');
+  const trackButtons = document.querySelectorAll('[data-track-btn]');
   const sidebarNavBtns = document.querySelectorAll('.sidebar-nav-btn');
   const chatNavExtras = document.getElementById('chat-nav-extras');
 
@@ -567,11 +569,26 @@
   newSessionBtn.addEventListener('click', () => createChat('study'));
   newWorkoutBtn.addEventListener('click', () => createChat('workout'));
   newDietBtn.addEventListener('click', () => createChat('diet'));
+  newCodeBtn.addEventListener('click', () => createChat('code'));
   newTutorBtn.addEventListener('click', () => createChat('tutor'));
 
   async function createChat(mode) {
     if (busy) return;
-    const { data } = await api('/api/chats', { method: 'POST', body: { mode } });
+    const { ok, data } = await api('/api/chats', { method: 'POST', body: { mode } });
+
+    if (!ok) {
+      // The plan does not include this track. Say which one does and put them
+      // in front of it, rather than failing silently.
+      if (data && data.code === 'track_locked') {
+        const planName = tr(`plan.${data.requiredPlan}`);
+        window.alert(tr('err.trackLocked', { plan: planName }));
+        switchView('settings');
+        return;
+      }
+      window.alert((data && data.error) || tr('err.generic'));
+      return;
+    }
+
     await refreshChatList();
     await loadChat(data.chat.id, data.chat);
   }
@@ -605,7 +622,32 @@
     }
   }
 
+  // Which tracks this account's plan opens. The server refuses the rest
+  // regardless; this only stops someone clicking a button that cannot work.
+  let allowedTracks = null;
+
+  function applyTrackLocks() {
+    trackButtons.forEach((btn) => {
+      const track = btn.dataset.trackBtn;
+      const locked = allowedTracks !== null && !allowedTracks.includes(track);
+      btn.classList.toggle('locked', locked);
+      // Left clickable on purpose: a button that does nothing is a dead end,
+      // whereas one that says what it costs is the only place an upgrade makes
+      // sense to offer.
+      btn.title = locked ? tr('nav.locked', { track: btn.textContent.replace(/^\+\s*/, ''), plan: '' }).trim() : '';
+    });
+  }
+
+  async function refreshPlan() {
+    const { data } = await api('/api/billing');
+    if (data && Array.isArray(data.tracks)) {
+      allowedTracks = data.tracks;
+      applyTrackLocks();
+    }
+  }
+
   async function initApp() {
+    refreshPlan();
     chatTitleHeading.textContent = tr('chat.brand');
     refreshKeyState();
     await refreshChatList();
@@ -1033,6 +1075,7 @@
   document.addEventListener('languagechange', () => {
     markActiveLanguage();
     if (appLayout.hidden) return;
+    applyTrackLocks();
 
     applyModeChrome();
     renderSidebar();

@@ -15,25 +15,34 @@ const { db } = require('../db');
 const PLAN_LIMITS = {
   free: {
     priceRial: 0,
+    tracks: ['study'],
     ai_messages: { period: 'day', limit: 20 },
     video_summaries: { period: 'month', limit: 3 },
   },
   basic: {
-    priceRial: 990000,      // 99,000 Toman
+    priceRial: 2000000,     // 200,000 Toman
+    tracks: ['study', 'workout'],
     ai_messages: { period: 'day', limit: 100 },
     video_summaries: { period: 'month', limit: 15 },
   },
   plus: {
-    priceRial: 1990000,     // 199,000 Toman
+    priceRial: 5500000,     // 550,000 Toman
+    tracks: ['study', 'workout', 'diet'],
     ai_messages: { period: 'day', limit: 300 },
     video_summaries: { period: 'month', limit: 40 },
   },
   pro: {
-    priceRial: 3990000,     // 399,000 Toman
+    priceRial: 12000000,    // 1,200,000 Toman
+    tracks: ['study', 'workout', 'diet', 'code'],
     ai_messages: { period: 'day', limit: 1000 },
     video_summaries: { period: 'month', limit: 150 },
   },
 };
+
+// The tutor is freeform help rather than a coached track, and every plan has
+// it - including free. Gating the ability to ask a question at all would make
+// the free tier useless rather than limited.
+const ALWAYS_AVAILABLE = ['tutor'];
 
 const PAID_PLANS = ['basic', 'plus', 'pro'];
 
@@ -50,6 +59,23 @@ function planPriceRial(plan) {
 // free rather than handing out the most generous limits by accident.
 function limitsFor(plan) {
   return PLAN_LIMITS[plan] || PLAN_LIMITS.free;
+}
+
+// Which coached tracks a plan opens. 'phased' is the old name for study.
+function tracksFor(plan) {
+  return limitsFor(plan).tracks;
+}
+
+function canUseTrack(plan, mode) {
+  const key = mode === 'phased' || !mode ? 'study' : mode;
+  return ALWAYS_AVAILABLE.includes(key) || tracksFor(plan).includes(key);
+}
+
+// The cheapest plan that opens a given track, for telling someone what to buy
+// rather than only that they cannot have it.
+function planForTrack(mode) {
+  const key = mode === 'phased' || !mode ? 'study' : mode;
+  return ['free', ...PAID_PLANS].find((plan) => tracksFor(plan).includes(key)) || null;
 }
 
 function periodKey(period, date = new Date()) {
@@ -124,6 +150,10 @@ function getUsageSummary(userId) {
 
 module.exports = {
   PAID_PLANS,
+  PLAN_LIMITS,
+  tracksFor,
+  canUseTrack,
+  planForTrack,
   isPaidPlan,
   planPriceRial,
   limitsFor, PLAN_LIMITS, getPlan, checkLimit, increment, getUsageSummary, periodLabel };

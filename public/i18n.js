@@ -52,6 +52,21 @@
     'nav.new.workout': ['+ Workout plan', '+ برنامه‌ی تمرین'],
     'nav.new.diet': ['+ Nutrition plan', '+ برنامه‌ی تغذیه'],
     'nav.new.tutor': ['+ Ask AI Teacher', '+ سؤال از معلم هوش مصنوعی'],
+    'nav.new.code': ['+ Buddy Code', '+ بادی کد'],
+    'nav.locked': ['{track} — needs the {plan} plan', '{track} — نیاز به اشتراک {plan}'],
+    'track.code.title': ['Buddy Code', 'بادی کد'],
+    'track.code.sub': ['Build it, don\u2019t paste it.', 'بساز، کپی نکن.'],
+    'track.code.welcome': [
+      "What are you building, and in what language? Show me it working the way you want it to - an example beats a description. And tell me what you have written so far, even if it is nothing.",
+      'داری چی می‌سازی، و با چه زبانی؟ یک نمونه از کاری که می‌خواهی بکند نشانم بده — مثال از توضیح بهتر است. و بگو تا حالا چقدرش را نوشته‌ای، حتی اگر هیچی.',
+    ],
+    'err.trackLocked': [
+      'That track needs the {plan} plan.',
+      'این مسیر به اشتراک {plan} نیاز دارد.',
+    ],
+    'plan.basic': ['Basic', 'پایه'],
+    'plan.plus': ['Plus', 'پلاس'],
+    'plan.pro': ['Pro', 'پرو'],
     'nav.recent': ['Recent chats', 'گفتگوهای اخیر'],
     'nav.noChats': ['No chats yet — start one above.', 'هنوز گفتگویی نیست — از بالا یکی شروع کن.'],
 

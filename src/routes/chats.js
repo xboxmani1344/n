@@ -42,6 +42,20 @@ router.post('/', (req, res) => {
   const { mode, topic } = req.body || {};
   // 'tutor' is freeform and has no phases; everything else is a coached track.
   const chatMode = mode === 'tutor' ? 'tutor' : isTrackKey(mode) ? mode : 'study';
+
+  // Enforced here, not in the interface. The buttons for locked tracks are
+  // hidden client-side, but hiding a button is decoration - the check that
+  // matters is the one a hand-written POST also has to pass.
+  const plan = usage.getPlan(req.user.id);
+  if (!usage.canUseTrack(plan, chatMode)) {
+    return res.status(403).json({
+      error: 'That track is not included in your plan.',
+      code: 'track_locked',
+      track: chatMode,
+      requiredPlan: usage.planForTrack(chatMode),
+      plan,
+    });
+  }
   const now = new Date().toISOString();
   const initialPhase = chatMode === 'tutor' ? null : getPhases(chatMode)[0].key;
 
@@ -134,6 +148,19 @@ router.post(
       .all(chat.id)
       .slice(-MAX_HISTORY_MESSAGES)
       .map((m) => ({ role: m.role, content: m.content }));
+
+    const chatPlan = usage.getPlan(req.user.id);
+    if (!usage.canUseTrack(chatPlan, chat.mode)) {
+      // Reachable without any trickery: a plan can lapse while an old chat of
+      // that track is still sitting in the sidebar.
+      return res.status(403).json({
+        error: 'That track is not included in your plan.',
+        code: 'track_locked',
+        track: chat.mode,
+        requiredPlan: usage.planForTrack(chat.mode),
+        plan: chatPlan,
+      });
+    }
 
     const lang = req.user.language;
     const system =

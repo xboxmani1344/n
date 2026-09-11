@@ -1563,3 +1563,43 @@ html[data-i18n-pending] body {
 :root[lang='fa'] .lp-track-count {
   letter-spacing: normal;
 }
+
+/* Buddy Code, the fourth track. Violet keeps it clear of the training
+   green-blue and the nutrition orange, and away from the neutral study
+   surface. */
+:root[data-track='code'] {
+  --tint: 265 52%;
+  --tint-ground: #e7e4ee;
+  --tint-ground-dark: #0a0713;
+}
+
+:root[data-track='code'] {
+  --blob-strong: hsl(var(--tint) 44% / 0.30);
+  --blob-soft: hsl(var(--tint) 88% / 0.85);
+  --blob: hsl(var(--tint) 92% / 0.85);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-track='code']:not([data-theme='light']) {
+    --blob: hsl(var(--tint) 62% / 0.24);
+    --blob-strong: hsl(var(--tint) 56% / 0.16);
+    --blob-soft: hsl(var(--tint) 70% / 0.28);
+  }
+}
+
+:root[data-theme='dark'][data-track='code'] {
+  --blob: hsl(var(--tint) 62% / 0.24);
+  --blob-strong: hsl(var(--tint) 56% / 0.16);
+  --blob-soft: hsl(var(--tint) 70% / 0.28);
+}
+
+/* A locked track reads as available-but-not-yours rather than broken. */
+.sidebar-new-btn.locked {
+  opacity: 0.45;
+}
+
+.sidebar-new-btn.locked::after {
+  content: '🔒';
+  margin-inline-start: 6px;
+  font-size: 0.72em;
+}
