@@ -50,6 +50,10 @@ const server = spawn(process.execPath, ['server.js'], {
     // A closed port, so the AI diagnostic below fails instantly instead of
     // waiting out a real provider timeout. No test makes a real AI call.
     AI_BASE_URL: 'http://127.0.0.1:1/v1',
+    // The plan check runs before the safety check, so on a free plan the diet
+    // and workout tracks are refused as locked (403) and the safety gate below
+    // never gets a turn. This is also how the site runs today.
+    UNLOCK_ALL_TRACKS: '1',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
 });
@@ -112,6 +116,55 @@ async function waitForListening() {
     );
   } catch (err) {
     report(false, 'track definitions parse', err.message);
+  }
+
+  // The notice before a first nutrition or training session. Enforced on the
+  // server, not only in the dialog: "they were told" should be a fact, not a
+  // hope about which client they used.
+  try {
+    const signup = await fetch(`http://127.0.0.1:${PORT}/api/auth/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: `safety-${Date.now()}@example.com`, password: 'password123' }),
+    });
+    const cookie = (signup.headers.get('set-cookie') || '').split(';')[0];
+    const post = (path, body) =>
+      fetch(`http://127.0.0.1:${PORT}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie },
+        body: JSON.stringify(body),
+      });
+
+    const blocked = await post('/api/chats', { mode: 'diet' });
+    const study = await post('/api/chats', { mode: 'study' });
+    await post('/api/chats/safety-notice', { track: 'diet' });
+    const allowed = await post('/api/chats', { mode: 'diet' });
+    // Agreeing to the nutrition notice is not agreeing to the training one.
+    const otherTrack = await post('/api/chats', { mode: 'workout' });
+
+    const ok =
+      blocked.status === 409 && study.status === 201 && allowed.status === 201 && otherTrack.status === 409;
+    report(ok, 'the safety notice gates diet and workout',
+      ok ? 'blocked, then allowed once accepted; study untouched; workout asks separately'
+         : `diet ${blocked.status}/${allowed.status}, study ${study.status}, workout ${otherTrack.status}`);
+  } catch (err) {
+    report(false, 'the safety notice gates diet and workout', err.message);
+  }
+
+  // The safety floor in the prompts themselves. The dialog tells the person
+  // once; this is what constrains the model that writes the plan.
+  try {
+    const { getSystemPrompt, getTrack } = require('../src/prompts');
+    const wrong = ['diet', 'workout'].filter(
+      (t) => !/SAFETY - this overrides/.test(getSystemPrompt(getTrack(t).phases[1].key, 'x', t, 'en'))
+    );
+    const leaked = ['study', 'code'].filter((t) =>
+      /SAFETY - this overrides/.test(getSystemPrompt(getTrack(t).phases[1].key, 'x', t, 'en'))
+    );
+    report(wrong.length === 0 && leaked.length === 0, 'diet and workout prompts carry the safety floor',
+      wrong.length ? `missing on ${wrong.join(', ')}` : leaked.length ? `wrongly on ${leaked.join(', ')}` : 'and study and code do not');
+  } catch (err) {
+    report(false, 'diet and workout prompts carry the safety floor', err.message);
   }
 
   // The doubled-scheme correction. A pure function, so checked directly - and

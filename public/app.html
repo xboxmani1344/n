@@ -128,6 +128,19 @@
       </div>
     </div>
 
+    <!-- Shown once, before the first nutrition or training session. The terms
+         of service say the same thing, but nobody reads a terms page - and of
+         everything on it, this is the part with real consequences. -->
+    <dialog id="safety-dialog" class="safety-dialog">
+      <h2 id="safety-title">Before we start</h2>
+      <p id="safety-lead"></p>
+      <ul id="safety-points"></ul>
+      <div class="safety-actions">
+        <button type="button" class="pill-btn" id="safety-cancel" data-i18n="safety.cancel">Not now</button>
+        <button type="button" class="pill-btn primary-btn" id="safety-accept" data-i18n="safety.accept">I understand</button>
+      </div>
+    </dialog>
+
     <div class="app-layout" id="app-layout" hidden>
       <aside class="sidebar glass" id="sidebar">
         <div class="sidebar-header">

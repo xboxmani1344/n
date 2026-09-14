@@ -31,6 +31,35 @@ function loadOwnedChat(userId, chatId) {
   return db.prepare('SELECT * FROM chats WHERE id = ? AND user_id = ?').get(Number(chatId), userId);
 }
 
+// The two tracks where a language model is answering questions about someone's
+// body, and so the two that show a notice before the first session.
+const NEEDS_SAFETY_NOTICE = new Set(['diet', 'workout']);
+
+function hasAcknowledged(userId, track) {
+  return Boolean(
+    db
+      .prepare('SELECT 1 FROM safety_acknowledgements WHERE user_id = ? AND track = ?')
+      .get(userId, track)
+  );
+}
+
+// Records that the notice was shown and accepted. Idempotent - reopening the
+// dialog and accepting again keeps the first timestamp, which is the one that
+// says when they were actually told.
+router.post('/safety-notice', (req, res) => {
+  const { track } = req.body || {};
+  if (!NEEDS_SAFETY_NOTICE.has(track)) {
+    return res.status(400).json({ error: 'Unknown track.' });
+  }
+
+  db.prepare(
+    `INSERT INTO safety_acknowledgements (user_id, track, acknowledged_at) VALUES (?, ?, ?)
+     ON CONFLICT (user_id, track) DO NOTHING`
+  ).run(req.user.id, track, new Date().toISOString());
+
+  res.json({ ok: true, track });
+});
+
 router.get('/', (req, res) => {
   const rows = db
     .prepare('SELECT * FROM chats WHERE user_id = ? AND archived_at IS NULL ORDER BY updated_at DESC')
@@ -56,6 +85,17 @@ router.post('/', (req, res) => {
       plan,
     });
   }
+  // Same reasoning as the plan check above: the dialog is in the interface, but
+  // the interface is decoration. A hand-written POST has to pass this too, or
+  // "they were told" is a thing we hope rather than a thing we know.
+  if (NEEDS_SAFETY_NOTICE.has(chatMode) && !hasAcknowledged(req.user.id, chatMode)) {
+    return res.status(409).json({
+      error: 'This track shows a safety notice before the first session.',
+      code: 'safety_notice_required',
+      track: chatMode,
+    });
+  }
+
   const now = new Date().toISOString();
   const initialPhase = chatMode === 'tutor' ? null : getPhases(chatMode)[0].key;
 

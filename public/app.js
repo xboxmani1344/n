@@ -634,9 +634,71 @@
   newCodeBtn.addEventListener('click', () => createChat('code'));
   newTutorBtn.addEventListener('click', () => createChat('tutor'));
 
+  // The notice before the first nutrition or training session.
+  //
+  // A dialog rather than an alert(): this has to be readable, and accepting has
+  // to be a different act from dismissing. Closing it any other way - Escape,
+  // the backdrop, the cancel button - counts as declining, and the session is
+  // not started. The server keeps the record; this only shows it.
+  const safetyDialog = document.getElementById('safety-dialog');
+  const safetyTitle = document.getElementById('safety-title');
+  const safetyLead = document.getElementById('safety-lead');
+  const safetyPoints = document.getElementById('safety-points');
+
+  function showSafetyNotice(track) {
+    return new Promise((resolve) => {
+      safetyTitle.textContent = tr(`safety.${track}.title`);
+      safetyLead.textContent = tr(`safety.${track}.lead`);
+
+      safetyPoints.innerHTML = '';
+      tr(`safety.${track}.points`)
+        .split('·')
+        .map((point) => point.trim())
+        .filter(Boolean)
+        .forEach((point) => {
+          const li = document.createElement('li');
+          li.textContent = point;
+          safetyPoints.appendChild(li);
+        });
+
+      let accepted = false;
+      const accept = () => {
+        accepted = true;
+        safetyDialog.close();
+      };
+      const cancel = () => safetyDialog.close();
+
+      const acceptBtn = document.getElementById('safety-accept');
+      const cancelBtn = document.getElementById('safety-cancel');
+      acceptBtn.addEventListener('click', accept);
+      cancelBtn.addEventListener('click', cancel);
+
+      safetyDialog.addEventListener(
+        'close',
+        () => {
+          acceptBtn.removeEventListener('click', accept);
+          cancelBtn.removeEventListener('click', cancel);
+          resolve(accepted);
+        },
+        { once: true }
+      );
+
+      safetyDialog.showModal();
+    });
+  }
+
   async function createChat(mode) {
     if (busy) return;
-    const { ok, data } = await api('/api/chats', { method: 'POST', body: { mode } });
+    let { ok, data } = await api('/api/chats', { method: 'POST', body: { mode } });
+
+    // First nutrition or training session: show the notice, and only continue
+    // if it was accepted.
+    if (!ok && data && data.code === 'safety_notice_required') {
+      const accepted = await showSafetyNotice(data.track);
+      if (!accepted) return;
+      await api('/api/chats/safety-notice', { method: 'POST', body: { track: data.track } });
+      ({ ok, data } = await api('/api/chats', { method: 'POST', body: { mode } }));
+    }
 
     if (!ok) {
       // The plan does not include this track. Say which one does and put them

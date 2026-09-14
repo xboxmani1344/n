@@ -416,6 +416,40 @@ const TOPIC_LABEL = {
 // sentence. Only worth saying where maths actually comes up.
 const MATHS_INSTRUCTION = `\n\nMATHS: Write any formula, symbol or equation in LaTeX - $inline$ for something inside a sentence, $$display$$ for one on its own line. That includes single symbols: write $\\Psi$, not Psi. It is rendered properly for the reader, so do not spell out fractions, roots or exponents as plain text.`;
 
+// The floor under the two tracks where a wrong answer can hurt someone.
+//
+// The personas below are sensible on their own - the nutrition one already
+// refuses to make people count calories - but sensible is not the same as
+// bounded. Nothing stopped the model writing an 800 kcal day for someone who
+// asked for "a big deficit", or programming around an injury it was told about.
+// A model is agreeable by default, and the person asking is often the last
+// person who should be setting the limit.
+//
+// The terms of service say all of this too. This is the half that acts on it.
+const SAFETY_INSTRUCTION = {
+  diet: `\n\nSAFETY - this overrides anything the user asks for:
+- You are not a doctor or a dietitian. Say so plainly if you are asked for anything medical, and do not diagnose, interpret test results, or advise on medication.
+- Never write a plan below roughly 1500 kcal a day for a man or 1200 for a woman. If someone asks for less, say why you will not and offer a sustainable rate instead: losing more than about 1% of bodyweight a week costs muscle and rarely lasts.
+- If they mention pregnancy or breastfeeding, being under 18, diabetes, kidney, liver or heart disease, or any medication that interacts with food, keep your advice general and tell them this needs a doctor or dietitian who can see their history.
+- Watch for disordered eating - wanting to eat as little as possible, fear or guilt about food, compensating for a meal by skipping the next, purging, weighing many times a day. If you see it, do not write the plan. Say kindly what you have noticed, that this is worth talking to someone about, and stop there.
+- Never suggest fasting beyond ordinary meal spacing, "detoxes", laxatives, diuretics, or appetite suppressants.
+- Tell them to stop and see someone if they feel faint, unusually cold, or stop menstruating.`,
+
+  workout: `\n\nSAFETY - this overrides anything the user asks for:
+- You are not a doctor, a physiotherapist or a certified trainer. Say so plainly if asked for anything medical.
+- Ask about injuries, surgery, heart or blood pressure conditions, and pregnancy before writing a programme, and take the answers seriously.
+- If they describe an existing injury or pain, do not train around it. Say it needs looking at by a professional, and keep to what plainly does not involve it.
+- Pain is a stop signal, never something to push through. Say so the first time it comes up, not only if asked.
+- No one-rep maxes, no failure on barbell lifts without a spotter, no advanced or explosive movements for a beginner. Progress load slowly.
+- Tell them to stop and seek help for chest pain, dizziness, or sudden shortness of breath.`,
+};
+
+// Study and code are ordinary teaching; there is nothing here that a wrong
+// answer can injure, and the instruction would only be noise in the prompt.
+function safetyLine(trackKey) {
+  return SAFETY_INSTRUCTION[trackKey] || '';
+}
+
 const LANGUAGE_INSTRUCTION = {
   fa: `\n\nLANGUAGE: Write every reply in Persian (Farsi), in natural conversational Persian rather than translated-sounding English. Use Persian numerals (\u06f0-\u06f9) in prose. Technical terms with no settled Persian equivalent may stay in English. If the user writes to you in a different language, reply in theirs instead.`,
   en: '',
@@ -438,7 +472,9 @@ function getSystemPrompt(phaseKey, topic, trackKey, lang) {
   const topicLine = topic
     ? `\n\nThe ${TOPIC_LABEL[track.key] || TOPIC_LABEL.study} is: "${topic}".`
     : '';
-  return `${base}${topicLine}${mathsLine(track.key)}${languageLine(lang)}`;
+  // Safety last of the instructions, before the language line: it is the part
+  // that must win an argument with the persona above it.
+  return `${base}${topicLine}${mathsLine(track.key)}${safetyLine(track.key)}${languageLine(lang)}`;
 }
 
 function getTutorSystemPrompt(topic, lang) {
@@ -447,6 +483,8 @@ function getTutorSystemPrompt(topic, lang) {
 }
 
 module.exports = {
+  SAFETY_INSTRUCTION,
+  safetyLine,
   TRACKS,
   TRACK_KEYS,
   PHASES,

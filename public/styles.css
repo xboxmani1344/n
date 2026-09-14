@@ -1947,3 +1947,65 @@ html[data-i18n-pending] body {
 }
 
 .auth-consent a { color: var(--text); }
+
+/* --- the safety notice ---------------------------------------------------- */
+
+/* A real dialog, not an alert: this is the one thing in the app someone could
+   be hurt by getting wrong, and it has to be readable. ::backdrop and Escape
+   come free with <dialog>; Escape counts as declining, which is the safe
+   default. */
+.safety-dialog {
+  max-width: min(34rem, calc(100vw - 32px));
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-card);
+  background: var(--bg-solid);
+  color: var(--text);
+  padding: 26px 28px;
+  box-shadow: var(--shadow-lift);
+  line-height: 1.75;
+}
+
+.safety-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.safety-dialog h2 {
+  margin: 0 0 10px;
+  font-size: 1.15rem;
+}
+
+.safety-dialog p {
+  margin: 0 0 14px;
+  color: var(--text);
+}
+
+.safety-dialog ul {
+  margin: 0 0 22px;
+  padding-inline-start: 1.25em;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
+.safety-dialog li { margin-block-end: 9px; }
+
+.safety-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+/* .primary-btn carries no styling of its own anywhere in this file - every use
+   is scoped to its container - so without this the accept and decline buttons
+   came out identical. On this dialog of all places the two have to be told
+   apart at a glance. */
+.safety-actions .primary-btn {
+  background: var(--fill);
+  color: var(--fill-contrast);
+  font-weight: 600;
+}
+
+.safety-actions .primary-btn:hover {
+  opacity: 0.9;
+}

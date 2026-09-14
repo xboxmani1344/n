@@ -208,6 +208,32 @@
     'plan.choose': ['Choose', 'انتخاب'],
     'plan.messages': ['{n} messages a day', '{n} پیام در روز'],
     'plan.includes': ['Study', 'درس'],
+    // --- the safety notice ---------------------------------------------------
+    // Bullets are one string split on ' · ', the same shape the landing page
+    // uses for phase lists.
+    'safety.accept': ['I understand', 'متوجه شدم'],
+    'safety.cancel': ['Not now', 'بی‌خیال'],
+
+    'safety.diet.title': ['Before we start', 'قبل از شروع'],
+    'safety.diet.lead': [
+      'Buddy is not a doctor or a dietitian. It writes eating plans with an AI, and an AI can be confidently wrong.',
+      'Buddy نه پزشک است نه متخصص تغذیه. برنامه‌ی غذایی را با هوش مصنوعی می‌نویسد، و هوش مصنوعی می‌تواند با اطمینان کامل اشتباه بگوید.',
+    ],
+    'safety.diet.points': [
+      'Talk to a doctor first if you are pregnant or breastfeeding, under 18, or living with diabetes, a kidney, liver or heart condition, or take medication that interacts with food. · Buddy will not write very low calorie plans. Losing weight faster than about 1% of your bodyweight a week costs muscle and rarely lasts. · If eating has been a difficult subject for you, please talk to someone rather than starting here. · Stop and see a doctor if you feel faint, unusually cold, or your periods stop.',
+      'اگر باردار یا شیرده هستی، زیر ۱۸ سال داری، یا دیابت، بیماری کلیه، کبد یا قلب داری یا دارویی می‌خوری که با غذا تداخل دارد — اول با پزشک حرف بزن. · Buddy برنامه‌ی خیلی کم‌کالری نمی‌نویسد. کم‌کردن وزن سریع‌تر از حدود ۱٪ وزن بدن در هفته، عضله را می‌برد و معمولاً نمی‌ماند. · اگر غذا برایت موضوع سختی بوده، لطفاً به جای شروع از اینجا با کسی حرف بزن. · اگر سرگیجه داشتی، غیرعادی سردت شد، یا پریودت قطع شد — متوقف کن و پیش پزشک برو.',
+    ],
+
+    'safety.workout.title': ['Before we start', 'قبل از شروع'],
+    'safety.workout.lead': [
+      'Buddy is not a trainer, a physiotherapist or a doctor. It writes training plans with an AI, and an AI can be confidently wrong.',
+      'Buddy نه مربی است، نه فیزیوتراپ، نه پزشک. برنامه‌ی تمرینی را با هوش مصنوعی می‌نویسد، و هوش مصنوعی می‌تواند با اطمینان کامل اشتباه بگوید.',
+    ],
+    'safety.workout.points': [
+      'Talk to a doctor first if you have a heart condition or high blood pressure, are pregnant, or are coming back from an injury or surgery. · Tell Buddy about any injury before it writes you a plan. · Pain means stop, not push through. Soreness the next day is normal; sharp pain during a movement is not. · Stop and get help for chest pain, dizziness, or sudden shortness of breath.',
+      'اگر بیماری قلبی یا فشار خون بالا داری، باردار هستی، یا از آسیب‌دیدگی یا جراحی برمی‌گردی — اول با پزشک حرف بزن. · قبل از اینکه برنامه بگیری، هر آسیب‌دیدگی‌ای داری به Buddy بگو. · درد یعنی متوقف شو، نه اینکه فشار بیاور. کوفتگی فردایش طبیعی است؛ درد تیز موقع حرکت نه. · برای درد قفسه‌ی سینه، سرگیجه یا تنگی نفس ناگهانی، تمرین را قطع کن و کمک بگیر.',
+    ],
+
     // --- deleting an account -------------------------------------------------
     'settings.danger': ['Delete account', 'حذف حساب'],
     'settings.dangerBody': [
