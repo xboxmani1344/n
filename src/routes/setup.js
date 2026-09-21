@@ -7,6 +7,11 @@ const { requireAuth } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errors');
 const ai = require('../services/ai');
 const apiKeys = require('../services/apiKeys');
+const email = require('../services/email');
+const zarinpal = require('../services/zarinpal');
+const usage = require('../services/usage');
+const { DB_PATH, onSeparateVolume } = require('../db');
+const { appOrigin, googleCallbackUrl } = require('../services/appUrl');
 
 const router = express.Router();
 
@@ -50,6 +55,78 @@ function normalizeKey(raw) {
 }
 
 // ---- Server-level setup (local single-user install only) --------------------
+
+// Everything a fresh deployment can be silently wrong about, on one page.
+//
+// This project has now lost time four separate ways to the same shape of
+// problem: a doubled scheme in AI_BASE_URL, a redirect URI Google would not
+// match, a database sitting on a filesystem the next deploy throws away, and a
+// subdomain with a deadline nobody saw. Each was invisible until something
+// failed much later, and each was solved by adding somewhere to look. There
+// were three such places by the end and no way to know which to check.
+//
+// Every answer here comes from the function that already decides it elsewhere,
+// so this page cannot drift from the boot log or from the behaviour itself.
+//
+// Behind requireAuth, which on a brand-new app means signing up first. That is
+// useful rather than annoying: it proves the database takes writes before
+// anything else on the page is worth believing.
+router.get('/health', requireAuth, (req, res) => {
+  const lines = [];
+  const problems = [];
+
+  // A hint with no label of its own hangs off the line above it, rather than
+  // printing an empty padded line first.
+  const say = (label, value, hint) => {
+    if (label || value) lines.push(`${label.padEnd(12)} ${value}`);
+    if (hint) lines.push(`${' '.repeat(12)} ${hint}`);
+  };
+  const flag = (label, value, hint) => {
+    problems.push(label.trim());
+    say(label, value, hint);
+  };
+
+  // First, because it is the one that destroys data rather than failing.
+  const separate = onSeparateVolume();
+  if (separate === true) say('database', `${DB_PATH}  (on its own disk)`);
+  else if (separate === false)
+    flag('database', `${DB_PATH}  (on the container filesystem)`,
+      'NOT on a disk - everything here is wiped by the next deploy. Attach one and set DB_PATH into it.');
+  else say('database', `${DB_PATH}  (cannot tell where this is)`);
+
+  lines.push('');
+  say('address', appOrigin(req) + (process.env.APP_URL ? '   (from APP_URL)' : '   (guessed from this request)'));
+  if (!process.env.APP_URL) {
+    say('', '', 'Set APP_URL once the domain is settled: the payment return and the Google callback are both built from it.');
+  }
+
+  lines.push('');
+  if (!ai.isConfigured()) flag('ai', 'NO KEY - the coach cannot reply', 'Set AI_API_KEY.');
+  else if (ai.BASE_URL_WAS_CORRECTED)
+    flag('ai', `${ai.RAW_BASE_URL}`, `Two schemes in AI_BASE_URL. Working around it with ${ai.BASE_URL} - fix the variable.`);
+  else if (ai.baseUrlLooksWrong()) flag('ai', ai.BASE_URL, 'Not a usable URL. It should read https://host/path.');
+  else say('ai', ai.BASE_URL);
+  say('model', ai.MODEL_ID, 'Test it live at /api/setup/ai-check');
+
+  lines.push('');
+  const googleOn = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+  say('google', googleOn ? 'configured' : 'off - the sign-in button stays disabled');
+  if (googleOn) say('', '', `Register exactly: ${googleCallbackUrl(req)}`);
+
+  lines.push('');
+  say('email', email.isConfigured() ? 'configured' : 'off - discount codes are issued but never sent');
+  say('payments', zarinpal.isConfigured() ? 'ZarinPal configured' : 'off - nobody can upgrade');
+
+  if (usage.UNLOCK_ALL) {
+    lines.push('');
+    flag('tracks', 'ALL UNLOCKED', 'UNLOCK_ALL_TRACKS=1 - every plan has every coach. Unset it before charging anyone.');
+  }
+
+  lines.push('');
+  lines.push(problems.length ? `${problems.length} thing(s) to fix: ${problems.join(', ')}` : 'Everything configured.');
+
+  res.type('text/plain').send(lines.join('\n'));
+});
 
 // A live test of the AI settings, in plain text, for the person running the
 // site to open on a phone.

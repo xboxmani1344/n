@@ -147,6 +147,9 @@ function bootSummary() {
   }
 
   console.log(lines.join('\n'));
+  // The single page that answers "is this set up right", for whoever is
+  // looking at this log straight after a deploy.
+  console.log('  check     open /api/setup/health, signed in, for everything at once');
 
   // The one that silently destroys data rather than just failing.
   if (separate === false && process.env.NODE_ENV === 'production') {

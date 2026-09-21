@@ -298,6 +298,33 @@ async function waitForListening() {
     report(false, 'AI_BASE_URL normalisation', err.message);
   }
 
+  // The one page that says whether a deployment is set up right. It names the
+  // AI base URL, the callback and the database path, so the rule that matters
+  // is that it never names a secret - and it must not answer a stranger.
+  try {
+    const signedOut = await fetch(`http://127.0.0.1:${PORT}/api/setup/health`);
+    const signup = await fetch(`http://127.0.0.1:${PORT}/api/auth/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: `health-${Date.now()}@example.com`, password: 'password123' }),
+    });
+    const cookie = (signup.headers.get('set-cookie') || '').split(';')[0];
+    const text = await (await fetch(`http://127.0.0.1:${PORT}/api/setup/health`, { headers: { cookie } })).text();
+
+    // The smoke server runs with a recognisable key and an unmounted DB_PATH,
+    // so both the secret rule and the it-noticed rule are checkable here.
+    const leaks = ['smoke-test-placeholder'].filter((secret) => text.includes(secret));
+    const noticesTheDisk = /container filesystem/.test(text);
+    const ok = signedOut.status === 401 && leaks.length === 0 && noticesTheDisk;
+    report(ok, 'the health page reports without leaking',
+      leaks.length ? 'IT PRINTED A SECRET'
+        : signedOut.status !== 401 ? `signed out got ${signedOut.status}`
+        : noticesTheDisk ? 'refuses a stranger, names no secret, spots the unmounted database'
+        : 'did not notice the database is not on a disk');
+  } catch (err) {
+    report(false, 'the health page reports without leaking', err.message);
+  }
+
   // The diagnostic that tells the operator why the AI is unreachable. It names
   // the base URL and the model, so it must not answer a stranger.
   try {
