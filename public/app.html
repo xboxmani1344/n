@@ -142,34 +142,50 @@
     </dialog>
 
     <div class="app-layout" id="app-layout" hidden>
+      <!-- The sections live along the top now; the sidebar keeps only the list
+           of past chats, which is the one thing that benefits from being a tall
+           column. -->
+      <header class="topbar glass" id="topbar">
+        <span class="topbar-brand"><svg class="brand-mark" viewBox="0 0 64 64" fill="none" aria-hidden="true" focusable="false"><rect x="13" y="8" width="10" height="48" rx="5" fill="currentColor"/><circle cx="33" cy="38" r="13" stroke="currentColor" stroke-width="10"/></svg>Buddy</span>
+
+        <nav class="topbar-nav" id="topbar-nav">
+          <button type="button" class="topbar-btn active" data-view="home" data-i18n="nav.home">Home</button>
+          <button type="button" class="topbar-btn" data-view="chats" data-i18n="nav.chats">Chats</button>
+          <button type="button" class="topbar-btn" data-view="planner" data-i18n="nav.planner">Planner</button>
+          <button type="button" class="topbar-btn" data-view="video" data-i18n="nav.video">Video</button>
+        </nav>
+
+        <span class="topbar-actions">
+          <button type="button" class="lang-toggle" id="lang-toggle" data-i18n="lang.switch" data-i18n-aria="lang.switch.aria">فارسی</button>
+          <button type="button" id="settings-btn" class="icon-btn" data-i18n-aria="nav.settings" data-i18n-title="nav.settings" aria-label="Settings" title="Settings">⚙</button>
+          <button type="button" id="logout-btn" class="icon-btn" data-i18n-aria="nav.logout" data-i18n-title="nav.logout" aria-label="Log out" title="Log out">⏻</button>
+        </span>
+      </header>
+
       <aside class="sidebar glass" id="sidebar">
-        <div class="sidebar-header">
-          <p class="sidebar-title"><svg class="brand-mark" viewBox="0 0 64 64" fill="none" aria-hidden="true" focusable="false"><rect x="13" y="8" width="10" height="48" rx="5" fill="currentColor"/><circle cx="33" cy="38" r="13" stroke="currentColor" stroke-width="10"/></svg>Buddy</p>
-          <span class="sidebar-header-actions">
-            <button type="button" class="lang-toggle" id="lang-toggle" data-i18n="lang.switch" data-i18n-aria="lang.switch.aria">فارسی</button>
-            <button type="button" id="settings-btn" class="icon-btn" data-i18n-aria="nav.settings" data-i18n-title="nav.settings" aria-label="Settings" title="Settings">⚙</button>
-            <button type="button" id="logout-btn" class="icon-btn" data-i18n-aria="nav.logout" data-i18n-title="nav.logout" aria-label="Log out" title="Log out">⏻</button>
-          </span>
-        </div>
-
-        <div class="sidebar-nav">
-          <button type="button" class="sidebar-nav-btn active" data-view="chats" data-i18n="nav.chats">Chats</button>
-          <button type="button" class="sidebar-nav-btn" data-view="planner" data-i18n="nav.planner">Planner</button>
-          <button type="button" class="sidebar-nav-btn" data-view="video" data-i18n="nav.video">Video</button>
-        </div>
-
         <div id="chat-nav-extras">
-          <div class="sidebar-new-buttons">
-            <button type="button" id="new-session-btn" class="pill-btn sidebar-new-btn" data-track-btn="study" data-i18n="nav.new.study">+ Study session</button>
-            <button type="button" id="new-workout-btn" class="pill-btn sidebar-new-btn" data-track-btn="workout" data-i18n="nav.new.workout">+ Workout plan</button>
-            <button type="button" id="new-diet-btn" class="pill-btn sidebar-new-btn" data-track-btn="diet" data-i18n="nav.new.diet">+ Nutrition plan</button>
-            <button type="button" id="new-code-btn" class="pill-btn sidebar-new-btn" data-track-btn="code" data-i18n="nav.new.code">+ Buddy Code</button>
-            <button type="button" id="new-tutor-btn" class="pill-btn sidebar-new-btn" data-i18n="nav.new.tutor">+ Ask AI Teacher</button>
-          </div>
+          <button type="button" id="new-session-btn" class="pill-btn sidebar-new-btn primary-new" data-view-link="home" data-i18n="nav.newChat">+ New session</button>
           <p class="sidebar-label" data-i18n="nav.recent">Recent chats</p>
           <div class="sidebar-list" id="sidebar-list"></div>
         </div>
       </aside>
+
+      <!-- Home: every coach as a card, and the skills explained once. This is
+           where a session starts now, instead of a column of + buttons. -->
+      <div class="shell" id="home-shell" hidden>
+        <header class="brand chat-brand">
+          <h1 data-i18n="home.title">What are we working on?</h1>
+          <p class="tagline" data-i18n="home.tagline">Pick a coach. Each one walks you through four phases.</p>
+        </header>
+
+        <div class="agent-grid" id="agent-grid"></div>
+
+        <section class="home-section">
+          <h2 class="home-section-title" data-i18n="home.skills">Skills</h2>
+          <p class="home-section-lead" data-i18n="home.skillsLead">Switches you can turn on inside any session, from the bar above the message box. They change how the coach answers, not who it is.</p>
+          <div class="skill-catalogue" id="skill-catalogue"></div>
+        </section>
+      </div>
 
       <div class="shell" id="app-shell">
         <header class="brand chat-brand">
@@ -187,6 +203,10 @@
         <div class="chat-card glass">
           <div class="transcript" id="chat-log" aria-live="polite"></div>
         </div>
+
+        <!-- The skills switched on for this session. Built from the catalogue
+             at boot, so adding a skill server-side needs nothing here. -->
+        <div class="skill-bar" id="skill-bar" role="group" data-i18n-aria="home.skills" aria-label="Skills"></div>
 
         <form class="composer glass" id="composer">
           <textarea

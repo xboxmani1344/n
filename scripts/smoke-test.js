@@ -148,6 +148,29 @@ async function waitForListening() {
     report(false, 'every coach is complete and reachable', err.message);
   }
 
+  // Every coach needs its own title, subtitle and opening line in the
+  // dictionary. Without them the client falls back to Study, which is how a
+  // Writing session came to open with the Study welcome and be called "Study
+  // session" - wrong in a way that reads as the coach having failed to load.
+  try {
+    const { TRACKS } = require('../src/prompts');
+    const dict = fs.readFileSync(path.join(__dirname, '..', 'public', 'i18n.js'), 'utf8');
+    const missing = [];
+    for (const key of Object.keys(TRACKS)) {
+      for (const part of ['title', 'sub', 'welcome']) {
+        if (!dict.includes(`'track.${key}.${part}'`)) missing.push(`track.${key}.${part}`);
+      }
+    }
+    // The freeform tutor is not a track - it has no phases - and its opening
+    // line lives under chat.tutorWelcome rather than following this pattern.
+    for (const key of ["'track.tutor.title'", "'track.tutor.sub'", "'chat.tutorWelcome'"]) {
+      if (!dict.includes(key)) missing.push(key);
+    }
+    report(missing.length === 0, 'every coach has its own wording', missing.length ? missing.join(', ') : `${Object.keys(TRACKS).length + 1} coaches`);
+  } catch (err) {
+    report(false, 'every coach has its own wording', err.message);
+  }
+
   // Skills arrive from the client and end up in a prompt, so the filter is the
   // only thing between a request body and the model's instructions.
   try {

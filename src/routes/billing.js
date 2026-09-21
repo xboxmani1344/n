@@ -84,6 +84,11 @@ router.get('/', requireAuth, (req, res) => {
     currentPeriodEnd: sub ? sub.current_period_end : null,
     usage: usageSummary,
     tracks: usage.tracksFor(plan),
+    // Which plan opens which coach, so a locked card in the gallery can say
+    // what it costs rather than only that it is shut.
+    planTracks: Object.fromEntries(
+      Object.entries(usage.PLAN_LIMITS).map(([key, limits]) => [key, limits.tracks])
+    ),
     plans: usage.PAID_PLANS.map((key) => ({
       key,
       priceRial: usage.PLAN_LIMITS[key].priceRial,

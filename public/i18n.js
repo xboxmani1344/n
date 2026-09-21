@@ -55,12 +55,6 @@
     'nav.video': ['Video', 'ویدیو'],
     'nav.settings': ['Settings', 'تنظیمات'],
     'nav.logout': ['Log out', 'خروج'],
-    'nav.new.study': ['+ Study session', '+ جلسه‌ی درس'],
-    'nav.new.workout': ['+ Workout plan', '+ برنامه‌ی تمرین'],
-    'nav.new.diet': ['+ Nutrition plan', '+ برنامه‌ی تغذیه'],
-    'nav.new.tutor': ['+ Ask AI Teacher', '+ سؤال از معلم هوش مصنوعی'],
-    'nav.new.code': ['+ Buddy Code', '+ بادی کد'],
-    'nav.locked': ['{track} — needs the {plan} plan', '{track} — نیاز به اشتراک {plan}'],
     'track.code.title': ['Buddy Code', 'بادی کد'],
     'track.code.sub': ['Build it, don\u2019t paste it.', 'بساز، کپی نکن.'],
     'track.code.welcome': [
@@ -78,6 +72,30 @@
     'nav.noChats': ['No chats yet — start one above.', 'هنوز گفتگویی نیست — از بالا یکی شروع کن.'],
 
     // --- tracks --------------------------------------------------------------
+    'track.exam.title': ['Exam prep', 'آمادگی امتحان'],
+    'track.exam.sub': ['Four phases. One session.', 'چهار فاز. یک جلسه.'],
+    'track.exam.welcome': [
+      'Which exam are we getting ready for, and when is it? Tell me what it covers and how much time you actually have each week.',
+      'برای چه امتحانی آماده می‌شویم و کِی است؟ بگو چه چیزی را شامل می‌شود و واقعاً هفته‌ای چقدر وقت داری.',
+    ],
+    'track.writing.title': ['Writing', 'نوشتن'],
+    'track.writing.sub': ['Four phases. One session.', 'چهار فاز. یک جلسه.'],
+    'track.writing.welcome': [
+      'What are you writing, and what is the title or question exactly as it was set? Tell me the length and the deadline too.',
+      'چه چیزی می‌نویسی، و عنوان یا سؤالش دقیقاً چه بوده؟ طولش و مهلتش را هم بگو.',
+    ],
+    'track.language.title': ['English', 'انگلیسی'],
+    'track.language.sub': ['Four phases. One session.', 'چهار فاز. یک جلسه.'],
+    'track.language.welcome': [
+      'Tell me in English — even a broken sentence is fine — what you need English for, and what you find hardest about it.',
+      'به انگلیسی بگو — حتی جمله‌ی شکسته هم اشکالی ندارد — انگلیسی را برای چه می‌خواهی، و چه چیزش برایت سخت‌تر است.',
+    ],
+    'track.interview.title': ['Interview', 'مصاحبه'],
+    'track.interview.sub': ['Four phases. One session.', 'چهار فاز. یک جلسه.'],
+    'track.interview.welcome': [
+      'What is the role, and where are you in the process? Paste the posting if you have it.',
+      'موقعیت شغلی چیست و کجای فرایندش هستی؟ اگر آگهی‌اش را داری، بچسبان اینجا.',
+    ],
     'track.study.title': ['Study session', 'جلسه‌ی درس'],
     'track.study.sub': ['Four phases. One session.', 'چهار فاز. یک جلسه.'],
     'track.study.welcome': [
@@ -208,6 +226,27 @@
     'plan.choose': ['Choose', 'انتخاب'],
     'plan.messages': ['{n} messages a day', '{n} پیام در روز'],
     'plan.includes': ['Study', 'درس'],
+    // --- home, agents and skills ---------------------------------------------
+    'nav.home': ['Home', 'خانه'],
+    'nav.newChat': ['+ New session', '+ جلسه‌ی جدید'],
+    'home.title': ['What are we working on?', 'روی چی کار کنیم؟'],
+    'home.tagline': [
+      'Pick a coach. Each one walks you through four phases.',
+      'یک مربی انتخاب کن. هرکدام تو را از چهار فاز عبور می‌دهد.',
+    ],
+    'home.skills': ['Skills', 'قابلیت‌ها'],
+    'home.skillsLead': [
+      'Switches you can turn on inside any session, from the bar above the message box. They change how the coach answers, not who it is.',
+      'کلیدهایی که داخل هر جلسه، از نوار بالای کادر پیام روشن می‌کنی. طرز جواب‌دادن مربی را عوض می‌کنند، نه اینکه چه کسی باشد.',
+    ],
+    'home.locked': ['In {plan}', 'در {plan}'],
+    'home.start': ['Start', 'شروع'],
+    'agent.tutor.label': ['Ask anything', 'هر سؤالی بپرس'],
+    'agent.tutor.blurb': [
+      'One question, one answer. No phases.',
+      'یک سؤال، یک جواب. بدون فاز.',
+    ],
+
     // --- the safety notice ---------------------------------------------------
     // Bullets are one string split on ' · ', the same shape the landing page
     // uses for phase lists.

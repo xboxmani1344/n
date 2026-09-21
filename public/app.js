@@ -43,7 +43,12 @@
   // keys to read. 'phased' is the old name for study.
   function trackKey(mode) {
     const key = mode === 'phased' || !mode ? 'study' : mode;
-    return ['study', 'workout', 'diet', 'code', 'tutor'].includes(key) ? key : 'study';
+    // Against the catalogue the server sent, not a list written out here. The
+    // hardcoded version silently resolved every new coach to 'study', so a
+    // Writing session opened with the Study welcome and was titled "Study
+    // session" - wrong in a way that looked like the coach had not loaded.
+    if (key === 'tutor' || TRACKS[key]) return key;
+    return 'study';
   }
 
   function trackText(mode, part) {
@@ -79,13 +84,12 @@
 
   const sidebarList = document.getElementById('sidebar-list');
   const newSessionBtn = document.getElementById('new-session-btn');
-  const newWorkoutBtn = document.getElementById('new-workout-btn');
-  const newDietBtn = document.getElementById('new-diet-btn');
-  const newCodeBtn = document.getElementById('new-code-btn');
-  const newTutorBtn = document.getElementById('new-tutor-btn');
-  const trackButtons = document.querySelectorAll('[data-track-btn]');
-  const sidebarNavBtns = document.querySelectorAll('.sidebar-nav-btn');
-  const chatNavExtras = document.getElementById('chat-nav-extras');
+  const sidebar = document.getElementById('sidebar');
+  const topbarBtns = document.querySelectorAll('.topbar-btn');
+  const homeShell = document.getElementById('home-shell');
+  const agentGrid = document.getElementById('agent-grid');
+  const skillCatalogue = document.getElementById('skill-catalogue');
+  const skillBar = document.getElementById('skill-bar');
 
   const chatTitleHeading = document.getElementById('chat-title-heading');
   const chatTitleSub = document.getElementById('chat-title-sub');
@@ -629,10 +633,9 @@
   });
 
   newSessionBtn.addEventListener('click', () => createChat('study'));
-  newWorkoutBtn.addEventListener('click', () => createChat('workout'));
-  newDietBtn.addEventListener('click', () => createChat('diet'));
-  newCodeBtn.addEventListener('click', () => createChat('code'));
-  newTutorBtn.addEventListener('click', () => createChat('tutor'));
+  // The one button left in the sidebar goes back to the gallery rather than
+  // starting a particular coach - which one to start is the choice Home is for.
+  newSessionBtn.addEventListener('click', () => switchView('home'));
 
   // The notice before the first nutrition or training session.
   //
@@ -715,6 +718,11 @@
 
     await refreshChatList();
     await loadChat(data.chat.id, data.chat);
+    // Picking a coach on Home has to land in the conversation. Without this the
+    // chat loaded behind a still-visible gallery: nothing looked like it had
+    // happened, and the skill bar - which lives in the chat view - stayed
+    // unreachable.
+    switchView('chats');
   }
 
   function showWelcome() {
@@ -733,9 +741,11 @@
     const { data } = await api(`/api/chats/${chatId}`);
     const chat = data.chat || knownChat;
     currentMode = chat.mode;
+    currentSkills = Array.isArray(chat.skills) ? chat.skills : [];
     phaseIndex = currentMode === 'tutor' ? 0 : Math.max(0, currentPhases().findIndex((p) => p.key === chat.phaseKey));
 
     applyModeChrome();
+    renderSkillBar();
     renderSidebar();
 
     if (data.messages && data.messages.length) {
@@ -750,23 +760,152 @@
   // regardless; this only stops someone clicking a button that cannot work.
   let allowedTracks = null;
 
-  function applyTrackLocks() {
-    trackButtons.forEach((btn) => {
-      const track = btn.dataset.trackBtn;
-      const locked = allowedTracks !== null && !allowedTracks.includes(track);
-      btn.classList.toggle('locked', locked);
-      // Left clickable on purpose: a button that does nothing is a dead end,
-      // whereas one that says what it costs is the only place an upgrade makes
-      // sense to offer.
-      btn.title = locked ? tr('nav.locked', { track: btn.textContent.replace(/^\+\s*/, ''), plan: '' }).trim() : '';
-    });
+  // Every coach the server knows about, as a card. Built from /api/phases, so a
+  // coach added server-side appears here with no change to this file.
+  function renderAgents() {
+    if (!agentGrid) return;
+    agentGrid.innerHTML = '';
+
+    // Freeform tutor first: it is the one that needs no commitment.
+    const entries = [
+      { key: 'tutor', label: tr('agent.tutor.label'), blurb: tr('agent.tutor.blurb'), phases: null },
+      ...Object.values(TRACKS).map((track) => ({
+        key: track.key,
+        label: (i18n.lang === 'fa' && track.labelFa) || track.label,
+        blurb: (i18n.lang === 'fa' && track.blurbFa) || track.blurb,
+        phases: track.phases,
+      })),
+    ];
+
+    for (const entry of entries) {
+      const locked = entry.key !== 'tutor' && allowedTracks !== null && !allowedTracks.includes(entry.key);
+
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'agent-card' + (locked ? ' locked' : '');
+      card.dataset.agent = entry.key;
+
+      const name = document.createElement('span');
+      name.className = 'agent-name';
+      name.textContent = entry.label;
+      card.appendChild(name);
+
+      const blurb = document.createElement('span');
+      blurb.className = 'agent-blurb';
+      blurb.textContent = entry.blurb;
+      card.appendChild(blurb);
+
+      if (entry.phases) {
+        const steps = document.createElement('span');
+        steps.className = 'agent-phases';
+        steps.textContent = entry.phases.map(phaseLabel).join(' · ');
+        card.appendChild(steps);
+      }
+
+      if (locked) {
+        const badge = document.createElement('span');
+        badge.className = 'agent-lock';
+        // Which plan opens it, so a locked card is an answer rather than a wall.
+        badge.textContent = tr('home.locked', { plan: tr(`plan.${planForAgent(entry.key)}`) });
+        card.appendChild(badge);
+      }
+
+      // Left clickable even when locked: createChat surfaces which plan is
+      // needed and sends them to the page where they can do something about it.
+      card.addEventListener('click', () => createChat(entry.key));
+      agentGrid.appendChild(card);
+    }
   }
+
+  // The cheapest plan whose track list contains this coach.
+  function planForAgent(key) {
+    const order = ['free', 'basic', 'plus', 'pro'];
+    for (const plan of order) {
+      if ((PLAN_TRACKS[plan] || []).includes(key)) return plan;
+    }
+    return 'pro';
+  }
+
+  let PLAN_TRACKS = {};
 
   async function refreshPlan() {
     const { data } = await api('/api/billing');
     if (data && Array.isArray(data.tracks)) {
       allowedTracks = data.tracks;
-      applyTrackLocks();
+      if (data.planTracks) PLAN_TRACKS = data.planTracks;
+      renderAgents();
+    }
+  }
+
+  // The skills catalogue, filled from /api/phases at boot.
+  let SKILLS = [];
+
+  function skillText(skill, part) {
+    const fa = i18n.lang === 'fa';
+    return (fa && skill[`${part}Fa`]) || skill[part];
+  }
+
+  // Home: what each skill does, read-only. The switches live in the session.
+  function renderSkillCatalogue() {
+    if (!skillCatalogue) return;
+    skillCatalogue.innerHTML = '';
+    for (const skill of SKILLS) {
+      const item = document.createElement('div');
+      item.className = 'skill-entry';
+
+      const name = document.createElement('span');
+      name.className = 'skill-entry-name';
+      name.textContent = skillText(skill, 'label');
+      item.appendChild(name);
+
+      const desc = document.createElement('span');
+      desc.className = 'skill-entry-desc';
+      desc.textContent = skillText(skill, 'description');
+      item.appendChild(desc);
+
+      skillCatalogue.appendChild(item);
+    }
+  }
+
+  // The bar above the composer. aria-pressed rather than a checkbox so it reads
+  // as a toggle to a screen reader without a label floating beside it.
+  function renderSkillBar() {
+    if (!skillBar) return;
+    skillBar.innerHTML = '';
+    for (const skill of SKILLS) {
+      const on = currentSkills.includes(skill.key);
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'skill-chip' + (on ? ' on' : '');
+      chip.setAttribute('aria-pressed', String(on));
+      chip.title = skillText(skill, 'description');
+      chip.textContent = skillText(skill, 'label');
+      chip.addEventListener('click', () => toggleSkill(skill.key));
+      skillBar.appendChild(chip);
+    }
+  }
+
+  let currentSkills = [];
+
+  async function toggleSkill(key) {
+    if (!currentChatId) return;
+    const next = currentSkills.includes(key)
+      ? currentSkills.filter((k) => k !== key)
+      : [...currentSkills, key];
+
+    // Painted first, saved after: a toggle that waits on the network feels
+    // broken. The server normalises and returns the set it actually stored,
+    // which is what wins if the two ever disagree.
+    currentSkills = next;
+    renderSkillBar();
+
+    const { ok, data } = await api(`/api/chats/${currentChatId}`, {
+      method: 'PATCH',
+      body: { skills: next },
+    });
+    if (ok && data && data.chat && Array.isArray(data.chat.skills)) {
+      currentSkills = data.chat.skills;
+      renderSkillBar();
     }
   }
 
@@ -777,23 +916,35 @@
     await refreshChatList();
 
     if (chats.length) {
+      // Straight back into the last conversation, which is almost always what
+      // someone reopening the app wants.
       await loadChat(chats[0].id);
+      switchView('chats');
     } else {
-      await createChat('study');
+      // Nothing to come back to, so start at the gallery rather than picking a
+      // coach on their behalf - which is the whole point of having eight.
+      switchView('home');
     }
   }
 
   // ---------- View switching (Chats / Planner / Video) ----------
 
   function switchView(view) {
-    sidebarNavBtns.forEach((b) => b.classList.toggle('active', b.dataset.view === view));
+    // Settings has no button of its own up top - the gear opens it - so nothing
+    // is marked active while it is showing, rather than leaving Home lit.
+    topbarBtns.forEach((b) => b.classList.toggle('active', b.dataset.view === view));
 
+    homeShell.hidden = view !== 'home';
     appShell.hidden = view !== 'chats';
     if (view === 'chats') requestAnimationFrame(movePhaseIndicator);
     plannerShell.hidden = view !== 'planner';
     videoShell.hidden = view !== 'video';
     settingsShell.hidden = view !== 'settings';
-    chatNavExtras.hidden = view !== 'chats';
+    // The chat list belongs to the chat views. On the planner or a video it is
+    // a column of things you cannot click your way back into.
+    sidebar.hidden = view !== 'chats' && view !== 'home';
+
+    if (view === 'home') renderAgents();
 
     if (view === 'planner' && !plannerLoaded) {
       plannerLoaded = true;
@@ -812,7 +963,7 @@
     else applyTrackColour(null);
   }
 
-  sidebarNavBtns.forEach((btn) => {
+  topbarBtns.forEach((btn) => {
     btn.addEventListener('click', () => switchView(btn.dataset.view));
   });
 
@@ -1307,7 +1458,9 @@
   document.addEventListener('languagechange', () => {
     markActiveLanguage();
     if (appLayout.hidden) return;
-    applyTrackLocks();
+    renderAgents();
+    renderSkillCatalogue();
+    renderSkillBar();
 
     applyModeChrome();
     renderSidebar();
@@ -1470,7 +1623,12 @@
   // so a workout chat never briefly shows study phases.
   async function loadTracks() {
     const { ok, data } = await api('/api/phases');
-    if (ok && data && data.tracks) TRACKS = data.tracks;
+    if (!ok || !data) return;
+    if (data.tracks) TRACKS = data.tracks;
+    if (Array.isArray(data.skills)) {
+      SKILLS = data.skills;
+      renderSkillCatalogue();
+    }
   }
 
   async function bootstrap() {

@@ -235,16 +235,37 @@ body {
   gap: 14px;
 }
 
+/* A full-width bar across the top, then sidebar and content beneath it. Grid
+   rather than flex now that there are two rows: the bar has to span both
+   columns, and the sidebar has to be able to disappear on the views it does
+   not belong to without the content jumping. */
 .app-layout {
   width: 100%;
-  max-width: 960px;
-  display: flex;
-  align-items: flex-start;
+  max-width: 1000px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
   gap: 16px;
 }
 
-.app-layout .shell {
-  flex: 1;
+.app-layout > .topbar {
+  grid-column: 1 / -1;
+}
+
+/* A hidden sidebar is display:none, so it stops being a grid item entirely and
+   the content would auto-place into the column it left behind - sized to fit
+   its contents, with the rest of the row empty. Collapsing to a single column
+   is simpler and more robust than telling each child to span. */
+.app-layout:has(> .sidebar[hidden]) {
+  grid-template-columns: 1fr;
+}
+
+/* .shell caps itself at 640px, which is right for the signed-out screens it was
+   written for. In here the grid column decides the width; the cap only showed
+   up once the sidebar could disappear and leave the content stranded at 640 in
+   a 984px row. */
+.app-layout > .shell {
+  max-width: none;
   min-width: 0;
 }
 
@@ -2008,4 +2029,188 @@ html[data-i18n-pending] body {
 
 .safety-actions .primary-btn:hover {
   opacity: 0.9;
+}
+
+/* --- top bar -------------------------------------------------------------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  flex-wrap: wrap;
+}
+
+.topbar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font-weight: 700;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.topbar-nav {
+  display: flex;
+  gap: 4px;
+  /* Pushes the actions to the far end in both directions. */
+  margin-inline-end: auto;
+  flex-wrap: wrap;
+}
+
+.topbar-btn {
+  border: none;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 7px 13px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.topbar-btn:hover { color: var(--text); }
+
+.topbar-btn.active {
+  background: var(--fill);
+  color: var(--fill-contrast);
+  font-weight: 600;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* --- the coach gallery ---------------------------------------------------- */
+
+.agent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  gap: 12px;
+  margin-block-end: 36px;
+}
+
+.agent-card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  /* start, not left: the whole card flips with the language. */
+  text-align: start;
+  align-items: flex-start;
+  padding: 16px 18px;
+  border: 1px solid var(--control-border);
+  border-radius: 22px;
+  background: var(--glass-bg);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.agent-card:hover {
+  border-color: var(--text);
+}
+
+.agent-name { font-weight: 700; font-size: 0.98rem; }
+.agent-blurb { color: var(--muted); font-size: 0.85rem; line-height: 1.6; }
+
+.agent-phases {
+  color: var(--muted);
+  font-size: 0.72rem;
+  opacity: 0.75;
+  margin-block-start: 3px;
+}
+
+/* Dimmed, not disabled: a card that says which plan opens it is useful, and a
+   dead one is a question with nowhere to ask it. */
+.agent-card.locked { opacity: 0.55; }
+
+.agent-lock {
+  margin-block-start: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--chip-bg);
+}
+
+/* --- skills --------------------------------------------------------------- */
+
+.home-section-title { font-size: 1rem; margin: 0 0 6px; }
+
+.home-section-lead {
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.7;
+  margin: 0 0 16px;
+  max-width: 42rem;
+}
+
+.skill-catalogue {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+  gap: 10px;
+}
+
+.skill-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px 15px;
+  border-radius: 16px;
+  background: var(--chip-bg);
+}
+
+.skill-entry-name { font-weight: 600; font-size: 0.86rem; }
+.skill-entry-desc { color: var(--muted); font-size: 0.78rem; line-height: 1.6; }
+
+/* The switches themselves, above the composer. */
+.skill-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 0 4px 8px;
+}
+
+.skill-chip {
+  border: 1px solid var(--control-border);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.74rem;
+  padding: 4px 11px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.skill-chip:hover { color: var(--text); }
+
+.skill-chip.on {
+  background: var(--fill);
+  color: var(--fill-contrast);
+  border-color: transparent;
+  font-weight: 600;
+}
+
+.sidebar-new-btn.primary-new {
+  width: 100%;
+  margin-block-end: 14px;
+}
+
+/* Phone: the bar wraps to two rows and the sidebar goes under the content
+   rather than squeezing it into a strip. */
+@media (max-width: 720px) {
+  .app-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .app-layout > .sidebar,
+  .app-layout > .shell {
+    grid-column: 1 / -1;
+  }
+
+  .topbar-nav { order: 3; width: 100%; }
+  .topbar-brand { margin-inline-end: auto; }
 }
