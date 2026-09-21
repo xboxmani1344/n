@@ -148,6 +148,42 @@ async function waitForListening() {
     report(false, 'every coach is complete and reachable', err.message);
   }
 
+  // A migration that fails partway must roll back, or the next boot hits
+  // "already exists" on its first line and the server can never start again -
+  // not a failed deploy you retry, a database that needs fixing by hand.
+  try {
+    const { execFileSync } = require('node:child_process');
+    const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'studybuddy-mig-'));
+    fs.cpSync(path.join(__dirname, '..', 'src'), path.join(sandbox, 'src'), { recursive: true });
+    fs.writeFileSync(
+      path.join(sandbox, 'src', 'migrations', '999_deliberately_broken.sql'),
+      'CREATE TABLE rollback_probe (id INTEGER PRIMARY KEY);\nINSERT INTO no_such_table (x) VALUES (1);\n'
+    );
+
+    const boot = () => {
+      try {
+        execFileSync(process.execPath, ['-e', `require(${JSON.stringify(path.join(sandbox, 'src', 'db'))})`], {
+          env: { ...process.env, DB_PATH: path.join(sandbox, 'probe.db') },
+          stdio: 'pipe',
+        });
+        return '';
+      } catch (err) {
+        return String(err.stderr || err.message);
+      }
+    };
+
+    const first = boot();
+    const second = boot();
+    // The same honest error both times. "already exists" on the second run is
+    // the symptom of the partial write surviving.
+    const rolledBack = /rolled back/.test(first) && /rolled back/.test(second) && !/already exists/.test(second);
+    fs.rmSync(sandbox, { recursive: true, force: true });
+    report(rolledBack, 'a failed migration rolls back and stays retryable',
+      rolledBack ? 'the same error twice, not an unfixable one' : 'second boot: ' + second.split('\n')[0]);
+  } catch (err) {
+    report(false, 'a failed migration rolls back and stays retryable', err.message);
+  }
+
   // Every coach needs its own title, subtitle and opening line in the
   // dictionary. Without them the client falls back to Study, which is how a
   // Writing session came to open with the Study welcome and be called "Study

@@ -94,8 +94,27 @@ function runMigrations() {
   for (const file of files) {
     if (applied.has(file)) continue;
     const sql = fs.readFileSync(path.join(dir, file), 'utf8');
-    db.exec(sql);
-    recordApplied.run(file, new Date().toISOString());
+
+    // One transaction per migration, covering the statements AND the row that
+    // records it. Without this a migration that failed halfway left its early
+    // statements behind and was never marked applied, so the next boot ran it
+    // again, hit "table already exists" on the first line, and threw. That is
+    // not a failed deploy you can retry - it is a server that can never start
+    // again, and the fix would have to be done by hand inside the database.
+    //
+    // SQLite runs DDL inside a transaction, so the rollback is real: a failed
+    // migration leaves the database exactly as it was, and redeploying once the
+    // migration is corrected simply works.
+    db.exec('BEGIN');
+    try {
+      db.exec(sql);
+      recordApplied.run(file, new Date().toISOString());
+      db.exec('COMMIT');
+    } catch (err) {
+      db.exec('ROLLBACK');
+      err.message = `Migration ${file} failed and was rolled back: ${err.message}`;
+      throw err;
+    }
     console.log(`Applied migration: ${file}`);
   }
 }
