@@ -78,7 +78,7 @@ REM --- Which app ----------------------------------------------------------
 echo.
 echo [3/4] Which app?
 echo       Enter the app id - the part before .liara.run
-echo       For https://studybuddy.liara.run that is:  studybuddy
+echo       For https://your-app.liara.run that is:  your-app
 echo.
 set "APPNAME="
 set /p "APPNAME=App id: "
