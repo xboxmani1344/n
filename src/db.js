@@ -40,23 +40,43 @@ try {
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'study-buddy.db');
 const DB_DIR = path.dirname(DB_PATH);
 
-// A read-only or missing directory almost always means DB_PATH points at a disk
+// A missing or read-only directory almost always means DB_PATH points at a disk
 // that was never mounted. Saying that plainly is the difference between a
 // two-minute fix and an afternoon.
+//
+// The two cases want different fixes and used to share one sentence: "not
+// writable" sent someone hunting for a permissions problem when the folder
+// simply was not there, which on a managed host means no disk exists yet.
 try {
   fs.mkdirSync(DB_DIR, { recursive: true });
   fs.accessSync(DB_DIR, fs.constants.W_OK);
 } catch (err) {
+  const missing = err.code === 'ENOENT';
   die([
-    'Buddy could not start: the database folder is not writable.',
+    missing
+      ? 'Buddy could not start: the database folder does not exist and could not be created.'
+      : 'Buddy could not start: the database folder is not writable.',
     '',
     `  DB_PATH:  ${DB_PATH}`,
     `  folder:   ${DB_DIR}`,
     `  error:    ${err.code || err.message}`,
     '',
-    'On a hosted server this normally means no persistent disk is attached at',
-    'that path, or DB_PATH points somewhere outside the disk. Attach a disk and',
-    'set DB_PATH to a file inside it.',
+    ...(missing
+      ? [
+          'Nothing is mounted at that path. On a managed host, declaring a disk in',
+          'liara.json only says where to mount one - it does not create it. Create',
+          'the disk in the panel first, with the name the config expects, then',
+          'redeploy.',
+          '',
+          '  1. Panel -> your app -> Disks -> create a disk named "data"',
+          '  2. Mount it at the folder above',
+          '  3. Redeploy',
+        ]
+      : [
+          'The folder exists but cannot be written to. Either the disk is mounted',
+          'read-only, or DB_PATH points somewhere outside it. Check the mount path',
+          'matches DB_PATH, then redeploy.',
+        ]),
   ]);
 }
 
