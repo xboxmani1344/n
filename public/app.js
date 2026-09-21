@@ -84,7 +84,8 @@
 
   const sidebarList = document.getElementById('sidebar-list');
   const newSessionBtn = document.getElementById('new-session-btn');
-  const sidebar = document.getElementById('sidebar');
+  const historyBtn = document.getElementById('history-btn');
+  const historyPanel = document.getElementById('history-panel');
   const topbarBtns = document.querySelectorAll('.topbar-btn');
   const homeShell = document.getElementById('home-shell');
   const agentGrid = document.getElementById('agent-grid');
@@ -382,6 +383,7 @@
       item.appendChild(main);
       item.appendChild(del);
       item.addEventListener('click', () => {
+        closeHistory();
         if (chat.id !== currentChatId) loadChat(chat.id);
       });
 
@@ -633,9 +635,45 @@
   });
 
   newSessionBtn.addEventListener('click', () => createChat('study'));
-  // The one button left in the sidebar goes back to the gallery rather than
-  // starting a particular coach - which one to start is the choice Home is for.
-  newSessionBtn.addEventListener('click', () => switchView('home'));
+  // --- the history panel ----------------------------------------------------
+
+  function setHistoryOpen(open) {
+    historyPanel.hidden = !open;
+    historyBtn.setAttribute('aria-expanded', String(open));
+    // The class is what the transition hangs off; `hidden` alone cannot animate,
+    // and toggling it in the same frame as the class would skip the transition.
+    if (open) requestAnimationFrame(() => historyPanel.classList.add('open'));
+    else historyPanel.classList.remove('open');
+  }
+
+  function closeHistory({ focusButton = false } = {}) {
+    if (historyPanel.hidden) return;
+    setHistoryOpen(false);
+    // Only on Escape: after clicking a chat, focus belongs in the conversation,
+    // not back on the button that opened the list.
+    if (focusButton) historyBtn.focus();
+  }
+
+  historyBtn.addEventListener('click', () => setHistoryOpen(historyPanel.hidden));
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeHistory({ focusButton: true });
+  });
+
+  // Anywhere outside the panel and its own button. Listening on the document
+  // rather than a backdrop element keeps the rest of the page usable.
+  document.addEventListener('click', (e) => {
+    if (historyPanel.hidden) return;
+    if (historyPanel.contains(e.target) || historyBtn.contains(e.target)) return;
+    closeHistory();
+  });
+
+  // Goes back to the gallery rather than starting a particular coach - which
+  // one to start is the choice Home is for.
+  newSessionBtn.addEventListener('click', () => {
+    closeHistory();
+    switchView('home');
+  });
 
   // The notice before the first nutrition or training session.
   //
@@ -940,9 +978,9 @@
     plannerShell.hidden = view !== 'planner';
     videoShell.hidden = view !== 'video';
     settingsShell.hidden = view !== 'settings';
-    // The chat list belongs to the chat views. On the planner or a video it is
-    // a column of things you cannot click your way back into.
-    sidebar.hidden = view !== 'chats' && view !== 'home';
+    // The history panel is reachable from every view now, so nothing to hide
+    // here - but leaving it hanging open across a view change looks like a bug.
+    closeHistory();
 
     if (view === 'home') renderAgents();
 

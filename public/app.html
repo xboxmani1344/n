@@ -142,9 +142,10 @@
     </dialog>
 
     <div class="app-layout" id="app-layout" hidden>
-      <!-- The sections live along the top now; the sidebar keeps only the list
-           of past chats, which is the one thing that benefits from being a tall
-           column. -->
+      <!-- Sections along the top; past chats behind the history button, which
+           opens the panel at the end of this header. Nothing holds a permanent
+           column any more - on a phone one did, and pushed the conversation
+           itself below the fold. -->
       <header class="topbar glass" id="topbar">
         <span class="topbar-brand"><svg class="brand-mark" viewBox="0 0 64 64" fill="none" aria-hidden="true" focusable="false"><rect x="13" y="8" width="10" height="48" rx="5" fill="currentColor"/><circle cx="33" cy="38" r="13" stroke="currentColor" stroke-width="10"/></svg>Buddy</span>
 
@@ -156,19 +157,20 @@
         </nav>
 
         <span class="topbar-actions">
+          <button type="button" id="history-btn" class="icon-btn" aria-expanded="false" aria-controls="history-panel" data-i18n-aria="nav.history" data-i18n-title="nav.history" aria-label="Chat history" title="Chat history">☰</button>
           <button type="button" class="lang-toggle" id="lang-toggle" data-i18n="lang.switch" data-i18n-aria="lang.switch.aria">فارسی</button>
           <button type="button" id="settings-btn" class="icon-btn" data-i18n-aria="nav.settings" data-i18n-title="nav.settings" aria-label="Settings" title="Settings">⚙</button>
           <button type="button" id="logout-btn" class="icon-btn" data-i18n-aria="nav.logout" data-i18n-title="nav.logout" aria-label="Log out" title="Log out">⏻</button>
         </span>
-      </header>
 
-      <aside class="sidebar glass" id="sidebar">
-        <div id="chat-nav-extras">
-          <button type="button" id="new-session-btn" class="pill-btn sidebar-new-btn primary-new" data-view-link="home" data-i18n="nav.newChat">+ New session</button>
+        <!-- Drops down from under the bar. Inside .topbar so it can be
+             positioned against it and shares its stacking context. -->
+        <div class="history-panel glass" id="history-panel" hidden>
+          <button type="button" id="new-session-btn" class="pill-btn sidebar-new-btn primary-new" data-i18n="nav.newChat">+ New session</button>
           <p class="sidebar-label" data-i18n="nav.recent">Recent chats</p>
           <div class="sidebar-list" id="sidebar-list"></div>
         </div>
-      </aside>
+      </header>
 
       <!-- Home: every coach as a card, and the skills explained once. This is
            where a session starts now, instead of a column of + buttons. -->
@@ -200,9 +202,9 @@
 
         <div class="segmented glass" id="phase-tracker" role="list" data-i18n-aria="chat.phasesAria" aria-label="Session phases"></div>
 
-        <div class="chat-card glass">
-          <div class="transcript" id="chat-log" aria-live="polite"></div>
-        </div>
+        <!-- No card around it any more: the reply is prose on the page, which
+             is what makes a conversation read as one. -->
+        <div class="transcript" id="chat-log" aria-live="polite"></div>
 
         <!-- The skills switched on for this session. Built from the catalogue
              at boot, so adding a skill server-side needs nothing here. -->

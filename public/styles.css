@@ -235,35 +235,19 @@ body {
   gap: 14px;
 }
 
-/* A full-width bar across the top, then sidebar and content beneath it. Grid
-   rather than flex now that there are two rows: the bar has to span both
-   columns, and the sidebar has to be able to disappear on the views it does
-   not belong to without the content jumping. */
+/* One column: the bar, then whichever view is showing. Past chats moved into a
+   panel that drops out of the bar, so nothing holds a second column any more -
+   and the grid that collapsed when the sidebar hid went with it. */
 .app-layout {
   width: 100%;
   max-width: 1000px;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
   gap: 16px;
 }
 
-.app-layout > .topbar {
-  grid-column: 1 / -1;
-}
-
-/* A hidden sidebar is display:none, so it stops being a grid item entirely and
-   the content would auto-place into the column it left behind - sized to fit
-   its contents, with the rest of the row empty. Collapsing to a single column
-   is simpler and more robust than telling each child to span. */
-.app-layout:has(> .sidebar[hidden]) {
-  grid-template-columns: 1fr;
-}
-
 /* .shell caps itself at 640px, which is right for the signed-out screens it was
-   written for. In here the grid column decides the width; the cap only showed
-   up once the sidebar could disappear and leave the content stranded at 640 in
-   a 984px row. */
+   written for, and too narrow here now that it has the full width. */
 .app-layout > .shell {
   max-width: none;
   min-width: 0;
@@ -369,29 +353,41 @@ body {
   overflow: hidden;
 }
 
+/* The scrolling part of the conversation. It takes whatever height is left
+   between the bar and the composer instead of a fixed 50vh, so the page itself
+   does not scroll and the composer never walks off the bottom. */
 .transcript {
-  padding: 20px 22px;
-  min-height: 320px;
-  max-height: 50vh;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  padding: 8px 4px 16px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 22px;
+  scroll-behavior: smooth;
 }
 
 .msg {
-  max-width: 82%;
-  line-height: 1.5;
+  max-width: 100%;
+  line-height: 1.7;
   font-size: 0.95rem;
 }
 
+/* Hidden, not removed. Nothing on screen says who is speaking any more - the
+   side it sits on does that - but a transcript read aloud with no speaker is
+   worse for the person relying on it than the label was ugly for everyone
+   else. The clip-rect form because `display:none` takes it out of the
+   accessibility tree too. */
 .msg .who {
-  display: block;
-  font-size: 0.66rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 4px;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 .msg .body {
@@ -400,20 +396,25 @@ body {
   word-wrap: break-word;
 }
 
+/* Your turn: a bubble on your own side, the way a message you sent looks
+   anywhere else. */
 .msg.user {
   align-self: flex-end;
-  text-align: end;
+  max-width: 72%;
 }
 
 .msg.user .body {
   background: var(--chip-bg);
-  padding: 10px 14px;
-  border-radius: 18px 18px 4px 18px;
+  padding: 11px 16px;
+  border-radius: 20px;
   text-align: start;
 }
 
+/* Buddy's turn: no bubble and no background, the full width of the column. A
+   long explanation reads as something written for you rather than as a chat
+   message that happens to be enormous. */
 .msg.bot {
-  align-self: flex-start;
+  align-self: stretch;
   max-width: 100%;
 }
 
@@ -2213,4 +2214,109 @@ html[data-i18n-pending] body {
 
   .topbar-nav { order: 3; width: 100%; }
   .topbar-brand { margin-inline-end: auto; }
+}
+
+/* --- the history panel ---------------------------------------------------- */
+
+/* Anchored under the bar rather than inside the page flow, so opening it does
+   not push the conversation down. `inset-inline-end` rather than `right`: in
+   Persian the button is on the left and the panel has to follow it. */
+.history-panel {
+  position: absolute;
+  inset-block-start: calc(100% + 8px);
+  inset-inline-end: 12px;
+  z-index: 20;
+  width: min(22rem, calc(100vw - 32px));
+  max-height: min(26rem, 60vh);
+  overflow-y: auto;
+  padding: 14px;
+  border-radius: 22px;
+}
+
+/* The positioning context for the panel above, and a stacking order above the
+   views below it. Without the z-index the bar sits at the same level as its
+   later siblings, so the phase tracker painted straight over the open panel and
+   swallowed the clicks meant for it. */
+.topbar {
+  position: relative;
+  z-index: 30;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .history-panel {
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: opacity 160ms ease, transform 160ms ease;
+  }
+
+  .history-panel.open {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* With motion reduced the panel simply appears. It still opens and still
+   closes: taking the movement out must not take the feature out. */
+
+.history-panel .sidebar-list {
+  max-height: none;
+}
+
+/* --- the chat view as a full-height column -------------------------------- */
+
+/* The conversation fills the screen below the bar, with the transcript as the
+   only scrolling part.
+   
+   Measured rather than subtracted: the first version took a guessed constant
+   off 100dvh for the bar, the gap and the page padding, and was 21px out -
+   which is the trouble with guessing at three numbers that can each change.
+   Capping the page itself and letting the shell take what is left is one rule
+   and cannot drift.
+   
+   100dvh rather than 100vh: on a phone, vh counts the space behind the
+   browser's own toolbar, which would leave the composer just off-screen. */
+.desk:has(#app-shell:not([hidden])) {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.desk:has(#app-shell:not([hidden])) .app-layout {
+  min-height: 0;
+}
+
+#app-shell {
+  flex: 1;
+  min-height: 0;
+}
+
+/* One reading column, centred, for everything in the conversation. */
+#app-shell > .transcript,
+#app-shell > .composer,
+#app-shell > .skill-bar,
+#app-shell > .controls,
+#app-shell > #phase-tracker {
+  width: 100%;
+  max-width: 46rem;
+  margin-inline: auto;
+}
+
+/* Chrome, not content: present when looked for, quiet when not. */
+#app-shell > .skill-bar { opacity: 0.85; }
+
+#app-shell > .composer {
+  border-radius: 26px;
+  padding: 8px 8px 8px 18px;
+}
+
+/* The heading takes a fixed slice of a screen that the conversation needs, and
+   the phase tracker already names the session. */
+#app-shell > .chat-brand {
+  display: none;
+}
+
+/* The bar wraps to two rows on a phone; the composer needs room to sit clear
+   of the home indicator. */
+@media (max-width: 720px) {
+  #app-shell > .controls { padding-block-end: 4px; }
 }

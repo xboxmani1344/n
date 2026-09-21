@@ -228,6 +228,7 @@
     'plan.includes': ['Study', 'درس'],
     // --- home, agents and skills ---------------------------------------------
     'nav.home': ['Home', 'خانه'],
+    'nav.history': ['Chat history', 'تاریخچه‌ی گفتگوها'],
     'nav.newChat': ['+ New session', '+ جلسه‌ی جدید'],
     'home.title': ['What are we working on?', 'روی چی کار کنیم؟'],
     'home.tagline': [
