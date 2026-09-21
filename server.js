@@ -40,7 +40,7 @@ if (bootFailure) {
 
 const { attachUser } = require('./src/middleware/auth');
 const { errorHandler } = require('./src/middleware/errors');
-const { TRACKS, PHASES } = require('./src/prompts');
+const { TRACKS, PHASES, SKILLS } = require('./src/prompts');
 const ai = require('./src/services/ai');
 const authRoutes = require('./src/routes/auth');
 const chatsRoutes = require('./src/routes/chats');
@@ -98,7 +98,9 @@ app.get('/terms', (_req, res) => {
 
 app.get('/api/phases', (_req, res) => {
   // `phases` is the study track, kept so an older cached client still works.
-  res.json({ phases: PHASES, tracks: TRACKS });
+  // Skills ride along here rather than on a route of their own: the client asks
+  // for this once at boot and needs both to render anything.
+  res.json({ phases: PHASES, tracks: TRACKS, skills: Object.values(SKILLS) });
 });
 
 app.get('/api/config', (_req, res) => {

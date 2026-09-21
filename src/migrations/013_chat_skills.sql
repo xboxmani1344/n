@@ -1,0 +1,12 @@
+-- Which skills are switched on for a chat.
+--
+-- Skills are short modifiers - "explain simply", "keep it short" - chosen per
+-- session rather than per account, because the right ones for revising physics
+-- are not the right ones for a job interview.
+--
+-- A JSON array in a column rather than a join table: these are only ever read
+-- together with the chat they belong to and never queried on their own, so a
+-- table would be a join for nothing. The set of valid keys lives in
+-- src/prompts.js and is re-checked on the way in and on the way out, so a stale
+-- key left here after a rename is ignored rather than reaching a prompt.
+ALTER TABLE chats ADD COLUMN skills TEXT NOT NULL DEFAULT '[]';

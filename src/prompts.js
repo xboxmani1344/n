@@ -4,6 +4,13 @@
 // per-phase prompts. Study came first; workout and diet reuse the same shape so
 // the chat route, the phase tracker and the Next Phase button did not need to
 // learn anything new.
+const { AGENTS, AGENT_PROMPTS, AGENT_TOPIC_LABEL } = require('./agents');
+
+// The four originals, plus the specialised coaches from agents.js. Merged into
+// one object on purpose: everything downstream - the chat route, the phase
+// tracker, plan gating, the client - already works in terms of tracks, and a
+// parallel "agent" concept would mean teaching all of it a second word for the
+// same thing.
 const TRACKS = {
   study: {
     key: 'study',
@@ -57,6 +64,7 @@ const TRACKS = {
       { id: 4, key: 'debug', label: 'Debug', labelFa: 'اشکال‌زدایی', description: 'Read the error, find the cause, and make it not happen again.' },
     ],
   },
+  ...AGENTS,
 };
 
 const TRACK_KEYS = Object.keys(TRACKS);
@@ -371,6 +379,7 @@ const TRACK_PROMPTS = {
   workout: WORKOUT_PHASE_PROMPTS,
   diet: DIET_PHASE_PROMPTS,
   code: CODE_PHASE_PROMPTS,
+  ...AGENT_PROMPTS,
 };
 
 // 'phased' is what the study track was called before other tracks existed.
@@ -404,6 +413,7 @@ const TOPIC_LABEL = {
   workout: 'training focus for this session',
   diet: 'focus for this session',
   code: 'thing being built',
+  ...AGENT_TOPIC_LABEL,
 };
 
 // The persona prompts are written in English, and a model given English
@@ -446,6 +456,74 @@ const SAFETY_INSTRUCTION = {
 
 // Study and code are ordinary teaching; there is nothing here that a wrong
 // answer can injure, and the instruction would only be noise in the prompt.
+// Skills: short modifiers a reader turns on for a session, on top of whichever
+// coach they are talking to. Deliberately not personas of their own - a persona
+// is an agent, and two personas in one prompt argue with each other. Each of
+// these is one instruction about *how* to answer, never about what to be.
+const SKILLS = {
+  simple: {
+    key: 'simple',
+    label: 'Explain simply',
+    labelFa: 'ساده‌تر توضیح بده',
+    description: 'Plain words, everyday comparisons, no jargon unless it is the thing being taught.',
+    descriptionFa: 'کلمات ساده، مثال‌های روزمره، بدون اصطلاح مگر اینکه خودش درس باشد.',
+    prompt: 'Explain everything in the simplest words that are still accurate. Use an everyday comparison before any technical term, and introduce a technical term only when it is the thing being taught. Assume no background.',
+  },
+  brief: {
+    key: 'brief',
+    label: 'Keep it short',
+    labelFa: 'کوتاه جواب بده',
+    description: 'A few sentences per turn instead of a page.',
+    descriptionFa: 'چند جمله در هر نوبت، نه یک صفحه.',
+    prompt: 'Keep every reply to a few sentences. No preamble, no summary of what you are about to say, no closing pleasantries. If something genuinely needs more room, say so and ask before writing it.',
+  },
+  local: {
+    key: 'local',
+    label: 'Iranian examples',
+    labelFa: 'مثال ایرانی',
+    description: 'Prices, food, places and names from here rather than somewhere else.',
+    descriptionFa: 'قیمت، غذا، مکان و اسم از همین‌جا، نه جای دیگر.',
+    prompt: 'Draw examples from everyday life in Iran: prices in Toman, food that is actually sold here, Iranian cities and names, the school and university system here. Do not use examples that assume somewhere else.',
+  },
+  quiz: {
+    key: 'quiz',
+    label: 'Check I understood',
+    labelFa: 'ازم سؤال بپرس',
+    description: 'Ends each turn with one question back to you.',
+    descriptionFa: 'آخر هر جواب، یک سؤال از تو می‌پرسد.',
+    prompt: 'End every reply with exactly one short question that checks they followed what you just said. Wait for their answer before going on, and if they get it wrong, work out where it went wrong rather than repeating the explanation.',
+  },
+  steps: {
+    key: 'steps',
+    label: 'Numbered steps',
+    labelFa: 'قدم‌به‌قدم',
+    description: 'Anything with more than one part comes back as a numbered list.',
+    descriptionFa: 'هر چیزی که بیش از یک قسمت دارد، شماره‌گذاری‌شده می‌آید.',
+    prompt: 'Whenever something has more than one part, give it as a numbered list of steps rather than a paragraph. One action per step, in the order they should be done.',
+  },
+};
+
+const SKILL_KEYS = Object.keys(SKILLS);
+
+// Only the ones that exist, in a fixed order, never twice, and capped - the
+// list arrives from the client, and a prompt is not somewhere to accept
+// arbitrary repeated text.
+function normalizeSkills(input) {
+  if (!Array.isArray(input)) return [];
+  const seen = new Set();
+  for (const key of input) {
+    if (typeof key === 'string' && SKILLS[key]) seen.add(key);
+  }
+  return SKILL_KEYS.filter((key) => seen.has(key));
+}
+
+function skillsLine(skills) {
+  const chosen = normalizeSkills(skills);
+  if (!chosen.length) return '';
+  const lines = chosen.map((key) => `- ${SKILLS[key].prompt}`).join('\n');
+  return `\n\nHOW TO ANSWER - the reader has asked for these:\n${lines}`;
+}
+
 function safetyLine(trackKey) {
   return SAFETY_INSTRUCTION[trackKey] || '';
 }
@@ -465,7 +543,7 @@ function mathsLine(trackKey) {
   return trackKey === 'study' || trackKey === 'code' ? MATHS_INSTRUCTION : '';
 }
 
-function getSystemPrompt(phaseKey, topic, trackKey, lang) {
+function getSystemPrompt(phaseKey, topic, trackKey, lang, skills) {
   const track = getTrack(trackKey);
   const prompts = TRACK_PROMPTS[track.key] || STUDY_PHASE_PROMPTS;
   const base = prompts[phaseKey] || prompts[track.phases[0].key];
@@ -474,15 +552,20 @@ function getSystemPrompt(phaseKey, topic, trackKey, lang) {
     : '';
   // Safety last of the instructions, before the language line: it is the part
   // that must win an argument with the persona above it.
-  return `${base}${topicLine}${mathsLine(track.key)}${safetyLine(track.key)}${languageLine(lang)}`;
+  // Skills before safety: they say how to answer, safety says what may not be
+  // answered, and the last word should belong to the one that can hurt someone.
+  return `${base}${topicLine}${mathsLine(track.key)}${skillsLine(skills)}${safetyLine(track.key)}${languageLine(lang)}`;
 }
 
-function getTutorSystemPrompt(topic, lang) {
+function getTutorSystemPrompt(topic, lang, skills) {
   const topicLine = topic ? `\n\nThe learner's current topic of interest is: "${topic}".` : '';
-  return `${TUTOR_PROMPT}${topicLine}${MATHS_INSTRUCTION}${languageLine(lang)}`;
+  return `${TUTOR_PROMPT}${topicLine}${MATHS_INSTRUCTION}${skillsLine(skills)}${languageLine(lang)}`;
 }
 
 module.exports = {
+  SKILLS,
+  normalizeSkills,
+  skillsLine,
   SAFETY_INSTRUCTION,
   safetyLine,
   TRACKS,

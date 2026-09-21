@@ -12,6 +12,9 @@ const { db } = require('../db');
 // The limits are also the spend control. With SHARED_API_KEY=1 the operator's
 // credit pays for every message, so these numbers are the only thing between
 // one enthusiastic user and the bill.
+// Which coaches each plan includes. The four originals plus the specialised
+// agents from src/agents.js - all in one table, so moving an agent between
+// plans is one line here and nothing else.
 const PLAN_LIMITS = {
   free: {
     // Nothing was paid, so there is nothing to refund.
@@ -24,21 +27,21 @@ const PLAN_LIMITS = {
   basic: {
     refundDays: 3,
     priceRial: 2000000,     // 200,000 Toman
-    tracks: ['study', 'workout'],
+    tracks: ['study', 'workout', 'exam'],
     ai_messages: { period: 'day', limit: 100 },
     video_summaries: { period: 'month', limit: 15 },
   },
   plus: {
     refundDays: 5,
     priceRial: 5500000,     // 550,000 Toman
-    tracks: ['study', 'workout', 'diet'],
+    tracks: ['study', 'workout', 'diet', 'exam', 'writing', 'language'],
     ai_messages: { period: 'day', limit: 300 },
     video_summaries: { period: 'month', limit: 40 },
   },
   pro: {
     refundDays: 7,
     priceRial: 12000000,    // 1,200,000 Toman
-    tracks: ['study', 'workout', 'diet', 'code'],
+    tracks: ['study', 'workout', 'diet', 'code', 'exam', 'writing', 'language', 'interview'],
     ai_messages: { period: 'day', limit: 1000 },
     video_summaries: { period: 'month', limit: 150 },
   },

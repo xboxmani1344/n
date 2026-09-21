@@ -101,21 +101,71 @@ async function waitForListening() {
     }
   }
 
-  // The tracks the landing page and the app both read from the server.
+  // What the client actually boots from. The shape of it, not the count - how
+  // many coaches there are is checked directly against the registry below,
+  // where adding one does not mean editing a number in a test.
   try {
-    const { tracks } = await (await fetch(`http://127.0.0.1:${PORT}/api/phases`)).json();
+    const { tracks, skills } = await (await fetch(`http://127.0.0.1:${PORT}/api/phases`)).json();
     const keys = Object.keys(tracks || {});
     report(
-      keys.length === 4 && keys.every((k) => tracks[k].phases.length === 4),
-      'four tracks of four phases each',
-      keys.join(', ')
+      keys.length > 0 && keys.every((k) => tracks[k].phases.length === 4),
+      'the catalogue serves four phases per coach',
+      `${keys.length} coaches`
     );
     report(
-      keys.every((k) => tracks[k].phases.every((p) => p.label && p.labelFa)),
-      'every phase named in both languages'
+      Array.isArray(skills) && skills.length > 0 && skills.every((s) => s.key && s.labelFa && s.descriptionFa),
+      'the catalogue serves the skills, in both languages',
+      `${(skills || []).length} skills`
     );
   } catch (err) {
-    report(false, 'track definitions parse', err.message);
+    report(false, 'the catalogue parses', err.message);
+  }
+
+  // Every coach, including the specialised agents, must be fully formed and
+  // reachable: four named phases in both languages, a prompt behind each, and
+  // some plan that includes it. An agent nobody can open is dead weight.
+  try {
+    const { TRACKS, getSystemPrompt, SKILLS } = require('../src/prompts');
+    const { PLAN_LIMITS } = require('../src/services/usage');
+    const everyPlanTrack = new Set(Object.values(PLAN_LIMITS).flatMap((p) => p.tracks));
+
+    const broken = [];
+    for (const [key, track] of Object.entries(TRACKS)) {
+      if (track.phases.length !== 4) broken.push(`${key}: ${track.phases.length} phases`);
+      if (!track.labelFa || !track.blurbFa) broken.push(`${key}: not bilingual`);
+      if (!everyPlanTrack.has(key)) broken.push(`${key}: no plan includes it`);
+      for (const phase of track.phases) {
+        if (!phase.labelFa) broken.push(`${key}.${phase.key}: no Persian name`);
+        // A missing phase prompt silently falls back to phase one, which reads
+        // as the coach forgetting where it is.
+        const prompt = getSystemPrompt(phase.key, 'x', key, 'en');
+        if (!prompt.includes(`CURRENT PHASE: ${phase.id}`)) broken.push(`${key}.${phase.key}: no prompt`);
+      }
+    }
+    report(broken.length === 0, 'every coach is complete and reachable',
+      broken.length ? broken.slice(0, 3).join('; ') : `${Object.keys(TRACKS).length} coaches, ${Object.keys(SKILLS).length} skills`);
+  } catch (err) {
+    report(false, 'every coach is complete and reachable', err.message);
+  }
+
+  // Skills arrive from the client and end up in a prompt, so the filter is the
+  // only thing between a request body and the model's instructions.
+  try {
+    const { normalizeSkills, getSystemPrompt } = require('../src/prompts');
+    const checks = [
+      [['brief', 'simple'], ['simple', 'brief'], 'a fixed order, not the order sent'],
+      [['simple', 'simple'], ['simple'], 'duplicates collapse'],
+      [['nope', 'simple'], ['simple'], 'unknown keys dropped'],
+      ['not an array', [], 'a non-array is no skills'],
+      [[{ toString: () => 'simple' }], [], 'only real strings count'],
+    ];
+    const wrong = checks.filter(([input, want]) => JSON.stringify(normalizeSkills(input)) !== JSON.stringify(want));
+    const reaches = /HOW TO ANSWER/.test(getSystemPrompt('learn', 'x', 'study', 'en', ['quiz']));
+    const absent = !/HOW TO ANSWER/.test(getSystemPrompt('learn', 'x', 'study', 'en', []));
+    report(wrong.length === 0 && reaches && absent, 'skills are filtered and reach the prompt',
+      wrong.length ? wrong.map(([, , l]) => l).join('; ') : 'filtered, ordered, and only present when chosen');
+  } catch (err) {
+    report(false, 'skills are filtered and reach the prompt', err.message);
   }
 
   // The notice before a first nutrition or training session. Enforced on the

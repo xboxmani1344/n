@@ -4,7 +4,15 @@ const express = require('express');
 const { db } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errors');
-const { getTrack, isTrackKey, getPhases, getPhaseByKey, getSystemPrompt, getTutorSystemPrompt } = require('../prompts');
+const {
+  getTrack,
+  isTrackKey,
+  getPhases,
+  getPhaseByKey,
+  getSystemPrompt,
+  getTutorSystemPrompt,
+  normalizeSkills,
+} = require('../prompts');
 const ai = require('../services/ai');
 const apiKeys = require('../services/apiKeys');
 const usage = require('../services/usage');
@@ -22,9 +30,21 @@ function chatSummary(row) {
     title: row.title,
     topic: row.topic,
     phaseKey: row.phase_key,
+    skills: skillsOf(row),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+// The column holds JSON, and a column can hold anything a past version wrote.
+// Parsing failures and keys that no longer exist both come back as "no skills"
+// rather than throwing on the way to a prompt.
+function skillsOf(chatRow) {
+  try {
+    return normalizeSkills(JSON.parse(chatRow.skills || '[]'));
+  } catch {
+    return [];
+  }
 }
 
 function loadOwnedChat(userId, chatId) {
@@ -127,20 +147,26 @@ router.patch('/:id', (req, res) => {
   const chat = loadOwnedChat(req.user.id, req.params.id);
   if (!chat) return res.status(404).json({ error: 'Chat not found' });
 
-  const { title, phaseKey, archived } = req.body || {};
+  const { title, phaseKey, archived, skills } = req.body || {};
   if (phaseKey !== undefined && phaseKey !== null && !getPhaseByKey(phaseKey, chat.mode)) {
     return res.status(400).json({ error: `Unknown phase: ${phaseKey}` });
   }
+
+  // Normalised rather than rejected: an unknown key is almost always a client
+  // left over from before a rename, and dropping it quietly is kinder than
+  // failing the whole save. COALESCE keeps the stored set when none is sent.
+  const skillsJson = skills === undefined ? null : JSON.stringify(normalizeSkills(skills));
 
   const now = new Date().toISOString();
   db.prepare(
     `UPDATE chats SET
        title = COALESCE(?, title),
        phase_key = COALESCE(?, phase_key),
+       skills = COALESCE(?, skills),
        archived_at = CASE WHEN ? = 1 THEN ? ELSE archived_at END,
        updated_at = ?
      WHERE id = ?`
-  ).run(title ?? null, phaseKey ?? null, archived ? 1 : 0, now, now, chat.id);
+  ).run(title ?? null, phaseKey ?? null, skillsJson, archived ? 1 : 0, now, now, chat.id);
 
   const updated = db.prepare('SELECT * FROM chats WHERE id = ?').get(chat.id);
   res.json({ chat: chatSummary(updated) });
@@ -203,14 +229,16 @@ router.post(
     }
 
     const lang = req.user.language;
+    const chatSkills = skillsOf(chat);
     const system =
       chat.mode === 'tutor'
-        ? getTutorSystemPrompt(chat.topic, lang)
+        ? getTutorSystemPrompt(chat.topic, lang, chatSkills)
         : getSystemPrompt(
             (getPhaseByKey(chat.phase_key, chat.mode) || getPhases(chat.mode)[0]).key,
             chat.topic,
             chat.mode,
-            lang
+            lang,
+            chatSkills
           );
 
     // The user's turn is already stored so it can be part of the history above.
