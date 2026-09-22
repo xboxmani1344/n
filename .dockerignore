@@ -1,0 +1,37 @@
+# What not to upload to the build. Without this file the host generates its own
+# default, which is a fine default but knows nothing about this project - and in
+# particular knows nothing about data/.
+
+# Reinstalled by npm during the build, so uploading it is pure waste. 40M here,
+# and 19M of that is playwright, which is not even a dependency of this app.
+node_modules
+
+# History the running container has no use for.
+.git
+
+# Continuous integration config. Runs on GitHub, not in the container.
+.github
+
+# The database. This is the entry with a reason beyond size: /app/data is where
+# the disk gets mounted, so anything shipped there sits under a mount point and
+# makes "is the disk working?" unanswerable. And an image is an artifact that
+# gets copied around - real accounts do not belong in one.
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Secrets. There is no .env in this checkout today; this is here so there never
+# is one in an image either.
+.env
+.env.local
+
+# Build and run noise.
+*.log
+npm-debug.log*
+
+# Editor and operating-system residue. Guards - none of these are checked in.
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
