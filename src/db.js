@@ -96,24 +96,59 @@ function ancestry(dir) {
   return parts.reverse().map((p) => `    ${p.padEnd(34)} ${describe(p)}`);
 }
 
-let failedAt = null;
-let failure = null;
-try {
-  fs.mkdirSync(DB_DIR, { recursive: true });
-} catch (err) {
-  failedAt = 'creating the folder';
-  failure = err;
+// A synchronous pause. Everything here runs at require time, before there is
+// an event loop to await on, and restructuring the whole module to be async for
+// one wait at startup would be a worse trade.
+function sleepSync(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
-if (!failure) {
+
+function tryFolder() {
+  try {
+    fs.mkdirSync(DB_DIR, { recursive: true });
+  } catch (err) {
+    return { failedAt: 'creating the folder', failure: err };
+  }
   try {
     fs.accessSync(DB_DIR, fs.constants.W_OK);
   } catch (err) {
-    // Reached separately on purpose. mkdirSync with recursive swallows EEXIST,
+    // Checked separately on purpose. mkdirSync with recursive swallows EEXIST,
     // so an ENOENT arriving here is a different fault from "could not create
-    // it" - a dangling symlink, or a mount the panel shows but the container
-    // does not have - and it was being reported as the same thing.
-    failedAt = 'writing to the folder';
-    failure = err;
+    // it" - and the two were being reported as the same thing.
+    return { failedAt: 'writing to the folder', failure: err };
+  }
+  return { failedAt: null, failure: null };
+}
+
+// The container can start before the disk has finished mounting.
+//
+// The evidence was a listing of /app that contained "data" while a stat of
+// /app/data in the same breath said ENOENT - which cannot both be true of a
+// settled filesystem, but is exactly what a mount point looks like mid-setup.
+// It also explains a disk the panel reports as in use with megabytes written:
+// it does mount, just after the process has already given up on it.
+//
+// So wait for it. Only on ENOENT, which is the not-yet-there case; a
+// permissions or read-only fault will not improve by being asked again, and
+// retrying those would only delay a real error by five seconds.
+const MOUNT_WAIT_MS = 10000;
+const MOUNT_POLL_MS = 500;
+
+let { failedAt, failure } = tryFolder();
+
+if (failure && failure.code === 'ENOENT') {
+  const deadline = Date.now() + MOUNT_WAIT_MS;
+  let waited = false;
+  while (failure && failure.code === 'ENOENT' && Date.now() < deadline) {
+    if (!waited) {
+      console.log(`Waiting up to ${MOUNT_WAIT_MS / 1000}s for ${DB_DIR} to appear...`);
+      waited = true;
+    }
+    sleepSync(MOUNT_POLL_MS);
+    ({ failedAt, failure } = tryFolder());
+  }
+  if (waited && !failure) {
+    console.log(`${DB_DIR} is there now - the disk finished mounting after the app started.`);
   }
 }
 
@@ -137,6 +172,19 @@ if (failure) {
     '',
     '  The path, one level at a time:',
     ...ancestry(DB_DIR),
+    '',
+    `  Does ${path.basename(DB_DIR)} appear in its parent's listing?`,
+    `    ${(() => {
+      try {
+        const there = fs.readdirSync(path.dirname(DB_DIR)).includes(path.basename(DB_DIR));
+        return there
+          ? 'yes - listed by the parent but not reachable on its own. That is a mount'
+            + '\n    that has not finished, not a missing folder.'
+          : 'no - the parent does not contain it at all.';
+      } catch (err) {
+        return `could not read the parent (${err.code})`;
+      }
+    })()}`,
     '',
     '  Other places a disk is commonly mounted:',
     ...['/app', '/usr/src/app', '/data', '/mnt', '/srv'].map(
