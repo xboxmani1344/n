@@ -22,7 +22,33 @@ try {
 }
 if (bootFailure) {
   const app = express();
-  const body = `Buddy cannot start.\n\n${bootFailure.message}\n`;
+
+  // Two audiences on one page, in that order.
+  //
+  // Whoever opened the site comes first, and in their own language: this app is
+  // for Persian speakers, and the one page that had no Persian in it was the one
+  // that appears when everything is broken. They were shown a wall of English
+  // about DB_PATH and mount points - nothing they can act on, and nothing a 503
+  // should be telling the public.
+  //
+  // The operator's detail stays, below the divider, because it is what makes
+  // this page worth serving at all.
+  //
+  // Still plain text. A styled page would look better, but this branch runs
+  // precisely when the app is broken, and every extra thing it depends on is
+  // another way for it to fail when it is needed most.
+  const body = [
+    'Buddy موقتاً در دسترس نیست.',
+    'داریم درستش می‌کنیم — کمی بعد دوباره امتحان کن.',
+    '',
+    'Buddy is temporarily unavailable. We are fixing it - please try again shortly.',
+    '',
+    '—'.repeat(30),
+    'For whoever runs this server:',
+    '',
+    bootFailure.message,
+    '',
+  ].join('\n');
 
   // Every path, so it does not matter where the reader lands. 503 rather than
   // 500: this is a configuration problem that a redeploy fixes, and it keeps
