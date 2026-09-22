@@ -40,43 +40,117 @@ try {
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'study-buddy.db');
 const DB_DIR = path.dirname(DB_PATH);
 
-// A missing or read-only directory almost always means DB_PATH points at a disk
-// that was never mounted. Saying that plainly is the difference between a
-// two-minute fix and an afternoon.
+// A missing or unwritable database folder on a managed host almost always means
+// the disk is not where the app thinks it is. Three guesses at that - wrong
+// name, wrong path, no redeploy - were all ruled out by evidence while the site
+// stayed down, so this stopped guessing and started reporting.
 //
-// The two cases want different fixes and used to share one sentence: "not
-// writable" sent someone hunting for a permissions problem when the folder
-// simply was not there, which on a managed host means no disk exists yet.
+// It says which call failed, and then what is actually on the filesystem. One
+// deploy answers the question instead of three.
+
+// Every one of these is wrapped: a diagnostic that throws while explaining a
+// failure is worse than no diagnostic at all.
+function describe(target) {
+  let stat;
+  try {
+    stat = fs.lstatSync(target);
+  } catch (err) {
+    return err.code === 'ENOENT' ? 'does not exist' : `cannot stat (${err.code})`;
+  }
+
+  if (stat.isSymbolicLink()) {
+    // A dangling symlink is the one shape that reports ENOENT from accessSync
+    // while looking present to anything that only checks the parent.
+    let to = '?';
+    try {
+      to = fs.readlinkSync(target);
+    } catch {
+      /* the link is there even if its target cannot be read */
+    }
+    const dangling = !fs.existsSync(target) ? ', DANGLING' : '';
+    return `symlink -> ${to}${dangling}`;
+  }
+  if (stat.isDirectory()) {
+    try {
+      const entries = fs.readdirSync(target);
+      const shown = entries.slice(0, 12).join(', ');
+      return `directory, ${entries.length} entries${entries.length ? `: ${shown}` : ' (empty)'}`;
+    } catch (err) {
+      return `directory, cannot list (${err.code})`;
+    }
+  }
+  return stat.isFile() ? 'a file, not a directory' : 'exists, not a directory';
+}
+
+// From the folder we wanted up to the root, so the first thing that does exist
+// is visible along with everything missing beneath it.
+function ancestry(dir) {
+  const parts = [];
+  let current = path.resolve(dir);
+  for (let i = 0; i < 12; i += 1) {
+    parts.push(current);
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  return parts.reverse().map((p) => `    ${p.padEnd(34)} ${describe(p)}`);
+}
+
+let failedAt = null;
+let failure = null;
 try {
   fs.mkdirSync(DB_DIR, { recursive: true });
-  fs.accessSync(DB_DIR, fs.constants.W_OK);
 } catch (err) {
-  const missing = err.code === 'ENOENT';
+  failedAt = 'creating the folder';
+  failure = err;
+}
+if (!failure) {
+  try {
+    fs.accessSync(DB_DIR, fs.constants.W_OK);
+  } catch (err) {
+    // Reached separately on purpose. mkdirSync with recursive swallows EEXIST,
+    // so an ENOENT arriving here is a different fault from "could not create
+    // it" - a dangling symlink, or a mount the panel shows but the container
+    // does not have - and it was being reported as the same thing.
+    failedAt = 'writing to the folder';
+    failure = err;
+  }
+}
+
+if (failure) {
+  // The headline follows which call failed, not the errno. Keying it off
+  // ENOENT said "cannot be written to" about a folder that could not be
+  // created in the first place - the two want different fixes.
   die([
-    missing
-      ? 'Buddy could not start: the database folder does not exist and could not be created.'
-      : 'Buddy could not start: the database folder is not writable.',
+    failedAt === 'creating the folder'
+      ? 'Buddy could not start: the database folder is not there and could not be created.'
+      : 'Buddy could not start: the database folder is there but cannot be written to.',
     '',
     `  DB_PATH:  ${DB_PATH}`,
     `  folder:   ${DB_DIR}`,
-    `  error:    ${err.code || err.message}`,
+    `  failed:   ${failedAt}`,
+    `  error:    ${failure.code || failure.message}`,
     '',
-    ...(missing
-      ? [
-          'Nothing is mounted at that path. On a managed host, declaring a disk in',
-          'liara.json only says where to mount one - it does not create it. Create',
-          'the disk in the panel first, with the name the config expects, then',
-          'redeploy.',
-          '',
-          '  1. Panel -> your app -> Disks -> create a disk named "data"',
-          '  2. Mount it at the folder above',
-          '  3. Redeploy',
-        ]
-      : [
-          'The folder exists but cannot be written to. Either the disk is mounted',
-          'read-only, or DB_PATH points somewhere outside it. Check the mount path',
-          'matches DB_PATH, then redeploy.',
-        ]),
+    '  Where the app is running from:',
+    `    cwd:       ${process.cwd()}`,
+    `    this file: ${__dirname}`,
+    '',
+    '  The path, one level at a time:',
+    ...ancestry(DB_DIR),
+    '',
+    '  Other places a disk is commonly mounted:',
+    ...['/app', '/usr/src/app', '/data', '/mnt', '/srv'].map(
+      (p) => `    ${p.padEnd(34)} ${describe(p)}`
+    ),
+    '',
+    'Read the listing above before changing anything. If the folder is simply',
+    'absent, no disk is mounted there - create one in the host panel and set',
+    'DB_PATH inside it. If a different directory above holds the app, DB_PATH',
+    'and the mount path both belong there instead.',
+    '',
+    'Not started rather than started without a disk: writing the database to',
+    'storage that the next deploy discards loses every account silently, which',
+    'is worse than refusing to boot.',
   ]);
 }
 
