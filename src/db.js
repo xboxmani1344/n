@@ -130,26 +130,45 @@ function tryFolder() {
 //
 // So wait for it. Only on ENOENT, which is the not-yet-there case; a
 // permissions or read-only fault will not improve by being asked again, and
-// retrying those would only delay a real error by five seconds.
-const MOUNT_WAIT_MS = 10000;
+// retrying those would only delay a real error.
+//
+// A minute, not the ten seconds tried first - that number was a guess and it
+// was not enough. A minute is still far below any sensible platform start-up
+// timeout, and a container that idles once at boot and then works is strictly
+// better than one that dies and needs a person.
+const MOUNT_WAIT_MS = 60000;
 const MOUNT_POLL_MS = 500;
+const MOUNT_REPORT_MS = 5000;
 
 let { failedAt, failure } = tryFolder();
+let waitedMs = 0;
 
 if (failure && failure.code === 'ENOENT') {
-  const deadline = Date.now() + MOUNT_WAIT_MS;
-  let waited = false;
+  const started = Date.now();
+  const deadline = started + MOUNT_WAIT_MS;
+  console.log(`Waiting up to ${MOUNT_WAIT_MS / 1000}s for ${DB_DIR} to appear...`);
+
+  let nextReport = MOUNT_REPORT_MS;
   while (failure && failure.code === 'ENOENT' && Date.now() < deadline) {
-    if (!waited) {
-      console.log(`Waiting up to ${MOUNT_WAIT_MS / 1000}s for ${DB_DIR} to appear...`);
-      waited = true;
-    }
     sleepSync(MOUNT_POLL_MS);
     ({ failedAt, failure } = tryFolder());
+    waitedMs = Date.now() - started;
+
+    // Every few seconds, so a log read later says how long it actually waited.
+    // Logging only at the start and the end left "waited and failed" looking
+    // exactly like "never waited at all" to someone scrolling.
+    if (waitedMs >= nextReport) {
+      console.log(`  still waiting for ${DB_DIR} - ${Math.round(waitedMs / 1000)}s`);
+      nextReport += MOUNT_REPORT_MS;
+    }
   }
-  if (waited && !failure) {
-    console.log(`${DB_DIR} is there now - the disk finished mounting after the app started.`);
-  }
+
+  waitedMs = Date.now() - started;
+  console.log(
+    failure
+      ? `Gave up after ${Math.round(waitedMs / 1000)}s - ${DB_DIR} never appeared.`
+      : `${DB_DIR} is there after ${Math.round(waitedMs / 1000)}s - the disk finished mounting after the app started.`
+  );
 }
 
 if (failure) {
@@ -165,6 +184,9 @@ if (failure) {
     `  folder:   ${DB_DIR}`,
     `  failed:   ${failedAt}`,
     `  error:    ${failure.code || failure.message}`,
+    ...(waitedMs
+      ? [`  waited:   ${Math.round(waitedMs / 1000)}s for the disk to mount, and it never did`]
+      : []),
     '',
     '  Where the app is running from:',
     `    cwd:       ${process.cwd()}`,
