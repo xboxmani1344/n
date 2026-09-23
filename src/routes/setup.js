@@ -87,6 +87,11 @@ router.get('/health', requireAuth, (req, res) => {
     say(label, value, hint);
   };
 
+  // Before anything else, so a page read from a stale deploy gives itself away
+  // rather than being trusted.
+  say('build', `${require('../version').STAMP}   (compare with npm run stamp)`);
+  lines.push('');
+
   // First, because it is the one that destroys data rather than failing.
   const separate = onSeparateVolume();
   if (separate === true) say('database', `${DB_PATH}  (on its own disk)`);

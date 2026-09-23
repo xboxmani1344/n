@@ -165,6 +165,7 @@ function bootSummary() {
 
   const lines = [
     `  node      ${process.versions.node}`,
+    `  build     ${require('./src/version').STAMP}   (npm run stamp, to check this is the code you pushed)`,
     `  database  ${DB_PATH}  (${disk})`,
     `  ai        ${ai.BASE_URL}`,
     `  model     ${ai.MODEL_ID}${ai.isConfigured() ? '' : '   (no key set — the AI cannot reply yet)'}`,

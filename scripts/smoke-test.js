@@ -224,6 +224,43 @@ async function waitForListening() {
     report(false, 'a tab pasted into DB_PATH does not take the site down', err.message);
   }
 
+  // A build stamp that never moves is worse than none at all: it would make
+  // every stale log look current. Two rounds of debugging this deployment went
+  // into reading the wrong deploy's output, so the value that is supposed to
+  // settle that question has to be shown to change.
+  try {
+    const { execFileSync } = require('node:child_process');
+    const here = require('../src/version').STAMP;
+
+    // Copying exactly what the fingerprint covers, taken from the module
+    // itself - a hand-written list here would drift the moment one is added,
+    // and the test would fail for a reason that has nothing to do with the app.
+    const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'studybuddy-stamp-'));
+    for (const source of require('../src/version').SOURCES) {
+      fs.cpSync(path.join(__dirname, '..', source), path.join(sandbox, source), { recursive: true });
+    }
+
+    const copied = String(execFileSync(process.execPath,
+      ['-p', `require(${JSON.stringify(path.join(sandbox, 'src', 'version'))}).STAMP`],
+      { encoding: 'utf8' })).trim();
+
+    fs.appendFileSync(path.join(sandbox, 'src', 'version.js'), '\n// one more byte\n');
+    const changed = String(execFileSync(process.execPath,
+      ['-p', `require(${JSON.stringify(path.join(sandbox, 'src', 'version'))}).STAMP`],
+      { encoding: 'utf8' })).trim();
+
+    fs.rmSync(sandbox, { recursive: true, force: true });
+
+    const shaped = [here, copied, changed].every((v) => /^[0-9a-f]{8}$/.test(v));
+    // An identical copy hashes the same; one byte more does not.
+    const sound = shaped && copied === here && changed !== here;
+    report(sound, 'the build stamp identifies the code that is running',
+      sound ? `${here}, and it moves when a byte does`
+            : `here ${here}, copy ${copied}, after a one-byte change ${changed}`);
+  } catch (err) {
+    report(false, 'the build stamp identifies the code that is running', err.message);
+  }
+
   // Every coach needs its own title, subtitle and opening line in the
   // dictionary. Without them the client falls back to Study, which is how a
   // Writing session came to open with the Study welcome and be called "Study

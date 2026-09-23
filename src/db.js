@@ -220,6 +220,9 @@ if (failure) {
     '  Where the app is running from:',
     `    cwd:       ${process.cwd()}`,
     `    this file: ${__dirname}`,
+    // First thing to check when reading this block: that it came from the
+    // deploy you think it did. Twice now it had not.
+    `    build:     ${require('./version').STAMP}   (compare with npm run stamp)`,
     '',
     '  The path, one level at a time:',
     ...ancestry(DB_DIR),
