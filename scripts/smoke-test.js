@@ -184,6 +184,46 @@ async function waitForListening() {
     report(false, 'a failed migration rolls back and stays retryable', err.message);
   }
 
+  // A tab nobody can see must not take the site down.
+  //
+  // This is not hypothetical: DB_PATH in the host's panel held a leading tab,
+  // which stopped the path being absolute, so the app measured it from the
+  // working directory, waited a minute for /app/<tab>/app/data, and refused to
+  // boot - while the disk it wanted was mounted and empty and fine. Three
+  // deploys went into reading a failure block that was pointing at a path
+  // nobody had ever set.
+  //
+  // Boot the real module with a value shaped exactly like the one that broke
+  // it, and check the database lands where the variable says, not where the
+  // whitespace would have put it.
+  try {
+    const { spawnSync } = require('node:child_process');
+    const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'studybuddy-env-'));
+    const wanted = path.join(sandbox, 'nested', 'buddy.db');
+
+    const run = spawnSync(
+      process.execPath,
+      ['-e', `require(${JSON.stringify(path.join(__dirname, '..', 'src', 'db'))})`],
+      { env: { ...process.env, DB_PATH: `\t${wanted} ` }, encoding: 'utf8' }
+    );
+
+    const booted = run.status === 0;
+    const landed = fs.existsSync(wanted);
+    const said = /DB_PATH had a tab at the start/.test(run.stderr || '');
+    fs.rmSync(sandbox, { recursive: true, force: true });
+
+    report(booted && landed && said, 'a tab pasted into DB_PATH does not take the site down',
+      booted && landed && said
+        ? 'trimmed, reported, and the database landed where the variable says'
+        : [
+            booted ? null : `did not boot: ${(run.stderr || '').split('\n').find(Boolean)}`,
+            landed ? null : 'the database is not at the un-prefixed path',
+            said ? null : 'booted but never said the variable was wrong',
+          ].filter(Boolean).join('; '));
+  } catch (err) {
+    report(false, 'a tab pasted into DB_PATH does not take the site down', err.message);
+  }
+
   // Every coach needs its own title, subtitle and opening line in the
   // dictionary. Without them the client falls back to Study, which is how a
   // Writing session came to open with the Study welcome and be called "Study

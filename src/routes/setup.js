@@ -11,6 +11,7 @@ const email = require('../services/email');
 const zarinpal = require('../services/zarinpal');
 const usage = require('../services/usage');
 const { DB_PATH, onSeparateVolume } = require('../db');
+const { TIDIED } = require('../env');
 const { appOrigin, googleCallbackUrl } = require('../services/appUrl');
 
 const router = express.Router();
@@ -93,6 +94,22 @@ router.get('/health', requireAuth, (req, res) => {
     flag('database', `${DB_PATH}  (on the container filesystem)`,
       'NOT on a disk - everything here is wiped by the next deploy. Attach one and set DB_PATH into it.');
   else say('database', `${DB_PATH}  (cannot tell where this is)`);
+
+  // A relative DB_PATH is measured from wherever the process happens to have
+  // started, which on a host is a coincidence rather than a decision.
+  if (!path.isAbsolute(DB_PATH)) {
+    problems.push('database');
+    say('', '', `DB_PATH is not an absolute path, so it is measured from ${process.cwd()} - almost certainly not what was meant.`);
+  }
+
+  // Whitespace that arrived with a pasted value. Worth a line of its own: the
+  // variables here are printed with it already stripped, so without this the
+  // page would show a value that is not the one in the panel.
+  lines.push('');
+  if (!TIDIED.length) say('env', 'no stray whitespace in any variable');
+  else
+    flag('env', `${TIDIED.length} variable(s) arrived with stray whitespace`,
+      `${TIDIED.map((v) => `${v.name} had ${v.had}`).join('; ')}. Running on the trimmed values - fix them in the panel.`);
 
   lines.push('');
   say('address', appOrigin(req) + (process.env.APP_URL ? '   (from APP_URL)' : '   (guessed from this request)'));

@@ -3,6 +3,13 @@
 const fs = require('fs');
 const path = require('path');
 
+// Before DB_PATH is read, not after. A leading tab in that variable is what
+// took this site down for a day: it stopped the path being absolute, so it was
+// measured from the working directory and the app waited for a folder that
+// could not exist. Required here as well as in server.js because the tests
+// load this module on its own.
+require('./env');
+
 // The two ways this fails on a managed host are both silent-looking: the
 // runtime is older than the SQLite module needs, or the database path is not
 // writable because no disk was attached. Both surface as stack traces that say
@@ -47,6 +54,20 @@ const DB_DIR = path.dirname(DB_PATH);
 //
 // It says which call failed, and then what is actually on the filesystem. One
 // deploy answers the question instead of three.
+
+// Printed plainly when there is nothing to hide, and escaped when there is.
+//
+// The failure block spent three deploys pointing at "/app/data" while the
+// actual value was "\t/app/data" - indistinguishable to the eye. Once
+// a path has anything in it that does not print, showing it raw is worse than
+// useless, because it looks like confirmation that the value is right.
+// eslint-disable-next-line no-control-regex
+const UNPRINTABLE = /[\u0000-\u001f\u007f]/;
+function show(target) {
+  return UNPRINTABLE.test(target)
+    ? `${JSON.stringify(target)}   <- escaped: this contains characters that do not print`
+    : target;
+}
 
 // Every one of these is wrapped: a diagnostic that throws while explaining a
 // failure is worse than no diagnostic at all.
@@ -146,7 +167,7 @@ let waitedMs = 0;
 if (failure && failure.code === 'ENOENT') {
   const started = Date.now();
   const deadline = started + MOUNT_WAIT_MS;
-  console.log(`Waiting up to ${MOUNT_WAIT_MS / 1000}s for ${DB_DIR} to appear...`);
+  console.log(`Waiting up to ${MOUNT_WAIT_MS / 1000}s for ${show(DB_DIR)} to appear...`);
 
   let nextReport = MOUNT_REPORT_MS;
   while (failure && failure.code === 'ENOENT' && Date.now() < deadline) {
@@ -158,7 +179,7 @@ if (failure && failure.code === 'ENOENT') {
     // Logging only at the start and the end left "waited and failed" looking
     // exactly like "never waited at all" to someone scrolling.
     if (waitedMs >= nextReport) {
-      console.log(`  still waiting for ${DB_DIR} - ${Math.round(waitedMs / 1000)}s`);
+      console.log(`  still waiting for ${show(DB_DIR)} - ${Math.round(waitedMs / 1000)}s`);
       nextReport += MOUNT_REPORT_MS;
     }
   }
@@ -166,8 +187,8 @@ if (failure && failure.code === 'ENOENT') {
   waitedMs = Date.now() - started;
   console.log(
     failure
-      ? `Gave up after ${Math.round(waitedMs / 1000)}s - ${DB_DIR} never appeared.`
-      : `${DB_DIR} is there after ${Math.round(waitedMs / 1000)}s - the disk finished mounting after the app started.`
+      ? `Gave up after ${Math.round(waitedMs / 1000)}s - ${show(DB_DIR)} never appeared.`
+      : `${show(DB_DIR)} is there after ${Math.round(waitedMs / 1000)}s - the disk finished mounting after the app started.`
   );
 }
 
@@ -180,12 +201,20 @@ if (failure) {
       ? 'Buddy could not start: the database folder is not there and could not be created.'
       : 'Buddy could not start: the database folder is there but cannot be written to.',
     '',
-    `  DB_PATH:  ${DB_PATH}`,
-    `  folder:   ${DB_DIR}`,
+    `  DB_PATH:  ${show(DB_PATH)}`,
+    `  folder:   ${show(DB_DIR)}`,
     `  failed:   ${failedAt}`,
     `  error:    ${failure.code || failure.message}`,
     ...(waitedMs
       ? [`  waited:   ${Math.round(waitedMs / 1000)}s for the disk to mount, and it never did`]
+      : []),
+    ...(path.resolve(DB_DIR) !== DB_DIR
+      ? [
+          '',
+          '  DB_PATH is not an absolute path, so it was measured from the working',
+          '  directory. The folder actually looked for was:',
+          `    ${show(path.resolve(DB_DIR))}`,
+        ]
       : []),
     '',
     '  Where the app is running from:',

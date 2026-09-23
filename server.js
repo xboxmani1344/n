@@ -2,6 +2,12 @@
 
 require('dotenv').config();
 
+// Immediately after dotenv, so a .env file is covered too, and before anything
+// below reads a variable. It strips whitespace that came along with a pasted
+// value - a leading tab in DB_PATH is what took the site down - and says which
+// variables it had to fix.
+const { TIDIED } = require('./src/env');
+
 const path = require('path');
 const express = require('express');
 const cookieParser = require('cookie-parser');
@@ -170,6 +176,13 @@ function bootSummary() {
 
   if (process.env.SHARED_API_KEY === '1') {
     lines.push('  shared    on — every signed-in user spends this key');
+  }
+
+  // Named again here even though src/env.js already warned, because that
+  // warning scrolls past above the summary and this is the block people
+  // actually read after a deploy.
+  if (TIDIED.length) {
+    lines.push(`  env       trimmed stray whitespace from: ${TIDIED.map((v) => v.name).join(', ')}`);
   }
 
   console.log(lines.join('\n'));
