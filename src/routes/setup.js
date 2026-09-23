@@ -120,6 +120,25 @@ router.get('/health', requireAuth, (req, res) => {
   say('address', appOrigin(req) + (process.env.APP_URL ? '   (from APP_URL)' : '   (guessed from this request)'));
   if (!process.env.APP_URL) {
     say('', '', 'Set APP_URL once the domain is settled: the payment return and the Google callback are both built from it.');
+  } else {
+    // The specific way a new domain breaks a working site: APP_URL still names
+    // the old one, so the payment return and the Google callback are built for
+    // a host nobody is on. Both fail after the person has left the site, which
+    // is the hardest place to notice anything.
+    const servedHost = req.get('host');
+    let configuredHost = null;
+    try {
+      configuredHost = new URL(process.env.APP_URL).host;
+    } catch {
+      flag('', process.env.APP_URL, 'APP_URL is not a usable URL. It should read https://your-domain.');
+    }
+    if (configuredHost && servedHost && configuredHost !== servedHost) {
+      // Continues the line above rather than repeating its label, which would
+      // read as two different addresses rather than one disagreement.
+      problems.push('address');
+      say('', `MISMATCH: APP_URL says ${configuredHost}, you are reading this on ${servedHost}`,
+        'Whichever is right, the other is broken: payment returns and the Google callback are both built from APP_URL. Fix it, then re-register the redirect URI below.');
+    }
   }
 
   lines.push('');
@@ -136,12 +155,25 @@ router.get('/health', requireAuth, (req, res) => {
   if (googleOn) say('', '', `Register exactly: ${googleCallbackUrl(req)}`);
 
   lines.push('');
+  // The legal pages are public and both end on a contact address. Unset, they
+  // publish a placeholder where the address should be.
+  if (process.env.CONTACT_EMAIL) say('contact', process.env.CONTACT_EMAIL, 'shown on /privacy and /terms');
+  else
+    flag('contact', 'not set - /privacy and /terms still show a placeholder',
+      'Set CONTACT_EMAIL to the address people should write to. A policy nobody can reply to is barely a policy.');
+
+  lines.push('');
   say('email', email.isConfigured() ? 'configured' : 'off - discount codes are issued but never sent');
   say('payments', zarinpal.isConfigured() ? 'ZarinPal configured' : 'off - nobody can upgrade');
 
   if (usage.UNLOCK_ALL) {
     lines.push('');
-    flag('tracks', 'ALL UNLOCKED', 'UNLOCK_ALL_TRACKS=1 - every plan has every coach. Unset it before charging anyone.');
+    flag('tracks', 'ALL UNLOCKED',
+      zarinpal.isConfigured()
+        // The combination is worse than either half: the checkout works, the
+        // money moves, and the buyer already had everything they paid for.
+        ? 'UNLOCK_ALL_TRACKS=1 while payments are live - anyone upgrading is paying for what every free account already has. Unset it now.'
+        : 'UNLOCK_ALL_TRACKS=1 - every plan has every coach. Unset it before charging anyone.');
   }
 
   lines.push('');

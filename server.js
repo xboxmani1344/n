@@ -8,6 +8,7 @@ require('dotenv').config();
 // variables it had to fix.
 const { TIDIED } = require('./src/env');
 
+const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const cookieParser = require('cookie-parser');
@@ -120,12 +121,52 @@ app.get('/app', (_req, res) => {
 // linked from the footer, from the signup screen, and - the reason the tidy URL
 // matters - pasted into Google's OAuth consent screen and ZarinPal's merchant
 // form, where a visible .html looks like something half-finished.
+// Both pages end on a contact address, in both languages, and both were
+// shipped with "[contact email - to be filled in]" standing in for it. That was
+// fine while nothing was published; it is not fine on a live site, where a
+// policy that cannot be replied to is barely a policy.
+//
+// Read from the environment rather than written into the files: whose address
+// appears on a public page is the operator's decision, not this code's, and it
+// can then change without a deploy. Left unset, the honest placeholder stays -
+// inventing an address that bounces would be worse than admitting there is
+// none yet.
+const CONTACT_EMAIL = (process.env.CONTACT_EMAIL || '').trim();
+
+// One address, no spaces, nothing that could close a tag. The value comes from
+// the operator, but it lands in HTML, and "trusted source" is how injected
+// markup usually gets in.
+const PLAUSIBLE_EMAIL = /^[^\s<>"'&@]+@[^\s<>"'&@]+\.[^\s<>"'&@]+$/;
+const CONTACT_USABLE = PLAUSIBLE_EMAIL.test(CONTACT_EMAIL);
+
+if (CONTACT_EMAIL && !CONTACT_USABLE) {
+  console.warn(`Note: CONTACT_EMAIL does not look like an email address, so /privacy and /terms keep their placeholder.`);
+}
+
+// Matches the placeholder in either language - they differ in wording, not in
+// shape - and is applied once per file at boot rather than per request.
+const LEGAL_PLACEHOLDER = /<span class="legal-todo">\[[^<\]]*\]<\/span>/g;
+const legalPages = new Map();
+
+function legalPage(name) {
+  if (!legalPages.has(name)) {
+    const raw = fs.readFileSync(path.join(__dirname, 'public', 'legal', `${name}.html`), 'utf8');
+    legalPages.set(
+      name,
+      CONTACT_USABLE
+        ? raw.replace(LEGAL_PLACEHOLDER, `<a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>`)
+        : raw
+    );
+  }
+  return legalPages.get(name);
+}
+
 app.get('/privacy', (_req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'legal', 'privacy.html'));
+  res.type('html').send(legalPage('privacy'));
 });
 
 app.get('/terms', (_req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'legal', 'terms.html'));
+  res.type('html').send(legalPage('terms'));
 });
 
 app.get('/api/phases', (_req, res) => {

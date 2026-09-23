@@ -39,6 +39,33 @@
     'auth.name': ['Name', 'نام'],
     'auth.passwordMin': ['Password (min. 8 characters)', 'رمز عبور (حداقل ۸ کاراکتر)'],
     'auth.or': ['or', 'یا'],
+    // One per code in AUTH_ERROR_CODES in src/routes/auth.js. A sign-in that
+    // fails silently is the worst kind: the person cannot tell whether to
+    // retry, use their password, or stop.
+    'auth.err.off': [
+      'Google sign-in is not set up on this site yet. Use your email and password.',
+      'ورود با گوگل روی این سایت هنوز راه‌اندازی نشده. با ایمیل و رمز عبور وارد شو.',
+    ],
+    'auth.err.expired': [
+      'That sign-in attempt expired. Please try again.',
+      'آن تلاش برای ورود منقضی شد. دوباره امتحان کن.',
+    ],
+    'auth.err.access_denied': [
+      'You cancelled the Google sign-in.',
+      'ورود با گوگل را لغو کردی.',
+    ],
+    'auth.err.google': [
+      'Google could not finish the sign-in. Please try again, or use your email and password.',
+      'گوگل نتوانست ورود را تمام کند. دوباره امتحان کن، یا با ایمیل و رمز عبور وارد شو.',
+    ],
+    'auth.err.noemail': [
+      'Google did not share an email address, so there is nothing to sign in with.',
+      'گوگل آدرس ایمیلی را به اشتراک نگذاشت، پس چیزی برای ورود نیست.',
+    ],
+    'auth.err.unverified': [
+      'An account already uses this email address. Sign in with your password instead.',
+      'یک حساب با همین ایمیل از قبل وجود دارد. با رمز عبور خودت وارد شو.',
+    ],
     // --- legal pages ---------------------------------------------------------
     'legal.privacy': ['Privacy', 'حریم خصوصی'],
     'legal.terms': ['Terms', 'شرایط استفاده'],

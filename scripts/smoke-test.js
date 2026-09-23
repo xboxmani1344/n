@@ -54,6 +54,12 @@ const server = spawn(process.execPath, ['server.js'], {
     // and workout tracks are refused as locked (403) and the safety gate below
     // never gets a turn. This is also how the site runs today.
     UNLOCK_ALL_TRACKS: '1',
+    // Obvious fakes, and never sent anywhere: every sign-in failure checked
+    // below is decided before the token exchange happens. They are here because
+    // the callback refuses outright when Google is unconfigured, which would
+    // make all of those cases report the same thing.
+    GOOGLE_CLIENT_ID: 'smoke-test.apps.googleusercontent.com',
+    GOOGLE_CLIENT_SECRET: 'smoke-test-placeholder',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
 });
@@ -482,6 +488,51 @@ async function waitForListening() {
     report(got === want, 'the Google redirect URI is exact', got === want ? want : `got ${JSON.stringify(got)}`);
   } catch (err) {
     report(false, 'the Google redirect URI is exact', err.message);
+  }
+
+  // A failed Google sign-in used to end on an English plain-text page in a
+  // Persian app, naming no cause and offering no way back. Now it comes back to
+  // the sign-in form carrying a code. Two things have to hold for that to be an
+  // improvement rather than a different dead end.
+  //
+  // First: the callback actually redirects, and carries the right code.
+  try {
+    // 'off' is the one code this cannot exercise: the server above is given
+    // credentials, which is what lets any of the rest be reached at all.
+    const cases = [
+      ['?error=access_denied&state=x', 'access_denied', 'someone declined the consent screen'],
+      ['?error=admin_policy_enforced&state=x', 'google', 'a refusal with no wording of its own'],
+      ['?code=abc&state=nope', 'expired', 'a state cookie that does not match'],
+      ['', 'expired', 'nothing at all'],
+    ];
+
+    const wrong = [];
+    for (const [query, want, what] of cases) {
+      const res = await fetch(`http://127.0.0.1:${PORT}/api/auth/google/callback${query}`, { redirect: 'manual' });
+      const to = res.headers.get('location') || '';
+      if (res.status !== 302 || to !== `/app?auth_error=${want}`) {
+        wrong.push(`${what}: ${res.status} -> ${to || 'no redirect'}`);
+      }
+    }
+    report(wrong.length === 0, 'a failed Google sign-in comes back with a reason',
+      wrong.length ? wrong.join('; ') : `${cases.length} ways to fail, each named`);
+  } catch (err) {
+    report(false, 'a failed Google sign-in comes back with a reason', err.message);
+  }
+
+  // Second: every code the server can emit has wording behind it. A code with
+  // no message shows the person a blank error, which is the dead end again
+  // wearing a different hat. Walked from the router's own list rather than a
+  // copy of it here, so adding a code without wording fails this.
+  try {
+    const codes = require('../src/routes/auth').AUTH_ERROR_CODES;
+    const dict = fs.readFileSync(path.join(__dirname, '..', 'public', 'i18n.js'), 'utf8');
+    const missing = codes.filter((code) => !dict.includes(`'auth.err.${code}'`));
+    report(Array.isArray(codes) && codes.length > 0 && missing.length === 0,
+      'every sign-in failure has wording in both languages',
+      missing.length ? `no message for: ${missing.join(', ')}` : `${codes.length} codes`);
+  } catch (err) {
+    report(false, 'every sign-in failure has wording in both languages', err.message);
   }
 
   // The welcome email goes out the instant the account exists, so the language

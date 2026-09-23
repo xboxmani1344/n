@@ -324,6 +324,27 @@
     showAuthView();
   });
 
+  // Google sends people back to /app?auth_error=<code> when a sign-in ends
+  // badly. Show it on the form they came from, then take the parameter out of
+  // the address bar: left there, a refresh - or a bookmark - would keep
+  // reporting a failure that is over.
+  function showAuthErrorFromUrl() {
+    const code = new URLSearchParams(window.location.search).get('auth_error');
+    if (!code) return;
+
+    // Cleared so a refresh does not repeat the message, the same way the
+    // payment outcome is handled below.
+    const url = new URL(window.location.href);
+    url.searchParams.delete('auth_error');
+    window.history.replaceState({}, '', url);
+
+    // tr() falls back to the key itself for anything it does not know, which
+    // would put "auth.err.whatever" in front of somebody. A general message is
+    // honest; an internal key is not.
+    const key = `auth.err.${code}`;
+    loginError.textContent = tr(key) === key ? tr('auth.err.google') : tr(key);
+  }
+
   async function configureGoogleButton() {
     const { data } = await api('/api/config');
     if (!data || !data.googleEnabled) {
@@ -1704,6 +1725,9 @@
       reportPaymentOutcome();
     } else {
       showAuthView();
+      // After the view exists, so the message is not written into a form that
+      // is still hidden.
+      showAuthErrorFromUrl();
     }
   }
 

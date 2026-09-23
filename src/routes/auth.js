@@ -159,11 +159,45 @@ router.get('/google/redirect-uri', (req, res) => {
   res.type('text/plain').send(googleCallbackUrl(req));
 });
 
+// Every way a Google sign-in can end badly, as a code the browser carries back
+// to /app.
+//
+// This used to be a set of plain-text pages - "Google sign-in failed. Please
+// try again." - in English, in an app whose users read Persian, naming no cause
+// and offering no way back to the form. A dead end is the worst possible answer
+// to a sign-in problem, because the person cannot tell whether to retry, use a
+// password, or give up.
+//
+// Rides along on the router so the interface's dictionary can be checked
+// against this list rather than a second copy of it that would drift.
+const AUTH_ERROR_CODES = ['off', 'expired', 'access_denied', 'google', 'noemail', 'unverified'];
+router.AUTH_ERROR_CODES = AUTH_ERROR_CODES;
+
+function authFailed(res, code) {
+  return res.redirect(`/app?auth_error=${encodeURIComponent(code)}`);
+}
+
+// The browser gets a code; the log gets the diagnosis. Google's refusals name
+// their cause precisely and each one has exactly one fix, so saying which is
+// the difference between a five-minute correction and another day of guessing.
+function explainTokenRefusal(reason, callbackUrl) {
+  if (reason === 'invalid_client') {
+    return '  GOOGLE_CLIENT_SECRET does not match GOOGLE_CLIENT_ID. Both belong to one OAuth client in Google Cloud - copy them from the same place.';
+  }
+  if (reason === 'redirect_uri_mismatch') {
+    return `  What is registered in Google Cloud is not what this app sent.\n  Register exactly, character for character: ${callbackUrl}`;
+  }
+  if (reason === 'invalid_grant') {
+    return '  The code was already spent or has expired - usually a refreshed callback page. Harmless on its own.';
+  }
+  return `  The redirect URI this app sends is: ${callbackUrl}`;
+}
+
 router.get('/google', (req, res) => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
-  if (!clientId) {
-    return res.status(503).json({ error: 'Google sign-in is not configured yet.' });
-  }
+  // Reached by following a link, not by fetch, so a JSON body would land in
+  // the address bar as raw text.
+  if (!clientId) return authFailed(res, 'off');
 
   const state = crypto.randomBytes(16).toString('hex');
   res.cookie(GOOGLE_STATE_COOKIE, state, {
@@ -187,17 +221,27 @@ router.get(
   asyncHandler(async (req, res) => {
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    if (!clientId || !clientSecret) {
-      return res.status(503).send('Google sign-in is not configured yet.');
-    }
+    if (!clientId || !clientSecret) return authFailed(res, 'off');
 
     const { code, state } = req.query;
     const expectedState = req.cookies ? req.cookies[GOOGLE_STATE_COOKIE] : null;
     res.clearCookie(GOOGLE_STATE_COOKIE);
 
-    if (!code || !state || state !== expectedState) {
-      return res.status(400).send('That sign-in attempt expired or was invalid. Please try again.');
+    // Google says why it is sending somebody back empty-handed, and this never
+    // read it. Declining the consent screen - by far the most common of these -
+    // looked exactly like a broken app.
+    if (req.query.error) {
+      const said = String(req.query.error);
+      if (said !== 'access_denied') {
+        console.error(`Google sign-in: Google refused with "${said}".\n${explainTokenRefusal(said, googleCallbackUrl(req))}`);
+      }
+      // Anything other than a plain decline is reported as a Google-side
+      // failure: inventing a message for a code with no wording behind it
+      // would show the person an empty error.
+      return authFailed(res, said === 'access_denied' ? 'access_denied' : 'google');
     }
+
+    if (!code || !state || state !== expectedState) return authFailed(res, 'expired');
 
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -211,7 +255,21 @@ router.get(
       }),
     });
     if (!tokenRes.ok) {
-      return res.status(502).send('Google sign-in failed. Please try again.');
+      const body = await tokenRes.text().catch(() => '');
+      let reason = '';
+      let described = '';
+      try {
+        const parsed = JSON.parse(body);
+        reason = parsed.error || '';
+        described = parsed.error_description || '';
+      } catch {
+        /* a non-JSON refusal still has a status worth logging */
+      }
+      console.error(
+        `Google sign-in: the token endpoint refused (${tokenRes.status}${reason ? ` ${reason}` : ''}${described ? ` - ${described}` : ''}).\n` +
+          explainTokenRefusal(reason, googleCallbackUrl(req))
+      );
+      return authFailed(res, 'google');
     }
     const tokenData = await tokenRes.json();
 
@@ -219,13 +277,12 @@ router.get(
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     });
     if (!profileRes.ok) {
-      return res.status(502).send('Google sign-in failed. Please try again.');
+      console.error(`Google sign-in: the profile endpoint refused (${profileRes.status}).`);
+      return authFailed(res, 'google');
     }
     const profile = await profileRes.json();
 
-    if (!profile.email) {
-      return res.status(502).send('Google did not share an email address. Please try again.');
-    }
+    if (!profile.email) return authFailed(res, 'noemail');
 
     const now = new Date().toISOString();
     const existingAccount = db
@@ -243,13 +300,7 @@ router.get(
       // if Google says it verified the address: an unverified one is a string
       // the signer-in typed, so honouring it would hand over any account whose
       // email could be guessed. Google sends email_verified for exactly this.
-      if (existingUser && profile.email_verified !== true) {
-        return res
-          .status(409)
-          .send(
-            'An account already uses this email address. Sign in with your password instead.'
-          );
-      }
+      if (existingUser && profile.email_verified !== true) return authFailed(res, 'unverified');
 
       userId = existingUser
         ? existingUser.id
