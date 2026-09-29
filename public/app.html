@@ -240,7 +240,20 @@
              at boot, so adding a skill server-side needs nothing here. -->
         <div class="skill-bar" id="skill-bar" role="group" data-i18n-aria="home.skills" aria-label="Skills"></div>
 
+        <!-- Sits above the composer rather than inside it, so a wide thumbnail
+             cannot squeeze the text box on a phone. -->
+        <div class="attachment" id="attachment" hidden>
+          <img class="attachment-thumb" id="attachment-thumb" alt="" />
+          <span class="attachment-note" id="attachment-note"></span>
+          <button type="button" class="attachment-remove" id="attachment-remove" data-i18n-aria="chat.removePhoto" aria-label="Remove photo">×</button>
+        </div>
+
         <form class="composer glass" id="composer">
+          <!-- capture="environment" opens the back camera straight away on a
+               phone, which is where a photograph of a textbook comes from.
+               On a desktop the same input is an ordinary file picker. -->
+          <input type="file" id="photo-input" accept="image/jpeg,image/png,image/webp" capture="environment" hidden />
+          <button type="button" id="photo-btn" class="attach-btn" data-i18n-aria="chat.addPhoto" data-i18n-title="chat.addPhoto" aria-label="Add a photo" title="Add a photo">＋</button>
           <textarea
             id="message-input"
             placeholder="Message Buddy…"

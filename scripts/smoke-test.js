@@ -715,6 +715,107 @@ async function waitForListening() {
     report(false, 'a day is a day in Tehran, not in UTC', err.message);
   }
 
+  // Photographs, at the adapter. A picture costs many times what the sentence
+  // beside it costs, so a chat with ten of them must not re-send nine on every
+  // turn - and the ones it drops have to be announced, or the model reads a
+  // bare "and this one?" and answers as though it could see something.
+  try {
+    const ai = require('../src/services/ai');
+    const shot = (n) => ({ data: Buffer.from(`photo${n}`), type: 'image/jpeg' });
+    const built = ai.toChatMessages('SYS', [
+      { role: 'user', content: 'q1', image: shot(1) },
+      { role: 'assistant', content: 'a1' },
+      { role: 'user', content: 'q2', image: shot(2) },
+      { role: 'user', content: 'q3', image: shot(3) },
+    ]);
+
+    const asArray = built.filter((m) => Array.isArray(m.content));
+    const dropped = built.filter((m) => typeof m.content === 'string' && m.content.includes('[an image was attached here'));
+    const plainStaysPlain = typeof ai.toChatMessages(null, [{ role: 'user', content: 'hi' }])[0].content === 'string';
+    // A picture the caller could not load must degrade to the note, never to
+    // the word "undefined" inside a data: URI.
+    const noBytes = ai.toChatMessages(null, [{ role: 'user', content: 'q', image: { type: 'image/jpeg' } }]);
+    const degrades = typeof noBytes[0].content === 'string';
+
+    const carriedLast = asArray.length === 2 &&
+      asArray[1].content[1].image_url.url.includes(Buffer.from('photo3').toString('base64'));
+
+    const ok = asArray.length === ai.MAX_IMAGES_IN_CONTEXT && dropped.length === 1 && carriedLast && plainStaysPlain && degrades;
+    report(ok, 'only the last two photos travel, and the dropped one is named',
+      ok ? `${ai.MAX_IMAGES_IN_CONTEXT} carried, the oldest announced, text messages untouched`
+         : JSON.stringify({ arrays: asArray.length, dropped: dropped.length, carriedLast, plainStaysPlain, degrades }));
+  } catch (err) {
+    report(false, 'only the last two photos travel, and the dropped one is named', err.message);
+  }
+
+  // Photographs, through the API. The size cap is the rule - the browser
+  // shrinking pictures first is a convenience, and a request that skips the
+  // page entirely must not be able to put four megabytes in a row.
+  try {
+    const res = await fetch(`http://127.0.0.1:${PORT}/api/auth/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: `photo-${Date.now()}@example.com`, password: 'password123' }),
+    });
+    const cookie = (res.headers.get('set-cookie') || '').split(';')[0];
+    const chat = await (
+      await fetch(`http://127.0.0.1:${PORT}/api/chats`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie },
+        body: JSON.stringify({ mode: 'study' }),
+      })
+    ).json();
+
+    const send = (body) =>
+      fetch(`http://127.0.0.1:${PORT}/api/chats/${chat.chat.id}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie },
+        body: JSON.stringify(body),
+      });
+
+    // A one-pixel PNG, which is a real image of a real type.
+    const tiny = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    const tooBig = Buffer.alloc(600 * 1024, 7).toString('base64');
+
+    const badType = await send({ content: 'x', image: { data: tiny, type: 'image/gif' } });
+    const oversized = await send({ content: 'x', image: { data: tooBig, type: 'image/png' } });
+    const junk = await send({ content: 'x', image: { data: '', type: 'image/png' } });
+    // The AI call fails in this environment (the base URL is a closed port),
+    // so the request 5xxs - but the picture is checked before any of that, and
+    // a 400 here would mean the cap rejected something it should have taken.
+    const good = await send({ content: 'what is this?', image: { data: tiny, type: 'image/png' } });
+
+    const ok = badType.status === 400 && oversized.status === 400 && junk.status === 400 && good.status !== 400;
+    report(ok, 'the photo cap is the server\'s, not the browser\'s',
+      ok ? 'a GIF, 600KB and an empty string all refused; a real PNG accepted'
+         : JSON.stringify({ badType: badType.status, oversized: oversized.status, junk: junk.status, good: good.status }));
+  } catch (err) {
+    report(false, 'the photo cap is the server\'s, not the browser\'s', err.message);
+  }
+
+  // The privacy policy lists what is held, so shipping a feature that holds
+  // something new makes that page wrong rather than merely out of date. This
+  // is the same guard as the terms-versus-PLAN_LIMITS check: a document that
+  // disagrees with the code is expensive to be wrong about.
+  //
+  // Checked in both languages, because a policy that is complete in English
+  // and stale in Persian is stale for almost everybody using this.
+  try {
+    const policy = await (await fetch(`http://127.0.0.1:${PORT}/privacy`)).text();
+    const mustMention = [
+      ['photo', 'عکس'],       // attached pictures, added with the camera button
+      ['coach', 'مربی'],      // the profile, sent with every message
+      ['active', 'فعال'],     // the record of which days, behind the streak
+    ];
+    const missing = mustMention
+      .filter(([en, fa]) => !(policy.includes(en) && policy.includes(fa)))
+      .map(([en]) => en);
+    report(missing.length === 0, 'the privacy policy lists what the app now stores',
+      missing.length ? `not mentioned in both languages: ${missing.join(', ')}` : 'photos, profile and activity, in both languages');
+  } catch (err) {
+    report(false, 'the privacy policy lists what the app now stores', err.message);
+  }
+
   server.kill();
   fs.rmSync(dbDir, { recursive: true, force: true });
 

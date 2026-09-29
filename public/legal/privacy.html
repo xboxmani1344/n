@@ -56,6 +56,9 @@
         <li><strong>Sign-in sessions</strong> — a random token, the browser's user-agent string, and the times it was created, last used, and expires.</li>
         <li><strong>Google sign-in</strong>, only if you use it — a link between your Buddy account and the account identifier Google gives us.</li>
         <li><strong>Your chats</strong> — every message, yours and Buddy's, and the topic and phase of each session.</li>
+        <li><strong>Photos you attach to a message</strong> — kept with that message, and sent to the AI provider so it can answer about them.</li>
+        <li><strong>What you tell your coach about yourself</strong> — what you are studying, what you are working towards, the date that matters, how long you have in a day, and any note you add. You choose whether to fill this in; it is sent with every message so the coach can pitch its answers at you.</li>
+        <li><strong>Which days you were active</strong> — one date per day you sent a message or finished a task, which is what the streak counts. No times, only dates.</li>
         <li><strong>Your planner</strong> — task titles, notes, subjects, due dates, and whether they are done.</li>
         <li><strong>Video summaries</strong> — which YouTube videos were summarised for you.</li>
         <li><strong>Usage counts</strong> — how many messages and summaries you have used against your plan's limits.</li>
@@ -67,7 +70,7 @@
 
       <h2>Who else receives it</h2>
       <div class="legal-callout">
-        <p><strong>The AI provider.</strong> To answer you, Buddy sends the text of your messages — and the transcript of any video you ask about — to the AI service it is configured to use. That company processes it under its own terms. Do not type anything into Buddy that you would not want a third company to hold: identity numbers, bank details, medical records, someone else's private information.</p>
+        <p><strong>The AI provider.</strong> To answer you, Buddy sends the text of your messages, any photo you attach, what you have told your coach about yourself, and the transcript of any video you ask about, to the AI service it is configured to use. That company processes it under its own terms. Do not type anything into Buddy that you would not want a third company to hold: identity numbers, bank details, medical records, someone else's private information.</p>
       </div>
       <ul>
         <li><strong>Google</strong>, only if you sign in with Google: Google tells us your email address, your name, and an account identifier. We ask for nothing else.</li>
@@ -90,7 +93,7 @@
       </ul>
 
       <h2>Deleting your account</h2>
-      <p>Settings → Delete account. It asks for your password — or, if you signed up with Google and so have no password, for your email address — and then removes your account and everything attached to it: chats and messages, planner tasks, sessions, usage counts, your stored AI key, your discount code, and the Google link. This cannot be undone.</p>
+      <p>Settings → Delete account. It asks for your password — or, if you signed up with Google and so have no password, for your email address — and then removes your account and everything attached to it: chats and messages, any photos attached to them, what you told your coach about yourself, your record of active days, planner tasks, sessions, usage counts, your stored AI key, your discount code, and the Google link. This cannot be undone.</p>
       <p>Two honest exceptions:</p>
       <ul>
         <li><strong>Payment records are kept</strong> — the amount, date, and bank reference — with your account no longer attached to them. They are needed for accounting, and the payment gateway holds its own copy regardless.</li>
@@ -123,6 +126,9 @@
         <li><strong>نشست‌های ورود</strong> — یک توکن تصادفی، مشخصات مرورگر، و زمان ساخت، آخرین استفاده و انقضا.</li>
         <li><strong>ورود با گوگل</strong>، فقط اگر استفاده کنی — پیوندی بین حساب Buddy تو و شناسه‌ای که گوگل می‌دهد.</li>
         <li><strong>گفتگوها</strong> — همه‌ی پیام‌ها، هم مال تو هم مال Buddy، و موضوع و فاز هر جلسه.</li>
+        <li><strong>عکس‌هایی که به پیام ضمیمه می‌کنی</strong> — همراه همان پیام نگه داشته می‌شوند و برای جواب‌دادن به سرویس هوش مصنوعی فرستاده می‌شوند.</li>
+        <li><strong>چیزی که درباره‌ی خودت به مربی می‌گویی</strong> — چه می‌خوانی، دنبال چه هستی، تاریخی که مهم است، روزی چند ساعت وقت داری، و هر یادداشتی که اضافه کنی. پرکردنش اختیاری است؛ با هر پیام فرستاده می‌شود تا مربی جواب‌ها را اندازه‌ی تو بدهد.</li>
+        <li><strong>روزهایی که فعال بوده‌ای</strong> — به ازای هر روزی که پیامی فرستاده‌ای یا کاری را تمام کرده‌ای، یک تاریخ. همین که استریک را می‌شمارد. فقط تاریخ، بدون ساعت.</li>
         <li><strong>برنامه‌ریز</strong> — عنوان کارها، یادداشت‌ها، درس، موعد، و انجام‌شده یا نه.</li>
         <li><strong>خلاصه‌ی ویدیوها</strong> — اینکه چه ویدیوهایی برایت خلاصه شده است.</li>
         <li><strong>شمارش استفاده</strong> — چند پیام و چند خلاصه از سقف اشتراکت استفاده کرده‌ای.</li>
@@ -134,7 +140,7 @@
 
       <h2>چه کسی دیگری آن را می‌گیرد</h2>
       <div class="legal-callout">
-        <p><strong>سرویس هوش مصنوعی.</strong> برای اینکه جوابت را بدهد، Buddy متن پیام‌هایت — و متن هر ویدیویی که درباره‌اش می‌پرسی — را به سرویس هوش مصنوعی تنظیم‌شده می‌فرستد. آن شرکت طبق شرایط خودش با این داده رفتار می‌کند. چیزی توی Buddy ننویس که نمی‌خواهی یک شرکت ثالث داشته باشد: کد ملی، اطلاعات بانکی، سوابق پزشکی، اطلاعات خصوصی دیگران.</p>
+        <p><strong>سرویس هوش مصنوعی.</strong> برای اینکه جوابت را بدهد، Buddy متن پیام‌هایت، هر عکسی که ضمیمه کنی، چیزی که درباره‌ی خودت به مربی گفته‌ای، و متن هر ویدیویی که درباره‌اش می‌پرسی را به سرویس هوش مصنوعی تنظیم‌شده می‌فرستد. آن شرکت طبق شرایط خودش با این داده رفتار می‌کند. چیزی توی Buddy ننویس که نمی‌خواهی یک شرکت ثالث داشته باشد: کد ملی، اطلاعات بانکی، سوابق پزشکی، اطلاعات خصوصی دیگران.</p>
       </div>
       <ul>
         <li><strong>گوگل</strong>، فقط اگر با گوگل وارد شوی: گوگل ایمیل، نام و یک شناسه‌ی حساب به ما می‌دهد. چیز دیگری نمی‌خواهیم.</li>
@@ -157,7 +163,7 @@
       </ul>
 
       <h2>حذف حساب</h2>
-      <p>تنظیمات ← حذف حساب. رمزت را می‌پرسد — یا اگر با گوگل ثبت‌نام کرده‌ای و رمزی نداری، ایمیلت را — و بعد حسابت را با هر چه به آن وصل است پاک می‌کند: گفتگوها و پیام‌ها، کارهای برنامه‌ریز، نشست‌ها، شمارش استفاده، کلید هوش مصنوعی ذخیره‌شده، کد تخفیف، و پیوند گوگل. برگشتی ندارد.</p>
+      <p>تنظیمات ← حذف حساب. رمزت را می‌پرسد — یا اگر با گوگل ثبت‌نام کرده‌ای و رمزی نداری، ایمیلت را — و بعد حسابت را با هر چه به آن وصل است پاک می‌کند: گفتگوها و پیام‌ها، عکس‌های ضمیمه‌شان، چیزی که درباره‌ی خودت به مربی گفته‌ای، سابقه‌ی روزهای فعالت، کارهای برنامه‌ریز، نشست‌ها، شمارش استفاده، کلید هوش مصنوعی ذخیره‌شده، کد تخفیف، و پیوند گوگل. برگشتی ندارد.</p>
       <p>دو استثنا، که صادقانه می‌گوییم:</p>
       <ul>
         <li><strong>سابقه‌ی پرداخت‌ها می‌ماند</strong> — مبلغ، تاریخ و شماره‌ی پیگیری — بدون اینکه دیگر به حساب تو وصل باشد. برای حسابداری لازم است، و درگاه پرداخت هم نسخه‌ی خودش را در هر حال نگه می‌دارد.</li>

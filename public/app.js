@@ -150,6 +150,12 @@
   const memoryNotes = document.getElementById('memory-notes');
   const memoryError = document.getElementById('memory-error');
   const memorySaved = document.getElementById('memory-saved');
+  const photoInput = document.getElementById('photo-input');
+  const photoBtn = document.getElementById('photo-btn');
+  const attachment = document.getElementById('attachment');
+  const attachmentThumb = document.getElementById('attachment-thumb');
+  const attachmentNote = document.getElementById('attachment-note');
+  const attachmentRemove = document.getElementById('attachment-remove');
   const progressPanel = document.getElementById('progress-panel');
   const progressCountdown = document.getElementById('progress-countdown');
   const progressDaysLeft = document.getElementById('progress-days-left');
@@ -338,6 +344,7 @@
     currentChatId = null;
     phaseIndex = 0;
     chatLog.innerHTML = '';
+    clearPhoto();
     showAuthView();
   });
 
@@ -547,7 +554,7 @@
     }
   }
 
-  function addBubble(role, text) {
+  function addBubble(role, text, imageSrc) {
     const div = document.createElement('div');
     div.className = `msg ${role}`;
 
@@ -564,6 +571,21 @@
     else body.textContent = text;
 
     div.appendChild(who);
+    // Above the words, the way it was taken: the photograph is the question
+    // and the typing underneath is the aside about it.
+    if (imageSrc) {
+      const shot = document.createElement('img');
+      shot.className = 'msg-photo';
+      shot.src = imageSrc;
+      shot.alt = tr('chat.photoAlt');
+      shot.loading = 'lazy';
+      // The log is scrolled to the bottom before this has height, so without
+      // this the newest message sits half off-screen until the image lands.
+      shot.addEventListener('load', () => {
+        chatLog.scrollTop = chatLog.scrollHeight;
+      });
+      div.appendChild(shot);
+    }
     div.appendChild(body);
     chatLog.appendChild(div);
     chatLog.scrollTop = chatLog.scrollHeight;
@@ -592,7 +614,106 @@
     messageInput.style.height = `${Math.min(messageInput.scrollHeight, 140)}px`;
   }
 
-  async function sendToBackend(content, hidden) {
+  // ---------- photographing a question ----------
+  //
+  // A phone camera produces four megabytes of a sheet of A4, most of it detail
+  // no model needs to read the writing on it. Shrinking here rather than
+  // server-side means the upload itself is small, which on an Iranian mobile
+  // connection is the part that hurts. The server still enforces its own cap:
+  // this is a convenience, not the rule.
+  const PHOTO_MAX_EDGE = 1280;
+  const PHOTO_MAX_BYTES = 500 * 1024;
+
+  // Attached but not yet sent. Cleared after every send and whenever the
+  // conversation changes, so a photograph cannot follow someone into the next
+  // question.
+  let pendingPhoto = null;
+
+  function clearPhoto() {
+    pendingPhoto = null;
+    photoInput.value = '';
+    attachment.hidden = true;
+    if (attachmentThumb.src) attachmentThumb.removeAttribute('src');
+  }
+
+  function loadImage(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve(img);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('unreadable'));
+      };
+      img.src = url;
+    });
+  }
+
+  function canvasToBlob(canvas, quality) {
+    return new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
+  }
+
+  // JPEG regardless of what came in: a screenshot arrives as a lossless PNG
+  // several times larger than the same picture as a photograph, and nothing
+  // here needs transparency.
+  async function shrink(file) {
+    const img = await loadImage(file);
+    const scale = Math.min(1, PHOTO_MAX_EDGE / Math.max(img.width, img.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(img.width * scale));
+    canvas.height = Math.max(1, Math.round(img.height * scale));
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    // Stepping the quality down rather than picking one and hoping: a dense
+    // page of printed text stays large at 0.8 in a way a snapshot does not.
+    for (const quality of [0.8, 0.6, 0.45]) {
+      const blob = await canvasToBlob(canvas, quality);
+      if (blob && blob.size <= PHOTO_MAX_BYTES) return blob;
+    }
+    return null;
+  }
+
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      // The reader gives back "data:image/jpeg;base64,...." and the server
+      // wants only what follows the comma.
+      reader.onload = () => resolve(String(reader.result).split(',')[1]);
+      reader.onerror = () => reject(new Error('unreadable'));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  photoBtn.addEventListener('click', () => photoInput.click());
+  attachmentRemove.addEventListener('click', clearPhoto);
+
+  photoInput.addEventListener('change', async () => {
+    const file = photoInput.files && photoInput.files[0];
+    if (!file) return;
+
+    attachment.hidden = false;
+    attachmentNote.textContent = tr('chat.photoReading');
+
+    try {
+      const blob = await shrink(file);
+      if (!blob) {
+        attachmentNote.textContent = tr('chat.photoTooBig');
+        pendingPhoto = null;
+        return;
+      }
+      pendingPhoto = { data: await blobToBase64(blob), type: 'image/jpeg' };
+      attachmentThumb.src = URL.createObjectURL(blob);
+      attachmentNote.textContent = tr('chat.photoAttached');
+    } catch {
+      attachmentNote.textContent = tr('chat.photoFailed');
+      pendingPhoto = null;
+    }
+  });
+
+  async function sendToBackend(content, hidden, photo) {
     setBusy(true);
     const typingEl = document.createElement('div');
     typingEl.className = 'msg typing';
@@ -618,7 +739,7 @@
 
     const { ok, status, data } = await api(`/api/chats/${chatIdAtSend}/messages`, {
       method: 'POST',
-      body: { content, hidden: Boolean(hidden) },
+      body: { content, hidden: Boolean(hidden), ...(photo ? { image: photo } : {}) },
     });
     typingEl.remove();
 
@@ -646,11 +767,21 @@
     e.preventDefault();
     if (busy) return;
     const text = messageInput.value.trim();
-    if (!text) return;
+    // A photograph on its own is a question. Demanding a caption would mean
+    // typing something meaningless to send the thing being asked about.
+    if (!text && !pendingPhoto) return;
+
+    const photo = pendingPhoto;
+    // Shown from the local copy rather than waiting for a round trip - the
+    // picture is already here, and the bubble should appear as fast as text
+    // does. Reloading the conversation later fetches the stored one.
+    const preview = photo ? attachmentThumb.src : null;
+
     messageInput.value = '';
     autoGrow();
-    addBubble('user', text);
-    sendToBackend(text, false);
+    clearPhoto();
+    addBubble('user', text, preview);
+    sendToBackend(text, false, photo);
   });
 
   messageInput.addEventListener('input', autoGrow);
@@ -812,6 +943,9 @@
   async function loadChat(chatId, knownChat) {
     currentChatId = chatId;
     chatLog.innerHTML = '';
+    // Attached to the question, not to the person: switching conversations
+    // with a photo waiting must not carry it across.
+    clearPhoto();
     needsAutoTitle = false;
 
     const { data } = await api(`/api/chats/${chatId}`);
@@ -825,7 +959,7 @@
     renderSidebar();
 
     if (data.messages && data.messages.length) {
-      data.messages.forEach((m) => addBubble(m.role === 'user' ? 'user' : 'bot', m.content));
+      data.messages.forEach((m) => addBubble(m.role === 'user' ? 'user' : 'bot', m.content, m.imageUrl));
     } else {
       needsAutoTitle = !chat.title && !chat.topic;
       showWelcome();

@@ -72,12 +72,54 @@ function fail(message, status) {
 // The conversation is stored with a separate system prompt and turns labelled
 // user/assistant, which is already the OpenAI shape - no role translation
 // needed, unlike Gemini's native API which calls the assistant "model".
+// How many of a conversation's photographs travel with it.
+//
+// A picture costs far more than the text around it, and a chat where somebody
+// has photographed ten questions would spend most of its budget re-sending
+// nine they have finished with. The last two keep "and the one before this"
+// working, which is what people actually refer back to.
+const MAX_IMAGES_IN_CONTEXT = 2;
+
+// The OpenAI-compatible shape for a message with a picture in it: content
+// stops being a string and becomes a list of parts. Only messages that carry
+// an image change shape - sending the array form for plain text works, but it
+// makes every request harder to read in a log for no gain.
+function imagePart(image) {
+  const base64 = Buffer.isBuffer(image.data) ? image.data.toString('base64') : String(image.data);
+  return { type: 'image_url', image_url: { url: `data:${image.type};base64,${base64}` } };
+}
+
 function toChatMessages(system, messages) {
   const out = [];
   if (system) out.push({ role: 'system', content: system });
-  for (const m of messages) {
-    out.push({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content });
-  }
+
+  // Counted from the end, so it is the most recent pictures that survive.
+  //
+  // An image without bytes is one the caller chose not to load, or could not.
+  // It is still announced as having been there, but it cannot be sent - and
+  // building a data: URI around an undefined would send the word "undefined"
+  // to the model as though it were a picture.
+  const sendable = (m) => Boolean(m.image && (Buffer.isBuffer(m.image.data) || typeof m.image.data === 'string'));
+  const carrying = new Set(
+    messages
+      .map((m, i) => (sendable(m) ? i : -1))
+      .filter((i) => i >= 0)
+      .slice(-MAX_IMAGES_IN_CONTEXT)
+  );
+
+  messages.forEach((m, i) => {
+    const role = m.role === 'assistant' ? 'assistant' : 'user';
+    if (!carrying.has(i)) {
+      // A dropped picture is said out loud rather than silently removed. Left
+      // unsaid, the model reads a bare "what about this one?" and answers as
+      // though it could see something.
+      const content = m.image ? `${m.content}\n\n[an image was attached here, no longer shown]` : m.content;
+      out.push({ role, content });
+      return;
+    }
+    out.push({ role, content: [{ type: 'text', text: m.content }, imagePart(m.image)] });
+  });
+
   return out;
 }
 
@@ -118,9 +160,19 @@ function retryAfterSeconds(res, body) {
 // Raw provider errors are walls of JSON full of quota IDs and internal URLs,
 // and whatever comes back is rendered straight into a chat bubble. Turn them
 // into sentences a person can act on.
-function translateHttpError(res, raw) {
+function translateHttpError(res, raw, hadImage) {
   const body = parseErrorBody(raw);
   const status = res.status;
+
+  // A model with no vision refuses the request outright, and every provider
+  // words it differently. Guessing from the wording would be fragile; knowing
+  // this request carried a picture is not.
+  if (hadImage && status === 400 && !(body && /api[ _-]?key/i.test(body.message))) {
+    return fail(
+      'This AI model cannot read images. Send the question as text, or ask the site owner to switch to a model that accepts pictures.',
+      400
+    );
+  }
 
   if (status === 429) {
     const seconds = retryAfterSeconds(res, body);
@@ -252,6 +304,7 @@ function translateNetworkError(err) {
 // own key, which is what both a single-user local install and a deployment
 // running on the operator's key want.
 async function complete({ system, messages, maxTokens = DEFAULT_MAX_TOKENS, apiKey }) {
+  const hadImage = messages.some((m) => m.image);
   const key = apiKey || serverApiKey();
   if (!key) {
     throw fail('No AI API key is configured yet.', 503);
@@ -283,7 +336,7 @@ async function complete({ system, messages, maxTokens = DEFAULT_MAX_TOKENS, apiK
     clearTimeout(timeout);
   }
 
-  if (!res.ok) throw translateHttpError(res, raw);
+  if (!res.ok) throw translateHttpError(res, raw, hadImage);
 
   let data;
   try {
@@ -321,6 +374,8 @@ async function complete({ system, messages, maxTokens = DEFAULT_MAX_TOKENS, apiK
 }
 
 module.exports = {
+  MAX_IMAGES_IN_CONTEXT,
+  toChatMessages,
   complete,
   isConfigured,
   serverApiKey,

@@ -202,6 +202,15 @@
     'settings.themeSystem': ['System', 'سیستم'],
     'settings.themeLight': ['Light', 'روشن'],
     'settings.themeDark': ['Dark', 'تیره'],
+    // --- photographing a question -----------------------------------------
+    'chat.addPhoto': ['Add a photo', 'یک عکس بگذار'],
+    'chat.removePhoto': ['Remove photo', 'حذف عکس'],
+    'chat.photoAttached': ['Photo attached', 'عکس ضمیمه شد'],
+    'chat.photoReading': ['Shrinking the photo…', 'در حال کوچک‌کردن عکس…'],
+    'chat.photoFailed': ['That photo could not be read. Try another one.', 'آن عکس خوانده نشد. یکی دیگر امتحان کن.'],
+    'chat.photoTooBig': ['That photo is too large, even shrunk. Try a smaller one.', 'آن عکس حتی بعد از کوچک‌شدن هم بزرگ است. یکی کوچک‌تر امتحان کن.'],
+    'chat.photoAlt': ['The photo attached to this message', 'عکس ضمیمه‌ی این پیام'],
+
     // --- keeping going ----------------------------------------------------
     'progress.daysLeft': ['days to go', 'روز مانده'],
     'progress.streak': ['days in a row', 'روز پشت سر هم'],

@@ -18,6 +18,45 @@ const apiKeys = require('../services/apiKeys');
 const usage = require('../services/usage');
 const progress = require('../services/progress');
 
+// What the server will accept as a photograph of a question.
+//
+// The browser shrinks the picture before sending it, but the browser is a
+// convenience and this is the rule: a request that skips the page entirely
+// still cannot put four megabytes in a row. Half a megabyte is comfortably
+// more than a 1280px photo of a test paper and comfortably less than the 1mb
+// body limit, leaving room for the question alongside it.
+const MAX_IMAGE_BYTES = 500 * 1024;
+
+// Listed rather than sniffed. These are the three a phone camera or a
+// screenshot produces, they are the three every vision model accepts, and
+// anything else is either a mistake or someone trying it on.
+const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
+// Returns the bytes to store, or a sentence saying why not.
+function readImage(image) {
+  if (image === undefined || image === null) return { bytes: null, type: null, error: null };
+  if (typeof image !== 'object' || typeof image.data !== 'string' || typeof image.type !== 'string') {
+    return { error: 'That image could not be read.' };
+  }
+  if (!ALLOWED_IMAGE_TYPES.has(image.type)) {
+    return { error: 'Photos need to be JPEG, PNG or WebP.' };
+  }
+
+  let bytes;
+  try {
+    bytes = Buffer.from(image.data, 'base64');
+  } catch {
+    return { error: 'That image could not be read.' };
+  }
+  // Buffer.from does not throw on rubbish, it returns whatever it could
+  // decode - so an empty result means the input was not base64 at all.
+  if (!bytes.length) return { error: 'That image could not be read.' };
+  if (bytes.length > MAX_IMAGE_BYTES) {
+    return { error: 'That photo is too large. Try again - the app usually shrinks it for you.' };
+  }
+  return { bytes, type: image.type, error: null };
+}
+
 const router = express.Router();
 const MAX_HISTORY_MESSAGES = 24;
 
@@ -136,12 +175,42 @@ router.get('/:id', (req, res) => {
   if (!chat) return res.status(404).json({ error: 'Chat not found' });
 
   const messages = db
-    .prepare('SELECT role, content, hidden, created_at FROM messages WHERE chat_id = ? ORDER BY id ASC')
+    .prepare(
+      'SELECT id, role, content, hidden, created_at, (image IS NOT NULL) AS has_image FROM messages WHERE chat_id = ? ORDER BY id ASC'
+    )
     .all(chat.id)
     .filter((m) => !m.hidden)
-    .map((m) => ({ role: m.role, content: m.content, createdAt: m.created_at }));
+    .map((m) => ({
+      id: m.id,
+      role: m.role,
+      content: m.content,
+      createdAt: m.created_at,
+      // A path rather than the bytes: a conversation with a dozen photographs
+      // in it would otherwise be megabytes of JSON before the first one is
+      // on screen, and the browser can cache these individually.
+      imageUrl: m.has_image ? `/api/chats/${chat.id}/messages/${m.id}/image` : null,
+    }));
 
   res.json({ chat: chatSummary(chat), messages });
+});
+
+// Behind the same ownership check as the conversation it belongs to - the
+// chat is loaded by owner first, and the message by chat, so neither id can
+// be swapped for somebody else's.
+router.get('/:id/messages/:messageId/image', (req, res) => {
+  const chat = loadOwnedChat(req.user.id, req.params.id);
+  if (!chat) return res.status(404).json({ error: 'Chat not found' });
+
+  const row = db
+    .prepare('SELECT image, image_type FROM messages WHERE id = ? AND chat_id = ?')
+    .get(Number(req.params.messageId), chat.id);
+  if (!row || !row.image) return res.status(404).json({ error: 'No image on that message' });
+
+  // Private, because it is: one person's photograph of their own homework,
+  // behind a session cookie. Immutable because a message's picture never
+  // changes once it is sent.
+  res.set('Cache-Control', 'private, max-age=31536000, immutable');
+  res.type(row.image_type || 'application/octet-stream').send(Buffer.from(row.image));
 });
 
 router.patch('/:id', (req, res) => {
@@ -186,8 +255,14 @@ router.post(
     const chat = loadOwnedChat(req.user.id, req.params.id);
     if (!chat) return res.status(404).json({ error: 'Chat not found' });
 
-    const { content, hidden } = req.body || {};
-    if (typeof content !== 'string' || !content.trim()) {
+    const { content, hidden, image } = req.body || {};
+    const picture = readImage(image);
+    if (picture.error) return res.status(400).json({ error: picture.error, code: 'bad_image' });
+
+    // A photograph on its own is a question - "what is this?" - so the text
+    // may be empty when there is one. Requiring a caption would mean typing
+    // something meaningless to send the thing being asked about.
+    if (typeof content !== 'string' || (!content.trim() && !picture.bytes)) {
       return res.status(400).json({ error: 'content is required' });
     }
 
@@ -206,15 +281,38 @@ router.post(
 
     const now = new Date().toISOString();
     const inserted = db
-      .prepare('INSERT INTO messages (chat_id, role, content, hidden, created_at) VALUES (?, ?, ?, ?, ?)')
-      .run(chat.id, 'user', content, hidden ? 1 : 0, now);
+      .prepare(
+        'INSERT INTO messages (chat_id, role, content, hidden, created_at, image, image_type) VALUES (?, ?, ?, ?, ?, ?, ?)'
+      )
+      .run(chat.id, 'user', content, hidden ? 1 : 0, now, picture.bytes, picture.type);
     const userMessageId = Number(inserted.lastInsertRowid);
 
+    // Which messages have a picture, without reading any of them. Selecting
+    // the blobs here would pull every photograph in the conversation into
+    // memory to send two.
     const history = db
-      .prepare('SELECT role, content FROM messages WHERE chat_id = ? ORDER BY id ASC')
+      .prepare(
+        'SELECT id, role, content, (image IS NOT NULL) AS has_image FROM messages WHERE chat_id = ? ORDER BY id ASC'
+      )
       .all(chat.id)
-      .slice(-MAX_HISTORY_MESSAGES)
-      .map((m) => ({ role: m.role, content: m.content }));
+      .slice(-MAX_HISTORY_MESSAGES);
+
+    const carrying = new Set(
+      history.filter((m) => m.has_image).slice(-ai.MAX_IMAGES_IN_CONTEXT).map((m) => m.id)
+    );
+    const pictures = new Map();
+    for (const id of carrying) {
+      const row = db.prepare('SELECT image, image_type FROM messages WHERE id = ?').get(id);
+      if (row && row.image) pictures.set(id, { data: Buffer.from(row.image), type: row.image_type });
+    }
+
+    const historyForAi = history.map((m) => ({
+      role: m.role,
+      content: m.content,
+      // Left undefined rather than null: the adapter tests for truthiness and
+      // a null would read as "had one, dropped it" and add the note.
+      ...(m.has_image ? { image: pictures.get(m.id) || { dropped: true } } : {}),
+    }));
 
     const chatPlan = usage.getPlan(req.user.id);
     if (!usage.canUseTrack(chatPlan, chat.mode)) {
@@ -253,7 +351,7 @@ router.post(
     // duplicate copy into the conversation.
     let reply;
     try {
-      reply = await ai.complete({ system, messages: history, apiKey: apiKeys.resolveKey(req.user.id) });
+      reply = await ai.complete({ system, messages: historyForAi, apiKey: apiKeys.resolveKey(req.user.id) });
     } catch (err) {
       db.prepare('DELETE FROM messages WHERE id = ?').run(userMessageId);
       throw err;
