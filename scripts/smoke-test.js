@@ -806,6 +806,7 @@ async function waitForListening() {
       ['photo', 'عکس'],       // attached pictures, added with the camera button
       ['coach', 'مربی'],      // the profile, sent with every message
       ['active', 'فعال'],     // the record of which days, behind the streak
+      ['reminder', 'یادآور'], // the daily email, and that it is opt-in
     ];
     const missing = mustMention
       .filter(([en, fa]) => !(policy.includes(en) && policy.includes(fa)))
@@ -814,6 +815,107 @@ async function waitForListening() {
       missing.length ? `not mentioned in both languages: ${missing.join(', ')}` : 'photos, profile and activity, in both languages');
   } catch (err) {
     report(false, 'the privacy policy lists what the app now stores', err.message);
+  }
+
+  // The daily email, where almost all the care is about not sending it.
+  //
+  // Driven against a sandbox database with a stubbed transport, because the
+  // three cases that matter are "nothing to say", "already sent today" and
+  // "somebody asked it to stop" - none of which can be seen by sending one.
+  try {
+    const { execFileSync } = require('node:child_process');
+    const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'studybuddy-digest-'));
+    const root = path.join(__dirname, '..');
+
+    const script = `
+      const email = require(${JSON.stringify(path.join(root, 'src', 'services', 'email'))});
+      // Stubbed before reminders.js reads it, so nothing leaves the machine.
+      const outbox = [];
+      email.isConfigured = () => true;
+      email.send = async (m) => { outbox.push(m); return { sent: true }; };
+
+      const { db } = require(${JSON.stringify(path.join(root, 'src', 'db'))});
+      const reminders = require(${JSON.stringify(path.join(root, 'src', 'services', 'reminders'))});
+      const progress = require(${JSON.stringify(path.join(root, 'src', 'services', 'progress'))});
+
+      const now = new Date('2026-10-15T04:00:00Z');
+      const today = progress.tehranDay(now);
+      const mk = (mail, lang) => {
+        db.prepare("INSERT INTO users (email, password_hash, theme, language, created_at) VALUES (?,'x','system',?,'n')").run(mail, lang);
+        return db.prepare('SELECT id FROM users WHERE email = ?').get(mail).id;
+      };
+
+      const quiet = mk('quiet@x', 'en');    // asked for it, but has nothing due
+      const busy  = mk('busy@x', 'fa');     // asked for it, and does
+      const off   = mk('off@x', 'en');      // never asked
+      reminders.setReminders(quiet, true);
+      const token = reminders.setReminders(busy, true);
+
+      db.prepare("INSERT INTO tasks (user_id, title, due_at, status, created_at, updated_at) VALUES (?,?,?,'pending','n','n')")
+        .run(busy, 'فصل ۳ شیمی', today);
+      db.prepare("INSERT INTO tasks (user_id, title, due_at, status, created_at, updated_at) VALUES (?,?,?,'pending','n','n')")
+        .run(busy, 'مرور دیروز', progress.shiftDay(today, -2));
+
+      (async () => {
+        const first = await reminders.runOnce('https://buddy.example', now);
+        const second = await reminders.runOnce('https://buddy.example', now);
+
+        // Somebody unsubscribing from the link in the mail they just got.
+        const stopped = reminders.unsubscribeByToken(token);
+        const tomorrow = new Date(now.getTime() + 86400000);
+        db.prepare("INSERT INTO tasks (user_id, title, due_at, status, created_at, updated_at) VALUES (?,?,?,'pending','n','n')")
+          .run(busy, 'باز هم کار', progress.tehranDay(tomorrow));
+        const afterStop = await reminders.runOnce('https://buddy.example', tomorrow);
+
+        console.log(JSON.stringify({
+          firstSent: first.sent,
+          secondSent: second.sent,
+          afterStopSent: afterStop.sent,
+          stopped,
+          to: outbox.map((m) => m.to),
+          persian: outbox[0] && /[\u0600-\u06FF]/.test(outbox[0].text),
+          hasUnsubscribe: outbox[0] && outbox[0].text.includes('/unsubscribe/' + token),
+          overdueNoted: outbox[0] && outbox[0].text.includes(progress.tehranDay(now)) === false,
+          offUntouched: db.prepare('SELECT reminders_on FROM users WHERE id = ?').get(off).reminders_on,
+        }));
+      })();
+    `;
+
+    const out = execFileSync(process.execPath, ['-e', script], {
+      env: { ...process.env, DB_PATH: path.join(sandbox, 'digest.db') },
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    fs.rmSync(sandbox, { recursive: true, force: true });
+    const r = JSON.parse(out.trim().split('\n').pop());
+
+    const ok =
+      r.firstSent === 1 &&            // only the one with something due
+      r.to.length === 1 && r.to[0] === 'busy@x' &&
+      r.secondSent === 0 &&           // a second pass the same day sends nothing
+      r.stopped === true &&
+      r.afterStopSent === 0 &&        // and nothing after unsubscribing, ever
+      r.persian === true &&           // written in the reader's language
+      r.hasUnsubscribe === true &&    // every one carries the way out
+      r.offUntouched === 0;           // an account that never asked is never touched
+
+    report(ok, 'the digest goes only to whoever asked, once a day, with a way out',
+      ok ? 'nothing to say sends nothing; twice in a day sends once; unsubscribing holds'
+         : JSON.stringify(r));
+  } catch (err) {
+    report(false, 'the digest goes only to whoever asked, once a day, with a way out', err.message);
+  }
+
+  // The unsubscribe page answers the same way whether or not the token was
+  // real. Saying "no such token" would make this somewhere to test tokens.
+  try {
+    const bogus = await fetch(`http://127.0.0.1:${PORT}/unsubscribe/not-a-real-token`);
+    const body = await bogus.text();
+    const ok = bogus.status === 200 && /ایمیل یادآوری/.test(body) && !/not found|invalid/i.test(body);
+    report(ok, 'an unknown unsubscribe token is told the same thing as a real one',
+      ok ? 'HTTP 200, same page, no hint either way' : `status ${bogus.status}`);
+  } catch (err) {
+    report(false, 'an unknown unsubscribe token is told the same thing as a real one', err.message);
   }
 
   server.kill();

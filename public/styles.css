@@ -1578,6 +1578,32 @@ body {
   color: var(--muted);
 }
 
+/* The whole row is the label, so the text is part of the target rather than
+   something to aim past on the way to a 13px box. */
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.88rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.settings-toggle input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  /* Follows the theme, so the tick is not a blue system control sitting in a
+     black and white interface. */
+  accent-color: var(--fill);
+  cursor: pointer;
+}
+
+.settings-toggle input:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
 .settings-section-hint {
   margin: -6px 0 14px;
   font-size: 0.78rem;

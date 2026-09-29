@@ -7,6 +7,7 @@ const { asyncHandler } = require('../middleware/errors');
 const { hashPassword, verifyPassword, SESSION_COOKIE } = require('../services/auth');
 const { transaction } = require('../db');
 const { PROFILE_FIELDS } = require('../prompts');
+const reminders = require('../services/reminders');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -52,6 +53,7 @@ function settingsOut(user) {
     email: user.email,
     theme: user.theme,
     language: user.language,
+    remindersOn: Boolean(user.reminders_on),
     hasPassword: Boolean(user.password_hash),
   };
 }
@@ -65,7 +67,7 @@ router.get('/', (req, res) => {
 });
 
 router.patch('/', (req, res) => {
-  const { displayName, theme, language, profile } = req.body || {};
+  const { displayName, theme, language, profile, remindersOn } = req.body || {};
 
   if (theme !== undefined && !VALID_THEMES.has(theme)) {
     return res.status(400).json({ error: `Invalid theme: ${theme}` });
@@ -87,6 +89,10 @@ router.patch('/', (req, res) => {
     language ?? null,
     req.user.id
   );
+
+  // Its own call rather than a column in the UPDATE below, because switching
+  // them on also has to issue the token the unsubscribe link is built from.
+  if (remindersOn !== undefined) reminders.setReminders(req.user.id, Boolean(remindersOn));
 
   if (profile && typeof profile === 'object') {
     const examDate = profile.exam_at === undefined ? undefined : cleanExamDate(profile.exam_at);

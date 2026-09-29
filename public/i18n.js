@@ -202,6 +202,14 @@
     'settings.themeSystem': ['System', 'سیستم'],
     'settings.themeLight': ['Light', 'روشن'],
     'settings.themeDark': ['Dark', 'تیره'],
+    // --- the daily email ---------------------------------------------------
+    'digest.title': ['Daily email', 'ایمیل روزانه'],
+    'digest.hint': [
+      'Off unless you ask for it. When something is due, you get one short email in the morning — and none at all on a day with nothing in it.',
+      'تا نخواهی خاموش است. وقتی کاری سررسید داشته باشد، صبح یک ایمیل کوتاه می‌گیری — و روزی که چیزی نباشد، هیچ ایمیلی نمی‌آید.',
+    ],
+    'digest.enable': ['Email me about what is due', 'کارهای سررسیدشده را ایمیل کن'],
+
     // --- photographing a question -----------------------------------------
     'chat.addPhoto': ['Add a photo', 'یک عکس بگذار'],
     'chat.removePhoto': ['Remove photo', 'حذف عکس'],

@@ -81,6 +81,7 @@ const tasksRoutes = require('./src/routes/tasks');
 const videoRoutes = require('./src/routes/video');
 const settingsRoutes = require('./src/routes/settings');
 const progressRoutes = require('./src/routes/progress');
+const reminders = require('./src/services/reminders');
 const billingRoutes = require('./src/routes/billing');
 const setupRoutes = require('./src/routes/setup');
 
@@ -161,6 +162,30 @@ function legalPage(name) {
   }
   return legalPages.get(name);
 }
+
+// Deliberately outside /api and outside requireAuth. Unsubscribing must work
+// for somebody who has forgotten their password and is reading this on a phone
+// - one link, one click, no sign-in. The token is the only thing it needs, it
+// can do nothing but switch reminders off, and it is issued only to accounts
+// that turned them on.
+app.get('/unsubscribe/:token', (req, res) => {
+  const stopped = reminders.unsubscribeByToken(req.params.token);
+  // The same page either way. A token that is already unsubscribed, or that
+  // never existed, still means "you will not get these" - and saying "no such
+  // token" would turn this into somewhere to test tokens.
+  res
+    .status(200)
+    .type('html')
+    .send(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Buddy</title>
+<div dir="rtl" style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:32rem;margin:15vh auto;padding:0 20px;line-height:1.8;color:#111">
+  <p style="font-size:1.1rem">دیگر ایمیل یادآوری برایت نمی‌فرستیم.</p>
+  <p style="color:#666">هر وقت خواستی، از تنظیمات دوباره روشنش کن.</p>
+  <p dir="ltr" style="color:#666;border-top:1px solid #eee;padding-top:14px;margin-top:22px">You will not get reminder emails any more. Turn them back on in Settings whenever you like.</p>
+  <p><a href="/app" style="color:#111">Buddy</a></p>
+</div>`);
+  if (!stopped) console.log('Unsubscribe link used with a token that matched nothing.');
+});
 
 app.get('/privacy', (_req, res) => {
   res.type('html').send(legalPage('privacy'));
@@ -247,6 +272,13 @@ function bootSummary() {
 app.listen(PORT, () => {
   console.log(`Buddy running at http://localhost:${PORT}`);
   bootSummary();
+
+  // Started after the port is open, because nothing about it should be able
+  // to delay the site coming up. It does nothing at all unless SMTP is
+  // configured and somebody has switched reminders on.
+  if (reminders.start(process.env.APP_URL || `http://localhost:${PORT}`)) {
+    console.log(`  digest    on, sent at ${reminders.SEND_HOUR_TEHRAN}:00 Tehran to whoever asked for it`);
+  }
 
   // A malformed AI_BASE_URL fails on the first message with a network error
   // that names nothing. It is worth one line here: a doubled scheme from a

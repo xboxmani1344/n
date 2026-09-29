@@ -390,6 +390,17 @@
         </div>
 
         <div class="chat-card glass settings-card">
+          <p class="settings-section-label" data-i18n="digest.title">Daily email</p>
+          <p class="settings-section-hint" data-i18n="digest.hint">Off unless you ask for it. When something is due, you get one short email in the morning — and none at all on a day with nothing in it.</p>
+          <label class="settings-toggle">
+            <input type="checkbox" id="digest-toggle" />
+            <span data-i18n="digest.enable">Email me about what is due</span>
+          </label>
+          <p class="auth-error" id="digest-error"></p>
+          <p class="settings-saved" id="digest-saved" data-i18n="settings.saved" hidden>Saved.</p>
+        </div>
+
+        <div class="chat-card glass settings-card">
           <p class="settings-section-label" data-i18n="settings.language">Language</p>
           <div class="theme-picker" id="language-picker">
             <button type="button" class="theme-option" data-language="en">English</button>

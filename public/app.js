@@ -162,6 +162,9 @@
   const progressStreak = document.getElementById('progress-streak');
   const progressStreakCount = document.getElementById('progress-streak-count');
   const progressFortnight = document.getElementById('progress-fortnight');
+  const digestToggle = document.getElementById('digest-toggle');
+  const digestError = document.getElementById('digest-error');
+  const digestSaved = document.getElementById('digest-saved');
   const memoryInvite = document.getElementById('memory-invite');
   const memoryInviteGo = document.getElementById('memory-invite-go');
   const memoryInviteLater = document.getElementById('memory-invite-later');
@@ -1714,6 +1717,8 @@
     profileSaved.hidden = true;
     memoryError.textContent = '';
     memorySaved.hidden = true;
+    digestError.textContent = '';
+    digestSaved.hidden = true;
     passwordError.textContent = '';
     passwordSaved.hidden = true;
     billingError.textContent = '';
@@ -1721,6 +1726,7 @@
     const { data } = await api('/api/settings');
     if (data) {
       fillMemoryForm(data.profile);
+      digestToggle.checked = Boolean(data.settings.remindersOn);
       settingsDisplayName.value = data.settings.displayName || '';
       settingsEmail.value = data.settings.email;
       currentPasswordField.hidden = !data.settings.hasPassword;
@@ -1860,6 +1866,25 @@
     memoryHours.value = p.hours_per_day === null || p.hours_per_day === undefined ? '' : p.hours_per_day;
     memoryNotes.value = p.notes || '';
   }
+
+  // Saved on the flip, like the theme and language pickers - a switch with a
+  // separate Save button is a switch that gets left unsaved.
+  digestToggle.addEventListener('change', async () => {
+    digestError.textContent = '';
+    digestSaved.hidden = true;
+    const wanted = digestToggle.checked;
+
+    const { ok, data } = await api('/api/settings', { method: 'PATCH', body: { remindersOn: wanted } });
+    if (!ok) {
+      // Put back, so the switch never shows a state the server did not agree
+      // to - somebody who thinks they unsubscribed and did not is worse off
+      // than somebody who sees it fail.
+      digestToggle.checked = !wanted;
+      digestError.textContent = (data && data.error) || tr('err.generic');
+      return;
+    }
+    digestSaved.hidden = false;
+  });
 
   memoryForm.addEventListener('submit', async (e) => {
     e.preventDefault();
