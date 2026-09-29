@@ -3,6 +3,7 @@
 const express = require('express');
 const { db } = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const progress = require('../services/progress');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -112,6 +113,11 @@ router.patch('/:id', (req, res) => {
     now,
     task.id
   );
+
+  // Crossing something off counts. Without this, a day spent working through
+  // the planner rather than talking to a coach would leave no trace and break
+  // a streak that was actually kept.
+  if (nextStatus === 'done' && task.status !== 'done') progress.recordActivity(req.user.id);
 
   const updated = db.prepare('SELECT * FROM tasks WHERE id = ?').get(task.id);
   res.json({ task: taskOut(updated) });

@@ -16,6 +16,7 @@ const {
 const ai = require('../services/ai');
 const apiKeys = require('../services/apiKeys');
 const usage = require('../services/usage');
+const progress = require('../services/progress');
 
 const router = express.Router();
 const MAX_HISTORY_MESSAGES = 24;
@@ -261,6 +262,9 @@ router.post(
     db.prepare(
       'INSERT INTO messages (chat_id, role, content, hidden, created_at) VALUES (?, ?, ?, 0, ?)'
     ).run(chat.id, 'assistant', reply, new Date().toISOString());
+    // After the reply, not before: a call that failed is not a day's work, and
+    // on the free tier failing is routine.
+    progress.recordActivity(req.user.id);
     db.prepare('UPDATE chats SET updated_at = ? WHERE id = ?').run(new Date().toISOString(), chat.id);
 
     if (!hidden) {

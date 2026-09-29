@@ -1366,6 +1366,75 @@ body {
 /* Sits between a section label and its form. Only the coach-memory card uses
    one: every other section here is self-evident from its label, and that one
    has to say why it is asking. */
+/* Two numbers and a fortnight of bars. Fourteen values do not need a chart
+   library, and one would be the largest dependency in the project. */
+.progress-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 32px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding: 18px 20px;
+  border: 1px solid var(--control-border);
+  border-radius: 16px;
+  background: var(--chip-bg);
+}
+
+.progress-figures {
+  display: flex;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+
+.progress-figure {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.progress-number {
+  font-size: 1.9rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text);
+  /* These are counts, so they stay in the reading order of the language
+     around them - but a number that changes width as it counts down makes the
+     label beneath it jump. */
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-label {
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.progress-fortnight {
+  display: flex;
+  gap: 4px;
+  align-items: flex-end;
+  /* Left to right in both languages: this is a timeline, not text. Oldest at
+     the start and today at the end is how a calendar reads either way. */
+  direction: ltr;
+}
+
+.progress-bar-day {
+  width: 8px;
+  height: 26px;
+  border-radius: 3px;
+  background: var(--control-border);
+}
+
+.progress-bar-day.on {
+  background: var(--fill);
+}
+
+/* Today gets an outline rather than a colour of its own, so the strip still
+   says which end is now even before the day has been earned. */
+.progress-bar-day.is-today {
+  box-shadow: 0 0 0 1.5px var(--text);
+}
+
 /* The one thing on Home that is asking for something rather than offering
    it, so it reads as a note rather than as another coach to pick. */
 .memory-invite {

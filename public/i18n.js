@@ -202,6 +202,13 @@
     'settings.themeSystem': ['System', 'سیستم'],
     'settings.themeLight': ['Light', 'روشن'],
     'settings.themeDark': ['Dark', 'تیره'],
+    // --- keeping going ----------------------------------------------------
+    'progress.daysLeft': ['days to go', 'روز مانده'],
+    'progress.streak': ['days in a row', 'روز پشت سر هم'],
+    'progress.today': ['today', 'امروز'],
+    'progress.examPassed': ['the day has been and gone', 'آن روز گذشت'],
+    'progress.fortnight': ['The last two weeks', 'دو هفته‌ی گذشته'],
+
     // --- what the coach remembers ---------------------------------------
     'memory.title': ['What your coach knows', 'چیزی که مربی‌ات می‌داند'],
     'memory.hint': [

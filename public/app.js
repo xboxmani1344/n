@@ -150,6 +150,12 @@
   const memoryNotes = document.getElementById('memory-notes');
   const memoryError = document.getElementById('memory-error');
   const memorySaved = document.getElementById('memory-saved');
+  const progressPanel = document.getElementById('progress-panel');
+  const progressCountdown = document.getElementById('progress-countdown');
+  const progressDaysLeft = document.getElementById('progress-days-left');
+  const progressStreak = document.getElementById('progress-streak');
+  const progressStreakCount = document.getElementById('progress-streak-count');
+  const progressFortnight = document.getElementById('progress-fortnight');
   const memoryInvite = document.getElementById('memory-invite');
   const memoryInviteGo = document.getElementById('memory-invite-go');
   const memoryInviteLater = document.getElementById('memory-invite-later');
@@ -988,6 +994,7 @@
     api('/api/settings').then(({ data }) => {
       if (data) refreshMemoryInvite(data.profile);
     });
+    refreshProgress();
     await refreshChatList();
 
     if (chats.length) {
@@ -1634,6 +1641,45 @@
     profileSaved.hidden = false;
   });
 
+  // How long you have kept going, and how long is left.
+  //
+  // Every part of this hides itself when it has nothing true to say. A
+  // countdown with no date, or "0 days in a row" on a first visit, is a
+  // scoreboard telling somebody they are losing a game they have not started -
+  // the opposite of what a panel like this is for.
+  async function refreshProgress() {
+    const { ok, data } = await api('/api/progress');
+    if (!ok || !data) {
+      progressPanel.hidden = true;
+      return;
+    }
+
+    // A date that has passed stops being a countdown. Saying "-3 days to go"
+    // is worse than saying nothing.
+    const counting = typeof data.examInDays === 'number' && data.examInDays >= 0;
+    progressCountdown.hidden = !counting;
+    if (counting) progressDaysLeft.textContent = num(data.examInDays);
+
+    progressStreak.hidden = data.streak < 1;
+    if (data.streak >= 1) progressStreakCount.textContent = num(data.streak);
+
+    progressFortnight.innerHTML = '';
+    const days = Array.isArray(data.days) ? data.days : [];
+    // One label for the whole strip rather than fourteen: a screen reader
+    // reading out two weeks of dates one at a time is not an improvement on
+    // being told it is a picture of the last two weeks.
+    progressFortnight.setAttribute('aria-label', tr('progress.fortnight'));
+    days.forEach((entry, i) => {
+      const bar = document.createElement('span');
+      bar.className = entry.active ? 'progress-bar-day on' : 'progress-bar-day';
+      if (i === days.length - 1) bar.classList.add('is-today');
+      progressFortnight.appendChild(bar);
+    });
+    progressFortnight.hidden = days.length === 0;
+
+    progressPanel.hidden = progressCountdown.hidden && progressStreak.hidden;
+  }
+
   // Shown on Home until the profile has something in it, or until it is
   // waved away. Dismissal lives in this browser rather than the account: it is
   // a preference about a banner, not a fact about the person, and it is not
@@ -1708,8 +1754,10 @@
     }
     fillMemoryForm(data.profile);
     memorySaved.hidden = false;
-    // The banner on Home was offering exactly this.
+    // The banner on Home was offering exactly this, and the countdown reads
+    // the date that may have just been set.
     refreshMemoryInvite(data.profile);
+    refreshProgress();
   });
 
   themeOptions.forEach((btn) => {

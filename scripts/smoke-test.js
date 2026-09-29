@@ -637,6 +637,84 @@ async function waitForListening() {
     report(false, 'the profile saves, refuses nonsense, and keeps what it was not asked about', err.message);
   }
 
+  // The streak, which is arithmetic about somebody's effort and therefore has
+  // to be right. Driven through the service against a seeded table rather than
+  // through the API, because the interesting cases are all about which day it
+  // is and waiting a day per case is not a test.
+  try {
+    const { execFileSync } = require('node:child_process');
+    const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'studybuddy-streak-'));
+
+    const script = `
+      const { db } = require(${JSON.stringify(path.join(__dirname, '..', 'src', 'db'))});
+      const p = require(${JSON.stringify(path.join(__dirname, '..', 'src', 'services', 'progress'))});
+      const now = new Date('2026-10-15T09:00:00Z');
+      const today = p.tehranDay(now);
+      db.prepare("INSERT INTO users (email, password_hash, theme, created_at) VALUES ('s@x','x','system','n')").run();
+      const uid = db.prepare('SELECT id FROM users LIMIT 1').get().id;
+      const add = (offset) => db.prepare('INSERT OR IGNORE INTO activity_days (user_id, day) VALUES (?, ?)')
+        .run(uid, p.shiftDay(today, offset));
+
+      // Yesterday and the two before it - three days, and nothing today yet.
+      [-1, -2, -3].forEach(add);
+      const beforeToday = p.streakFor(uid, now);
+
+      // Now today as well.
+      add(0);
+      const withToday = p.streakFor(uid, now);
+
+      // A gap five days back must not be counted through.
+      [-5, -6].forEach(add);
+      const acrossGap = p.streakFor(uid, now);
+
+      const fortnight = p.recentDays(uid, 14, now);
+      console.log(JSON.stringify({
+        beforeToday, withToday, acrossGap,
+        len: fortnight.length,
+        lastIsToday: fortnight[fortnight.length - 1].day === today,
+        oldestFirst: fortnight[0].day < fortnight[fortnight.length - 1].day,
+        activeCount: fortnight.filter((d) => d.active).length,
+      }));
+    `;
+
+    const out = execFileSync(process.execPath, ['-e', script], {
+      env: { ...process.env, DB_PATH: path.join(sandbox, 'streak.db') },
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    fs.rmSync(sandbox, { recursive: true, force: true });
+    const r = JSON.parse(out.trim().split('\n').pop());
+
+    // beforeToday is the one that matters. Somebody on day three who opens the
+    // app over breakfast, before doing anything, must not be told the streak
+    // is gone - it is only just morning.
+    const ok =
+      r.beforeToday === 3 && r.withToday === 4 && r.acrossGap === 4 &&
+      r.len === 14 && r.lastIsToday && r.oldestFirst && r.activeCount === 6;
+
+    report(ok, 'the streak counts days, forgives the morning, and stops at a gap',
+      ok ? 'three days before doing anything today, four after, and a gap does not carry'
+         : JSON.stringify(r));
+  } catch (err) {
+    report(false, 'the streak counts days, forgives the morning, and stops at a gap', err.message);
+  }
+
+  // The day boundary. Iran is +03:30, so 21:00 UTC is already tomorrow there -
+  // and that is exactly the hour a student is working. Keyed the way the quota
+  // counters are, a late-night session would land on the previous day and read
+  // as a broken streak the next morning.
+  try {
+    const p = require('../src/services/progress');
+    const lateNight = new Date('2026-10-01T21:00:00Z');
+    const tehran = p.tehranDay(lateNight);
+    const utc = lateNight.toISOString().slice(0, 10);
+    const ok = tehran === '2026-10-02' && utc === '2026-10-01';
+    report(ok, 'a day is a day in Tehran, not in UTC',
+      ok ? `21:00Z reads as ${tehran} there, ${utc} here` : `got ${tehran} vs ${utc}`);
+  } catch (err) {
+    report(false, 'a day is a day in Tehran, not in UTC', err.message);
+  }
+
   server.kill();
   fs.rmSync(dbDir, { recursive: true, force: true });
 

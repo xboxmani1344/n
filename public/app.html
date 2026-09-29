@@ -180,6 +180,23 @@
           <p class="tagline" data-i18n="home.tagline">Pick a coach. Each one walks you through four phases.</p>
         </header>
 
+        <!-- Hidden until there is something true to say. A panel reading
+             "0 days in a row" on somebody's first visit is a scoreboard
+             telling them they are losing a game they have not started. -->
+        <section class="progress-panel" id="progress-panel" hidden>
+          <div class="progress-figures">
+            <div class="progress-figure" id="progress-countdown" hidden>
+              <span class="progress-number" id="progress-days-left"></span>
+              <span class="progress-label" data-i18n="progress.daysLeft">days to go</span>
+            </div>
+            <div class="progress-figure" id="progress-streak" hidden>
+              <span class="progress-number" id="progress-streak-count"></span>
+              <span class="progress-label" data-i18n="progress.streak">days in a row</span>
+            </div>
+          </div>
+          <div class="progress-fortnight" id="progress-fortnight" role="img"></div>
+        </section>
+
         <!-- Offered, not demanded. A sign-up that asks five questions before
              anything works loses the person who came to try one thing. -->
         <div class="memory-invite" id="memory-invite" hidden>
