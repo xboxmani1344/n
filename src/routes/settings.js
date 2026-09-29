@@ -6,6 +6,7 @@ const { requireAuth } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errors');
 const { hashPassword, verifyPassword, SESSION_COOKIE } = require('../services/auth');
 const { transaction } = require('../db');
+const { PROFILE_FIELDS } = require('../prompts');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -21,6 +22,30 @@ function usageSummary(userId) {
   };
 }
 
+// The profile the coach reads before every reply. Shaped for the form that
+// edits it, so the interface never has to translate between two vocabularies.
+//
+// One place decides what a profile is - src/prompts.js, which is what actually
+// consumes it. A second list here would drift, and the drift would be silent:
+// a field saved and never read looks exactly like a field that works.
+const PROFILE_KEYS = PROFILE_FIELDS.map(([field]) => field);
+
+// A date the countdown can subtract, or nothing. A half-typed "2027-0" must not
+// reach the database as though it meant something.
+function cleanExamDate(value) {
+  if (value === null || value === '') return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return undefined;
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return Number.isNaN(parsed.getTime()) ? undefined : String(value);
+}
+
+function profileOut(userId) {
+  const row = db.prepare('SELECT * FROM user_profiles WHERE user_id = ?').get(userId);
+  const out = {};
+  for (const key of PROFILE_KEYS) out[key] = row ? row[key] : null;
+  return out;
+}
+
 function settingsOut(user) {
   return {
     displayName: user.display_name,
@@ -34,12 +59,13 @@ function settingsOut(user) {
 router.get('/', (req, res) => {
   res.json({
     settings: settingsOut(req.user),
+    profile: profileOut(req.user.id),
     subscription: usageSummary(req.user.id),
   });
 });
 
 router.patch('/', (req, res) => {
-  const { displayName, theme, language } = req.body || {};
+  const { displayName, theme, language, profile } = req.body || {};
 
   if (theme !== undefined && !VALID_THEMES.has(theme)) {
     return res.status(400).json({ error: `Invalid theme: ${theme}` });
@@ -62,8 +88,74 @@ router.patch('/', (req, res) => {
     req.user.id
   );
 
+  if (profile && typeof profile === 'object') {
+    const examDate = profile.exam_at === undefined ? undefined : cleanExamDate(profile.exam_at);
+    if (examDate === undefined && profile.exam_at !== undefined) {
+      return res.status(400).json({ error: 'The exam date should look like 2027-06-20.', code: 'bad_date' });
+    }
+
+    // Hours are a rough number someone types about their own life, not a
+    // measurement. Reject the absurd, round the rest, and do not argue about
+    // whether it is 2 or 2.5.
+    let hours;
+    if (profile.hours_per_day !== undefined) {
+      if (profile.hours_per_day === null || profile.hours_per_day === '') hours = null;
+      else {
+        hours = Number(profile.hours_per_day);
+        if (!Number.isFinite(hours) || hours < 0 || hours > 24) {
+          return res.status(400).json({ error: 'Hours in a day is somewhere between 0 and 24.', code: 'bad_hours' });
+        }
+      }
+    }
+
+    const text = (value) => {
+      if (value === undefined) return undefined;
+      if (value === null) return null;
+      // Capped because it all goes into every prompt this person ever sends -
+      // an essay pasted here would be paid for on every message.
+      const trimmed = String(value).trim().slice(0, 500);
+      return trimmed === '' ? null : trimmed;
+    };
+
+    const next = {
+      study_level: text(profile.study_level),
+      goal: text(profile.goal),
+      exam_at: examDate,
+      hours_per_day: hours,
+      notes: text(profile.notes),
+    };
+
+    // One statement so a first save and a later edit are the same code path.
+    // Undefined means "not mentioned in this request" and has to keep whatever
+    // is stored, which is what each COALESCE(?, column) does.
+    db.prepare(
+      `INSERT INTO user_profiles (user_id, study_level, goal, exam_at, hours_per_day, notes, updated_at)
+       VALUES (@user_id, @study_level, @goal, @exam_at, @hours_per_day, @notes, @updated_at)
+       ON CONFLICT(user_id) DO UPDATE SET
+         study_level   = CASE WHEN @set_study_level  THEN @study_level  ELSE study_level  END,
+         goal          = CASE WHEN @set_goal         THEN @goal         ELSE goal         END,
+         exam_at       = CASE WHEN @set_exam_at      THEN @exam_at      ELSE exam_at      END,
+         hours_per_day = CASE WHEN @set_hours        THEN @hours_per_day ELSE hours_per_day END,
+         notes         = CASE WHEN @set_notes        THEN @notes        ELSE notes        END,
+         updated_at    = @updated_at`
+    ).run({
+      user_id: req.user.id,
+      study_level: next.study_level ?? null,
+      goal: next.goal ?? null,
+      exam_at: next.exam_at ?? null,
+      hours_per_day: next.hours_per_day ?? null,
+      notes: next.notes ?? null,
+      updated_at: new Date().toISOString(),
+      set_study_level: next.study_level !== undefined ? 1 : 0,
+      set_goal: next.goal !== undefined ? 1 : 0,
+      set_exam_at: next.exam_at !== undefined ? 1 : 0,
+      set_hours: next.hours_per_day !== undefined ? 1 : 0,
+      set_notes: next.notes !== undefined ? 1 : 0,
+    });
+  }
+
   const updated = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
-  res.json({ settings: settingsOut(updated) });
+  res.json({ settings: settingsOut(updated), profile: profileOut(req.user.id) });
 });
 
 router.patch(

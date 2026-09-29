@@ -180,6 +180,19 @@
           <p class="tagline" data-i18n="home.tagline">Pick a coach. Each one walks you through four phases.</p>
         </header>
 
+        <!-- Offered, not demanded. A sign-up that asks five questions before
+             anything works loses the person who came to try one thing. -->
+        <div class="memory-invite" id="memory-invite" hidden>
+          <div class="memory-invite-text">
+            <p class="memory-invite-title" data-i18n="memory.inviteTitle">Your coach does not know you yet</p>
+            <p class="memory-invite-body" data-i18n="memory.inviteBody">Tell it what you are studying and when your exam is, once, and every session after this starts there.</p>
+          </div>
+          <div class="memory-invite-actions">
+            <button type="button" class="pill-btn primary-btn" id="memory-invite-go" data-i18n="memory.inviteGo">Tell it</button>
+            <button type="button" class="pill-btn ghost-btn" id="memory-invite-later" data-i18n="memory.inviteLater">Not now</button>
+          </div>
+        </div>
+
         <div class="agent-grid" id="agent-grid"></div>
 
         <section class="home-section">
@@ -309,6 +322,40 @@
             <p class="auth-error" id="profile-error"></p>
             <p class="settings-saved" id="profile-saved" data-i18n="settings.saved" hidden>Saved.</p>
             <button type="submit" class="pill-btn primary-btn settings-save-btn" data-i18n="settings.saveProfile">Save profile</button>
+          </form>
+        </div>
+
+        <!-- Separate from the account card above on purpose: that one is who you
+             are to the site, this one is what the coach remembers about you.
+             Filling in neither is fine; the coach simply carries on not
+             knowing. -->
+        <div class="chat-card glass settings-card">
+          <p class="settings-section-label" data-i18n="memory.title">What your coach knows</p>
+          <p class="settings-section-hint" data-i18n="memory.hint">Fill in what you like. Every session starts with this, so you never have to explain yourself twice.</p>
+          <form id="memory-form" class="settings-form">
+            <label class="settings-field">
+              <span data-i18n="memory.level">What you are studying</span>
+              <input type="text" id="memory-level" maxlength="500" data-i18n-placeholder="memory.levelHint" placeholder="e.g. final-year biology, or a Master's in computing" />
+            </label>
+            <label class="settings-field">
+              <span data-i18n="memory.goal">What you are working towards</span>
+              <input type="text" id="memory-goal" maxlength="500" data-i18n-placeholder="memory.goalHint" placeholder="e.g. medicine, or shipping my first app" />
+            </label>
+            <label class="settings-field">
+              <span data-i18n="memory.exam">The date that matters</span>
+              <input type="date" id="memory-exam" />
+            </label>
+            <label class="settings-field">
+              <span data-i18n="memory.hours">Hours you can give it on a normal day</span>
+              <input type="number" id="memory-hours" min="0" max="24" step="0.5" inputmode="decimal" />
+            </label>
+            <label class="settings-field">
+              <span data-i18n="memory.notes">Anything else worth remembering</span>
+              <textarea id="memory-notes" rows="3" maxlength="500" data-i18n-placeholder="memory.notesHint" placeholder="e.g. I work nights, geometry is my weak spot"></textarea>
+            </label>
+            <p class="auth-error" id="memory-error"></p>
+            <p class="settings-saved" id="memory-saved" data-i18n="settings.saved" hidden>Saved.</p>
+            <button type="submit" class="pill-btn primary-btn settings-save-btn" data-i18n="memory.save">Save</button>
           </form>
         </div>
 

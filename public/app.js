@@ -142,6 +142,17 @@
   const settingsEmail = document.getElementById('settings-email');
   const profileError = document.getElementById('profile-error');
   const profileSaved = document.getElementById('profile-saved');
+  const memoryForm = document.getElementById('memory-form');
+  const memoryLevel = document.getElementById('memory-level');
+  const memoryGoal = document.getElementById('memory-goal');
+  const memoryExam = document.getElementById('memory-exam');
+  const memoryHours = document.getElementById('memory-hours');
+  const memoryNotes = document.getElementById('memory-notes');
+  const memoryError = document.getElementById('memory-error');
+  const memorySaved = document.getElementById('memory-saved');
+  const memoryInvite = document.getElementById('memory-invite');
+  const memoryInviteGo = document.getElementById('memory-invite-go');
+  const memoryInviteLater = document.getElementById('memory-invite-later');
   const themePicker = document.getElementById('theme-picker');
   // Scoped to their own picker: both use .theme-option, and a document-wide
   // query would wire the language buttons to the theme handler.
@@ -972,6 +983,11 @@
     refreshPlan();
     chatTitleHeading.textContent = tr('chat.brand');
     refreshKeyState();
+    // Not awaited: the banner is the least important thing on the page and
+    // should never be the reason a conversation takes longer to open.
+    api('/api/settings').then(({ data }) => {
+      if (data) refreshMemoryInvite(data.profile);
+    });
     await refreshChatList();
 
     if (chats.length) {
@@ -1555,12 +1571,15 @@
     refreshKeyState();
     profileError.textContent = '';
     profileSaved.hidden = true;
+    memoryError.textContent = '';
+    memorySaved.hidden = true;
     passwordError.textContent = '';
     passwordSaved.hidden = true;
     billingError.textContent = '';
 
     const { data } = await api('/api/settings');
     if (data) {
+      fillMemoryForm(data.profile);
       settingsDisplayName.value = data.settings.displayName || '';
       settingsEmail.value = data.settings.email;
       currentPasswordField.hidden = !data.settings.hasPassword;
@@ -1613,6 +1632,84 @@
       return;
     }
     profileSaved.hidden = false;
+  });
+
+  // Shown on Home until the profile has something in it, or until it is
+  // waved away. Dismissal lives in this browser rather than the account: it is
+  // a preference about a banner, not a fact about the person, and it is not
+  // worth a column or a round trip.
+  const MEMORY_INVITE_DISMISSED = 'buddy.memoryInviteDismissed';
+
+  function memoryIsEmpty(profile) {
+    if (!profile) return true;
+    return !Object.values(profile).some((v) => v !== null && v !== undefined && String(v).trim() !== '');
+  }
+
+  function refreshMemoryInvite(profile) {
+    let dismissed = false;
+    try {
+      dismissed = window.localStorage.getItem(MEMORY_INVITE_DISMISSED) === '1';
+    } catch {
+      // Private browsing throws on read. A banner is not worth failing over.
+    }
+    memoryInvite.hidden = dismissed || !memoryIsEmpty(profile);
+  }
+
+  memoryInviteGo.addEventListener('click', () => {
+    switchView('settings');
+    memoryLevel.focus();
+  });
+
+  memoryInviteLater.addEventListener('click', () => {
+    memoryInvite.hidden = true;
+    try {
+      window.localStorage.setItem(MEMORY_INVITE_DISMISSED, '1');
+    } catch {
+      // Hidden for this visit either way, which is what was asked for.
+    }
+  });
+
+  // What the coach remembers. Sent as one object so a blank field means
+  // "clear it" rather than "leave it alone" - somebody deleting a stale exam
+  // date expects it gone, not kept.
+  function fillMemoryForm(profile) {
+    const p = profile || {};
+    memoryLevel.value = p.study_level || '';
+    memoryGoal.value = p.goal || '';
+    memoryExam.value = p.exam_at || '';
+    memoryHours.value = p.hours_per_day === null || p.hours_per_day === undefined ? '' : p.hours_per_day;
+    memoryNotes.value = p.notes || '';
+  }
+
+  memoryForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    memoryError.textContent = '';
+    memorySaved.hidden = true;
+
+    const { ok, data } = await api('/api/settings', {
+      method: 'PATCH',
+      body: {
+        profile: {
+          study_level: memoryLevel.value.trim(),
+          goal: memoryGoal.value.trim(),
+          exam_at: memoryExam.value || null,
+          hours_per_day: memoryHours.value === '' ? null : memoryHours.value,
+          notes: memoryNotes.value.trim(),
+        },
+      },
+    });
+
+    if (!ok) {
+      // The server's own words for the two it checks, so the message is in the
+      // reader's language rather than the API's.
+      const localized = { bad_date: 'memory.badDate', bad_hours: 'memory.badHours' }[data && data.code];
+      memoryError.textContent = localized ? tr(localized) : (data && data.error) || tr('err.generic');
+      return;
+    }
+    fillMemoryForm(data.profile);
+    memorySaved.hidden = false;
+    // The banner on Home was offering exactly this.
+    refreshMemoryInvite(data.profile);
   });
 
   themeOptions.forEach((btn) => {

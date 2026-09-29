@@ -561,6 +561,82 @@ async function waitForListening() {
     report(false, 'signup language', err.message);
   }
 
+  // The coach's memory. Two halves, and the second is the one that bites.
+  //
+  // The obvious half is that a saved profile survives a round trip. The half
+  // that matters is that an EMPTY profile adds nothing whatsoever to the
+  // prompt: a model handed "their goal is: (not set)" starts remarking on what
+  // it has not been told, which reads as the app being broken rather than as
+  // the person not having filled a form in.
+  try {
+    const { profileLine, getSystemPrompt, getTutorSystemPrompt } = require('../src/prompts');
+
+    const emptyAdds = [
+      profileLine(null),
+      profileLine({}),
+      profileLine({ goal: '   ', notes: null, hours_per_day: undefined }),
+    ].every((line) => line === '');
+
+    const filled = { study_level: 'کنکور تجربی', goal: 'پزشکی', exam_at: '2027-06-20', hours_per_day: 5 };
+    const withProfile = getSystemPrompt('plan', 'شیمی', 'study', 'fa', [], filled);
+    const without = getSystemPrompt('plan', 'شیمی', 'study', 'fa', [], null);
+    const tutorWith = getTutorSystemPrompt('شیمی', 'fa', [], filled);
+
+    // Every field reaches it, both prompt builders carry it, and the prompt
+    // without a profile is byte-for-byte what it was before this existed.
+    const reaches = ['کنکور تجربی', 'پزشکی', '2027-06-20', '5'].every((v) => withProfile.includes(v));
+    const tutorToo = tutorWith.includes('پزشکی');
+    const unchanged = without === getSystemPrompt('plan', 'شیمی', 'study', 'fa', [], undefined);
+
+    const ok = emptyAdds && reaches && tutorToo && unchanged;
+    report(ok, 'the coach reads the profile, and an empty one changes nothing',
+      ok ? 'all five fields, both prompt builders, silent when blank'
+         : [
+             emptyAdds ? null : 'an empty profile still adds text',
+             reaches ? null : 'a field never reached the prompt',
+             tutorToo ? null : 'the tutor prompt ignores it',
+             unchanged ? null : 'no-profile prompts differ from each other',
+           ].filter(Boolean).join('; '));
+  } catch (err) {
+    report(false, 'the coach reads the profile, and an empty one changes nothing', err.message);
+  }
+
+  // Saving it, reading it back, and the two values the server refuses. A bad
+  // date silently stored as a string would break the countdown later, a long
+  // way from the form that accepted it.
+  try {
+    const res = await fetch(`http://127.0.0.1:${PORT}/api/auth/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: `memory-${Date.now()}@example.com`, password: 'password123' }),
+    });
+    const cookie = (res.headers.get('set-cookie') || '').split(';')[0];
+    const patch = (body) =>
+      fetch(`http://127.0.0.1:${PORT}/api/settings`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', cookie },
+        body: JSON.stringify(body),
+      });
+
+    const saved = await (await patch({ profile: { goal: 'پزشکی', exam_at: '2027-06-20', hours_per_day: 4.5 } })).json();
+    const badDate = await patch({ profile: { exam_at: '2027-0' } });
+    const badHours = await patch({ profile: { hours_per_day: 99 } });
+
+    // A second save naming only one field must not wipe the others - the
+    // difference between "not mentioned" and "cleared".
+    const after = await (await patch({ profile: { notes: 'شب‌ها کار می‌کنم' } })).json();
+
+    const ok =
+      saved.profile && saved.profile.goal === 'پزشکی' && saved.profile.hours_per_day === 4.5 &&
+      badDate.status === 400 && badHours.status === 400 &&
+      after.profile.goal === 'پزشکی' && after.profile.notes === 'شب‌ها کار می‌کنم';
+    report(ok, 'the profile saves, refuses nonsense, and keeps what it was not asked about',
+      ok ? 'round-tripped; a half-typed date and 99 hours both refused'
+         : JSON.stringify({ saved: saved.profile, badDate: badDate.status, badHours: badHours.status, after: after.profile }));
+  } catch (err) {
+    report(false, 'the profile saves, refuses nonsense, and keeps what it was not asked about', err.message);
+  }
+
   server.kill();
   fs.rmSync(dbDir, { recursive: true, force: true });
 

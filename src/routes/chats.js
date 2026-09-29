@@ -230,15 +230,20 @@ router.post(
 
     const lang = req.user.language;
     const chatSkills = skillsOf(chat);
+    // Read per message rather than held on the chat: someone who corrects
+    // their exam date should not have to start a new conversation for the
+    // coach to know it.
+    const profile = db.prepare('SELECT * FROM user_profiles WHERE user_id = ?').get(req.user.id);
     const system =
       chat.mode === 'tutor'
-        ? getTutorSystemPrompt(chat.topic, lang, chatSkills)
+        ? getTutorSystemPrompt(chat.topic, lang, chatSkills, profile)
         : getSystemPrompt(
             (getPhaseByKey(chat.phase_key, chat.mode) || getPhases(chat.mode)[0]).key,
             chat.topic,
             chat.mode,
             lang,
-            chatSkills
+            chatSkills,
+            profile
           );
 
     // The user's turn is already stored so it can be part of the history above.

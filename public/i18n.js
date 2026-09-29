@@ -202,6 +202,35 @@
     'settings.themeSystem': ['System', 'سیستم'],
     'settings.themeLight': ['Light', 'روشن'],
     'settings.themeDark': ['Dark', 'تیره'],
+    // --- what the coach remembers ---------------------------------------
+    'memory.title': ['What your coach knows', 'چیزی که مربی‌ات می‌داند'],
+    'memory.hint': [
+      'Fill in what you like. Every session starts with this, so you never have to explain yourself twice.',
+      'هرچه دوست داشتی پر کن. هر جلسه با همین شروع می‌شود، پس لازم نیست هر بار خودت را از اول توضیح بدهی.',
+    ],
+    'memory.level': ['What you are studying', 'چه می‌خوانی'],
+    'memory.levelHint': ['e.g. final-year biology, or a Master\u2019s in computing', 'مثلاً کنکور تجربی، یا ارشد کامپیوتر'],
+    'memory.goal': ['What you are working towards', 'دنبال چه هستی'],
+    'memory.goalHint': ['e.g. medicine, or shipping my first app', 'مثلاً پزشکی، یا بیرون‌دادن اولین اپم'],
+    'memory.exam': ['The date that matters', 'تاریخی که مهم است'],
+    'memory.hours': ['Hours you can give it on a normal day', 'یک روز عادی چند ساعت وقت داری'],
+    'memory.notes': ['Anything else worth remembering', 'هر چیز دیگری که خوب است یادش بماند'],
+    'memory.notesHint': [
+      'e.g. I work nights, geometry is my weak spot',
+      'مثلاً شب‌ها کار می‌کنم، هندسه نقطه‌ضعفم است',
+    ],
+    'memory.save': ['Save', 'ذخیره'],
+    'memory.badDate': ['That date should look like 2027-06-20.', 'تاریخ باید شبیه ۲۰۲۷-۰۶-۲۰ باشد.'],
+    'memory.badHours': ['Hours in a day is somewhere between 0 and 24.', 'ساعت‌های یک روز بین ۰ تا ۲۴ است.'],
+    // The banner that offers it, for somebody who has never opened Settings.
+    'memory.inviteTitle': ['Your coach does not know you yet', 'مربی‌ات هنوز تو را نمی‌شناسد'],
+    'memory.inviteBody': [
+      'Tell it what you are studying and when your exam is, once, and every session after this starts there.',
+      'یک بار بگو چه می‌خوانی و کنکورت کی است، و از آن به بعد هر جلسه از همان‌جا شروع می‌شود.',
+    ],
+    'memory.inviteGo': ['Tell it', 'بگو'],
+    'memory.inviteLater': ['Not now', 'حالا نه'],
+
     'settings.language': ['Language', 'زبان'],
     'settings.password': ['Password', 'رمز عبور'],
     'settings.currentPassword': ['Current password', 'رمز فعلی'],

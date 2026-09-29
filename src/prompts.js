@@ -528,6 +528,44 @@ function safetyLine(trackKey) {
   return SAFETY_INSTRUCTION[trackKey] || '';
 }
 
+// What the coach already knows about the person, so the conversation does not
+// start by asking again.
+//
+// Context, not instruction, which is why it sits before the skills: everything
+// after it says how to answer, this says who is being answered.
+//
+// Only the fields that were filled in. An empty profile has to add nothing at
+// all - a prompt padded with "their goal is: unknown" teaches the model that
+// blanks are worth mentioning, and it starts mentioning them back.
+const PROFILE_FIELDS = [
+  ['study_level', 'They are studying'],
+  ['goal', 'What they are working towards'],
+  ['exam_at', 'The date that matters to them'],
+  ['hours_per_day', 'Hours they can give this on a normal day'],
+  ['notes', 'Worth remembering about them'],
+];
+
+function profileLine(profile) {
+  if (!profile) return '';
+
+  const known = PROFILE_FIELDS
+    .filter(([field]) => {
+      const value = profile[field];
+      return value !== null && value !== undefined && String(value).trim() !== '';
+    })
+    .map(([field, label]) => `- ${label}: ${String(profile[field]).trim()}`);
+
+  if (!known.length) return '';
+
+  // Said out loud, because a model handed facts about someone tends to recite
+  // them back at the first opportunity, which reads like being profiled rather
+  // than being known.
+  return (
+    `\n\nABOUT THIS PERSON - they told you this once, so do not ask again:\n${known.join('\n')}` +
+    '\nUse it to pitch your answers at them. Do not list it back to them or open by summarising it.'
+  );
+}
+
 const LANGUAGE_INSTRUCTION = {
   fa: `\n\nLANGUAGE: Write every reply in Persian (Farsi), in natural conversational Persian rather than translated-sounding English. Use Persian numerals (\u06f0-\u06f9) in prose. Technical terms with no settled Persian equivalent may stay in English. If the user writes to you in a different language, reply in theirs instead.`,
   en: '',
@@ -543,7 +581,7 @@ function mathsLine(trackKey) {
   return trackKey === 'study' || trackKey === 'code' ? MATHS_INSTRUCTION : '';
 }
 
-function getSystemPrompt(phaseKey, topic, trackKey, lang, skills) {
+function getSystemPrompt(phaseKey, topic, trackKey, lang, skills, profile) {
   const track = getTrack(trackKey);
   const prompts = TRACK_PROMPTS[track.key] || STUDY_PHASE_PROMPTS;
   const base = prompts[phaseKey] || prompts[track.phases[0].key];
@@ -554,12 +592,12 @@ function getSystemPrompt(phaseKey, topic, trackKey, lang, skills) {
   // that must win an argument with the persona above it.
   // Skills before safety: they say how to answer, safety says what may not be
   // answered, and the last word should belong to the one that can hurt someone.
-  return `${base}${topicLine}${mathsLine(track.key)}${skillsLine(skills)}${safetyLine(track.key)}${languageLine(lang)}`;
+  return `${base}${topicLine}${profileLine(profile)}${mathsLine(track.key)}${skillsLine(skills)}${safetyLine(track.key)}${languageLine(lang)}`;
 }
 
-function getTutorSystemPrompt(topic, lang, skills) {
+function getTutorSystemPrompt(topic, lang, skills, profile) {
   const topicLine = topic ? `\n\nThe learner's current topic of interest is: "${topic}".` : '';
-  return `${TUTOR_PROMPT}${topicLine}${MATHS_INSTRUCTION}${skillsLine(skills)}${languageLine(lang)}`;
+  return `${TUTOR_PROMPT}${topicLine}${profileLine(profile)}${MATHS_INSTRUCTION}${skillsLine(skills)}${languageLine(lang)}`;
 }
 
 module.exports = {
@@ -568,6 +606,8 @@ module.exports = {
   skillsLine,
   SAFETY_INSTRUCTION,
   safetyLine,
+  PROFILE_FIELDS,
+  profileLine,
   TRACKS,
   TRACK_KEYS,
   PHASES,

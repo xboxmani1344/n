@@ -1363,6 +1363,75 @@ body {
   color: var(--muted);
 }
 
+/* Sits between a section label and its form. Only the coach-memory card uses
+   one: every other section here is self-evident from its label, and that one
+   has to say why it is asking. */
+/* The one thing on Home that is asking for something rather than offering
+   it, so it reads as a note rather than as another coach to pick. */
+.memory-invite {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding: 16px 18px;
+  border: 1px solid var(--control-border);
+  border-radius: 16px;
+  background: var(--chip-bg);
+}
+
+.memory-invite-text {
+  flex: 1 1 240px;
+}
+
+.memory-invite-title {
+  margin: 0 0 4px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.memory-invite-body {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.memory-invite-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Scoped, the way .safety-actions is: neither .primary-btn nor .ghost-btn
+   carries any styling of its own in this file, so an unscoped pair comes out
+   identical and the banner reads as two equal choices when one is the offer
+   and the other is declining it. */
+.memory-invite-actions .primary-btn {
+  background: var(--fill);
+  color: var(--fill-contrast);
+  font-weight: 600;
+}
+
+.memory-invite-actions .primary-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.memory-invite-actions .ghost-btn {
+  background: transparent;
+  border: 1px solid var(--control-border);
+  color: var(--muted);
+}
+
+.settings-section-hint {
+  margin: -6px 0 14px;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
 .settings-form {
   display: flex;
   flex-direction: column;
@@ -1377,7 +1446,8 @@ body {
   color: var(--muted);
 }
 
-.settings-field input {
+.settings-field input,
+.settings-field textarea {
   border: 1px solid var(--control-border);
   background: var(--chip-bg);
   color: var(--text);
@@ -1387,11 +1457,30 @@ body {
   font-size: 0.9rem;
 }
 
+.settings-field textarea {
+  resize: vertical;
+  min-height: 72px;
+  line-height: 1.6;
+}
+
+/* A date field renders its own calendar button, which in dark mode is a black
+   glyph on a black ground. The filter is the only way to reach it. */
+:root[data-theme='dark'] .settings-field input[type='date']::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .settings-field input[type='date']::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+  }
+}
+
 .settings-field input:disabled {
   opacity: 0.6;
 }
 
-.settings-field input:focus {
+.settings-field input:focus,
+.settings-field textarea:focus {
   outline: none;
   box-shadow: 0 0 0 2px var(--text);
 }
