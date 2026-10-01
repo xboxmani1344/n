@@ -81,6 +81,7 @@ const tasksRoutes = require('./src/routes/tasks');
 const videoRoutes = require('./src/routes/video');
 const settingsRoutes = require('./src/routes/settings');
 const progressRoutes = require('./src/routes/progress');
+const pushRoutes = require('./src/routes/push');
 const reminders = require('./src/services/reminders');
 const billingRoutes = require('./src/routes/billing');
 const setupRoutes = require('./src/routes/setup');
@@ -231,6 +232,7 @@ app.use('/api/tasks', tasksRoutes);
 app.use('/api/video', videoRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/progress', progressRoutes);
+app.use('/api/push', pushRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/setup', setupRoutes);
 

@@ -167,6 +167,8 @@
   const inviteCounts = document.getElementById('invite-counts');
   const signupInvite = document.getElementById('signup-invite');
   const digestToggle = document.getElementById('digest-toggle');
+  const pushRow = document.getElementById('pushRow');
+  const pushToggle = document.getElementById('push-toggle');
   const digestError = document.getElementById('digest-error');
   const digestSaved = document.getElementById('digest-saved');
   const memoryInvite = document.getElementById('memory-invite');
@@ -1844,6 +1846,7 @@
     if (data) {
       fillMemoryForm(data.profile);
       fillInviteCard(data.referral);
+      initPushToggle();
       digestToggle.checked = Boolean(data.settings.remindersOn);
       settingsDisplayName.value = data.settings.displayName || '';
       settingsEmail.value = data.settings.email;
@@ -2012,6 +2015,81 @@
       selection.addRange(range);
     }
   });
+
+  // Notifications on this device.
+  //
+  // The row stays hidden unless the browser can do this AND the site has keys
+  // configured. Offering a switch that cannot work is worse than not offering
+  // one - the person flips it, nothing happens, and they conclude the app is
+  // broken rather than unconfigured.
+  function base64ToUint8(base64) {
+    const padded = (base64 + '='.repeat((4 - (base64.length % 4)) % 4)).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = window.atob(padded);
+    return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+  }
+
+  // Settings is opened again and again in one session, and this runs each
+  // time. The listener must be attached once or the fifth visit means five
+  // handlers racing each other on one flip.
+  let pushWired = false;
+
+  async function initPushToggle() {
+    const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+    if (!supported) return;
+
+    const { ok, data } = await api('/api/push/key');
+    if (!ok || !data || !data.configured) return;
+
+    const registration = await navigator.serviceWorker.ready;
+    const existing = await registration.pushManager.getSubscription();
+    // Re-read every time: the subscription can disappear outside this page,
+    // by revoking permission in the browser's own settings.
+    pushToggle.checked = Boolean(existing);
+    pushRow.hidden = false;
+
+    if (pushWired) return;
+    pushWired = true;
+
+    pushToggle.addEventListener('change', async () => {
+      digestError.textContent = '';
+      digestSaved.hidden = true;
+      const wanted = pushToggle.checked;
+
+      try {
+        if (!wanted) {
+          const current = await registration.pushManager.getSubscription();
+          if (current) {
+            await api('/api/push/unsubscribe', { method: 'POST', body: { endpoint: current.endpoint } });
+            await current.unsubscribe();
+          }
+          digestSaved.hidden = false;
+          return;
+        }
+
+        // Asked only when the switch is flipped, never on load. A permission
+        // prompt that appears unprompted is the fastest way to be refused
+        // permanently.
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+          pushToggle.checked = false;
+          digestError.textContent = tr('push.blocked');
+          return;
+        }
+
+        const { data: fresh } = await api('/api/push/key');
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: base64ToUint8(fresh.key),
+        });
+        const saved = await api('/api/push/subscribe', { method: 'POST', body: { subscription } });
+        if (!saved.ok) throw new Error('rejected');
+        digestSaved.hidden = false;
+      } catch {
+        pushToggle.checked = !wanted;
+        digestError.textContent = tr('push.failed');
+      }
+    });
+  }
 
   // Saved on the flip, like the theme and language pickers - a switch with a
   // separate Save button is a switch that gets left unsaved.

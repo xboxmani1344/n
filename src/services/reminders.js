@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const { db } = require('./../db');
 const email = require('./email');
 const progress = require('./progress');
+const push = require('./push');
 
 // The one email this app sends that nobody asked for at the moment it
 // arrives, which is why almost all of the care here is about not sending it.
@@ -157,18 +158,24 @@ ${paragraphs}
 // there was anything to say, so a quiet day is not retried every fifteen
 // minutes until the hour is over.
 async function runOnce(appUrl, now = new Date()) {
-  if (!email.isConfigured()) return { considered: 0, sent: 0 };
+  // Either channel is reason enough to run. Gating the whole pass on SMTP
+  // would have meant a site with notifications and no mail server sending
+  // nothing at all.
+  if (!email.isConfigured() && !push.isConfigured()) return { considered: 0, sent: 0, pushed: 0 };
 
   const today = progress.tehranDay(now);
   const waiting = db
     .prepare(
-      `SELECT id, email, display_name, language, reminder_token FROM users
-        WHERE reminders_on = 1
-          AND (last_reminder_at IS NULL OR last_reminder_at < ?)`
+      `SELECT u.id, u.email, u.display_name, u.language, u.reminder_token, u.reminders_on,
+              (SELECT COUNT(*) FROM push_subscriptions p WHERE p.user_id = u.id) AS devices
+         FROM users u
+        WHERE (u.reminders_on = 1 OR EXISTS (SELECT 1 FROM push_subscriptions p WHERE p.user_id = u.id))
+          AND (u.last_reminder_at IS NULL OR u.last_reminder_at < ?)`
     )
     .all(today);
 
   let sent = 0;
+  let pushed = 0;
   for (const user of waiting) {
     // Written before the attempt, not after. A send that throws halfway
     // through must not leave the row eligible again on the next tick, which
@@ -185,15 +192,30 @@ async function runOnce(appUrl, now = new Date()) {
       unsubscribeUrl: `${appUrl}/unsubscribe/${user.reminder_token}`,
     });
 
-    try {
-      await email.send({ to: user.email, subject, text, html: htmlFor(lang, text) });
-      sent += 1;
-    } catch (err) {
-      console.error(`Reminder to user ${user.id} failed:`, err.message);
+    // A notification is a glance, not a letter: the count and nothing else.
+    // Putting the task list in it would be a wall of text on a lock screen.
+    if (user.devices) {
+      const first = digest.due[0].title;
+      pushed += await push.sendTo(user.id, {
+        title: subject,
+        body: digest.due.length === 1 ? first : `${first} +${digest.due.length - 1}`,
+        dir: lang === 'fa' ? 'rtl' : 'ltr',
+        lang,
+        url: '/app',
+      });
+    }
+
+    if (user.reminders_on && email.isConfigured()) {
+      try {
+        await email.send({ to: user.email, subject, text, html: htmlFor(lang, text) });
+        sent += 1;
+      } catch (err) {
+        console.error(`Reminder to user ${user.id} failed:`, err.message);
+      }
     }
   }
 
-  return { considered: waiting.length, sent };
+  return { considered: waiting.length, sent, pushed };
 }
 
 // Started once at boot. An interval in the process rather than a host cron:
@@ -201,7 +223,7 @@ async function runOnce(appUrl, now = new Date()) {
 // rather than in the scheduler, and nothing here would change if this moved to
 // a cron later.
 function start(appUrl) {
-  if (!email.isConfigured()) return null;
+  if (!email.isConfigured() && !push.isConfigured()) return null;
 
   const tick = () => {
     if (tehranHour() !== SEND_HOUR_TEHRAN) return;

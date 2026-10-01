@@ -202,6 +202,14 @@
     'settings.themeSystem': ['System', 'سیستم'],
     'settings.themeLight': ['Light', 'روشن'],
     'settings.themeDark': ['Dark', 'تیره'],
+    // --- notifications on the device --------------------------------------
+    'push.enable': ['Notify me on this device instead', 'به‌جایش روی همین دستگاه خبرم کن'],
+    'push.blocked': [
+      'Your browser is blocking notifications for this site. Allow them in the site settings.',
+      'مرورگرت اعلان‌های این سایت را بسته است. از تنظیمات سایت اجازه بده.',
+    ],
+    'push.failed': ['Could not switch notifications on here.', 'نشد اعلان‌ها را اینجا روشن کنم.'],
+
     // --- bringing somebody with you ---------------------------------------
     'invite.title': ['Invite a friend', 'یک دوست را دعوت کن'],
     'invite.hint': [

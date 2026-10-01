@@ -1121,6 +1121,49 @@ async function waitForListening() {
     report(false, 'the manifest and its icons back up the install prompt', err.message);
   }
 
+  // Notifications. The smoke server has no VAPID keys, which is the case that
+  // matters most: unconfigured, the whole feature has to be invisible rather
+  // than broken. A switch that cannot work is worse than no switch, because
+  // flipping it and seeing nothing happen reads as the app being broken.
+  try {
+    const signup = await fetch(`http://127.0.0.1:${PORT}/api/auth/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: `push-${Date.now()}@example.com`, password: 'password123' }),
+    });
+    const cookie = (signup.headers.get('set-cookie') || '').split(';')[0];
+
+    const key = await (await fetch(`http://127.0.0.1:${PORT}/api/push/key`, { headers: { cookie } })).json();
+    const sub = await fetch(`http://127.0.0.1:${PORT}/api/push/subscribe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', cookie },
+      body: JSON.stringify({ subscription: { endpoint: 'https://example.invalid/x', keys: { p256dh: 'a', auth: 'b' } } }),
+    });
+    const anon = await fetch(`http://127.0.0.1:${PORT}/api/push/key`);
+
+    const ok = key.configured === false && key.key === null && sub.status === 503 && anon.status === 401;
+    report(ok, 'without keys, notifications are absent rather than broken',
+      ok ? 'reports unconfigured, refuses to subscribe, and still needs a session'
+         : JSON.stringify({ key, subscribe: sub.status, signedOut: anon.status }));
+  } catch (err) {
+    report(false, 'without keys, notifications are absent rather than broken', err.message);
+  }
+
+  // The worker has to be able to show one and take the tap somewhere.
+  try {
+    const sw = await (await fetch(`http://127.0.0.1:${PORT}/sw.js`)).text();
+    const shows = sw.includes("addEventListener('push'") && sw.includes('showNotification');
+    const handlesTap = sw.includes("addEventListener('notificationclick'");
+    // Without a tag, three days away means three notifications stacked up.
+    const replaces = sw.includes('tag:');
+    const ok = shows && handlesTap && replaces;
+    report(ok, 'the worker shows a notification and handles the tap',
+      ok ? 'shown, tagged so it replaces rather than stacks, and focuses an open tab'
+         : JSON.stringify({ shows, handlesTap, replaces }));
+  } catch (err) {
+    report(false, 'the worker shows a notification and handles the tap', err.message);
+  }
+
   server.kill();
   fs.rmSync(dbDir, { recursive: true, force: true });
 

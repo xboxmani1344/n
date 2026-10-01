@@ -35,6 +35,49 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// A notification that arrived. The payload is encrypted end to end, so this
+// is the first place it is readable - and if it is unreadable for any reason,
+// something generic is still better than a browser-supplied "This site has
+// been updated in the background", which is what appears if nothing is shown.
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    /* fall through to the defaults below */
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Buddy', {
+      body: data.body || '',
+      icon: '/brand/icon-192.png',
+      badge: '/brand/icon-192.png',
+      dir: data.dir || 'auto',
+      lang: data.lang || 'en',
+      // Replaces rather than stacks: three days away should not mean three
+      // notifications waiting.
+      tag: data.tag || 'buddy-digest',
+      data: { url: data.url || '/app' },
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = (event.notification.data && event.notification.data.url) || '/app';
+
+  // Focus a tab that is already open rather than piling up new ones.
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const client of windows) {
+        if (new URL(client.url).pathname.startsWith('/app')) return client.focus();
+      }
+      return self.clients.openWindow(target);
+    })()
+  );
+});
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
