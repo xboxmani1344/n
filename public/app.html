@@ -108,6 +108,7 @@
             autocomplete="new-password"
             minlength="8"
           />
+          <input type="text" id="signup-invite" name="invite" placeholder="Invite code" data-i18n-placeholder="invite.field" autocomplete="off" hidden />
           <p class="auth-error" id="signup-error"></p>
           <button type="submit" class="pill-btn primary-btn" data-i18n="auth.create">Create Account</button>
         </form>
@@ -387,6 +388,16 @@
             <p class="settings-saved" id="memory-saved" data-i18n="settings.saved" hidden>Saved.</p>
             <button type="submit" class="pill-btn primary-btn settings-save-btn" data-i18n="memory.save">Save</button>
           </form>
+        </div>
+
+        <div class="chat-card glass settings-card">
+          <p class="settings-section-label" data-i18n="invite.title">Invite a friend</p>
+          <p class="settings-section-hint" data-i18n="invite.hint">When someone signs up with your code and actually starts using Buddy, you both get a discount.</p>
+          <div class="invite-code-row">
+            <code class="invite-code" id="invite-code"></code>
+            <button type="button" class="pill-btn glass" id="invite-copy" data-i18n="invite.copy">Copy link</button>
+          </div>
+          <p class="invite-counts" id="invite-counts"></p>
         </div>
 
         <div class="chat-card glass settings-card">

@@ -162,6 +162,10 @@
   const progressStreak = document.getElementById('progress-streak');
   const progressStreakCount = document.getElementById('progress-streak-count');
   const progressFortnight = document.getElementById('progress-fortnight');
+  const inviteCode = document.getElementById('invite-code');
+  const inviteCopy = document.getElementById('invite-copy');
+  const inviteCounts = document.getElementById('invite-counts');
+  const signupInvite = document.getElementById('signup-invite');
   const digestToggle = document.getElementById('digest-toggle');
   const digestError = document.getElementById('digest-error');
   const digestSaved = document.getElementById('digest-saved');
@@ -326,6 +330,9 @@
         email: formData.get('email'),
         password: formData.get('password'),
         displayName: formData.get('displayName'),
+        // Ignored by the server if it is wrong, expired or their own, so
+        // there is nothing to validate here.
+        invite: signupInvite.value.trim() || undefined,
         // Sent with the signup rather than left to the settings PATCH that
         // follows: the welcome email goes out the moment the account exists,
         // so by the time the preference is saved the wrong-language email has
@@ -370,6 +377,21 @@
     // honest; an internal key is not.
     const key = `auth.err.${code}`;
     loginError.textContent = tr(key) === key ? tr('auth.err.google') : tr(key);
+  }
+
+  // Somebody arriving on a friend's link. The field stays hidden unless there
+  // is actually a code to show - a normal sign-up should not have to wonder
+  // what an invite code is or whether it is required.
+  function readInviteFromUrl() {
+    const code = new URLSearchParams(window.location.search).get('invite');
+    if (!code) return;
+    signupInvite.value = code.trim().toUpperCase();
+    signupInvite.hidden = false;
+    // Sign-up rather than log-in: a link from a friend is for somebody who
+    // does not have an account yet. Driven through the tab itself so the
+    // active styling and the form visibility cannot disagree.
+    const signupTab = document.querySelector('.auth-tab[data-tab="signup"]');
+    if (signupTab) signupTab.click();
   }
 
   async function configureGoogleButton() {
@@ -1821,6 +1843,7 @@
     const { data } = await api('/api/settings');
     if (data) {
       fillMemoryForm(data.profile);
+      fillInviteCard(data.referral);
       digestToggle.checked = Boolean(data.settings.remindersOn);
       settingsDisplayName.value = data.settings.displayName || '';
       settingsEmail.value = data.settings.email;
@@ -1961,6 +1984,34 @@
     memoryHours.value = p.hours_per_day === null || p.hours_per_day === undefined ? '' : p.hours_per_day;
     memoryNotes.value = p.notes || '';
   }
+
+  function fillInviteCard(referral) {
+    if (!referral || !referral.code) return;
+    inviteCode.textContent = referral.code;
+    inviteCounts.textContent = referral.invited
+      ? `${num(referral.invited)} / ${num(referral.rewarded)}`
+      : tr('invite.none');
+  }
+
+  inviteCopy.addEventListener('click', async () => {
+    const link = `${window.location.origin}/app?invite=${encodeURIComponent(inviteCode.textContent)}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      inviteCopy.textContent = tr('invite.copied');
+      window.setTimeout(() => {
+        inviteCopy.textContent = tr('invite.copy');
+      }, 2000);
+    } catch {
+      // Clipboard access is refused outside a secure context and in some
+      // in-app browsers. Selecting the text is the fallback that always
+      // works, and it is better than a button that silently does nothing.
+      const range = document.createRange();
+      range.selectNodeContents(inviteCode);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  });
 
   // Saved on the flip, like the theme and language pickers - a switch with a
   // separate Save button is a switch that gets left unsaved.
@@ -2127,6 +2178,7 @@
       // After the view exists, so the message is not written into a form that
       // is still hidden.
       showAuthErrorFromUrl();
+      readInviteFromUrl();
     }
   }
 

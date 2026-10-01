@@ -8,6 +8,7 @@ const { hashPassword, verifyPassword, SESSION_COOKIE } = require('../services/au
 const { transaction } = require('../db');
 const { PROFILE_FIELDS } = require('../prompts');
 const reminders = require('../services/reminders');
+const referrals = require('../services/referrals');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -62,6 +63,7 @@ router.get('/', (req, res) => {
   res.json({
     settings: settingsOut(req.user),
     profile: profileOut(req.user.id),
+    referral: referrals.statsFor(req.user.id),
     subscription: usageSummary(req.user.id),
   });
 });

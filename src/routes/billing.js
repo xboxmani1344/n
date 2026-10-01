@@ -97,8 +97,11 @@ router.get('/', requireAuth, (req, res) => {
     })),
     billingConfigured: zarinpal.isConfigured() || Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PRICE_ID),
     discountCode: (() => {
-      const own = discounts.forUser(req.user.id);
-      return own && !own.used_at ? { code: own.code, percent: own.percent } : null;
+      // The most valuable usable one. Now that a referral reward can sit
+      // beside the sign-up code, showing whichever was created first would
+      // quietly short-change somebody who had earned the better one.
+      const own = discounts.bestUnusedFor(req.user.id);
+      return own ? { code: own.code, percent: own.percent } : null;
     })(),
   });
 });

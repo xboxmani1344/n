@@ -15,6 +15,7 @@ const { asyncHandler } = require('../middleware/errors');
 const discounts = require('../services/discounts');
 const welcomeEmail = require('../services/welcomeEmail');
 const { appOrigin, googleCallbackUrl } = require('../services/appUrl');
+const referrals = require('../services/referrals');
 
 const router = express.Router();
 const isProd = process.env.NODE_ENV === 'production';
@@ -84,7 +85,7 @@ function sendWelcome(userId, req) {
 router.post(
   '/signup',
   asyncHandler(async (req, res) => {
-    const { email, password, displayName } = req.body || {};
+    const { email, password, displayName, invite } = req.body || {};
     if (!isValidEmail(email) || typeof password !== 'string' || password.length < 8) {
       return res
         .status(400)
@@ -103,6 +104,11 @@ router.post(
       displayName,
       language: requestedLanguage(req, req.body),
     });
+
+    // Recorded, not paid. A code that is wrong, expired or their own is
+    // ignored in silence - none of those is a reason to refuse somebody an
+    // account they came here to make.
+    if (invite) referrals.claim(userId, invite);
     sendWelcome(userId, req);
 
     const session = createSession(userId, req.headers['user-agent']);

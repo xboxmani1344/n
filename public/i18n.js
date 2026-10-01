@@ -202,6 +202,20 @@
     'settings.themeSystem': ['System', 'سیستم'],
     'settings.themeLight': ['Light', 'روشن'],
     'settings.themeDark': ['Dark', 'تیره'],
+    // --- bringing somebody with you ---------------------------------------
+    'invite.title': ['Invite a friend', 'یک دوست را دعوت کن'],
+    'invite.hint': [
+      'When someone signs up with your code and actually starts using Buddy, you both get a discount.',
+      'وقتی کسی با کد تو ثبت‌نام کند و واقعاً شروع به استفاده کند، هر دوتان تخفیف می‌گیرید.',
+    ],
+    'invite.copy': ['Copy link', 'کپی لینک'],
+    'invite.copied': ['Copied', 'کپی شد'],
+    'invite.field': ['Invite code', 'کد دعوت'],
+    'invite.none': [
+      'Nobody yet. The link is the whole thing — send it to one person.',
+      'هنوز کسی نیامده. همین لینک کل ماجراست — برای یک نفر بفرستش.',
+    ],
+
     // --- the coach proposing work -----------------------------------------
     'plan.heading': ['Put these in your planner?', 'این‌ها را در برنامه‌ریز بگذارم؟'],
     'plan.add': ['Add them', 'اضافه کن'],

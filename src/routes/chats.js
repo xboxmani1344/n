@@ -18,6 +18,7 @@ const apiKeys = require('../services/apiKeys');
 const usage = require('../services/usage');
 const progress = require('../services/progress');
 const taskProposals = require('../services/taskProposals');
+const referrals = require('../services/referrals');
 
 // What the server will accept as a photograph of a question.
 //
@@ -371,6 +372,10 @@ router.post(
     // After the reply, not before: a call that failed is not a day's work, and
     // on the free tier failing is routine.
     progress.recordActivity(req.user.id);
+    // The same moment is when a referral stops being a row and becomes a
+    // user. Cheap: one indexed lookup that finds nothing for everybody who
+    // was never invited, which is almost everybody.
+    referrals.rewardIfEarned(req.user.id);
     db.prepare('UPDATE chats SET updated_at = ? WHERE id = ?').run(new Date().toISOString(), chat.id);
 
     if (!hidden) {

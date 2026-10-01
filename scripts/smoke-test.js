@@ -984,6 +984,97 @@ async function waitForListening() {
     report(false, 'every coach knows it can put work in the planner', err.message);
   }
 
+  // Referrals. The mechanics are twenty lines; everything worth testing is
+  // the reason this is not simply free money for whoever owns the most email
+  // addresses.
+  try {
+    const { execFileSync } = require('node:child_process');
+    const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'studybuddy-ref-'));
+    const root = path.join(__dirname, '..');
+
+    const script = `
+      const { db } = require(${JSON.stringify(path.join(root, 'src', 'db'))});
+      const referrals = require(${JSON.stringify(path.join(root, 'src', 'services', 'referrals'))});
+      const discounts = require(${JSON.stringify(path.join(root, 'src', 'services', 'discounts'))});
+
+      const mk = (mail) => {
+        db.prepare("INSERT INTO users (email, password_hash, theme, created_at) VALUES (?,'x','system','n')").run(mail);
+        return db.prepare('SELECT id FROM users WHERE email = ?').get(mail).id;
+      };
+      const rewards = (id) =>
+        db.prepare("SELECT COUNT(*) AS n FROM discount_codes WHERE user_id = ? AND kind = 'referral'").get(id).n;
+
+      const alice = mk('alice@x');
+      const bob = mk('bob@x');
+      const code = referrals.codeFor(alice);
+
+      // Inviting yourself is the first thing anybody tries.
+      const selfClaim = referrals.claim(alice, code);
+      // A code nobody owns.
+      const junkClaim = referrals.claim(bob, 'BUDDY-ZZZZ-ZZZZ');
+
+      const realClaim = referrals.claim(bob, code);
+      // Signing up is not using it: no reward has been paid yet.
+      const paidAtSignup = rewards(alice) + rewards(bob);
+
+      // Bob actually uses the app.
+      const firstReward = referrals.rewardIfEarned(bob);
+      const afterUse = { alice: rewards(alice), bob: rewards(bob) };
+
+      // Every later message must not pay again.
+      referrals.rewardIfEarned(bob);
+      referrals.rewardIfEarned(bob);
+      const afterRepeats = { alice: rewards(alice), bob: rewards(bob) };
+
+      // The reward is worth more than the signup code, and checkout offers
+      // the better of the two rather than whichever came first.
+      discounts.issueForUser(alice);
+      const best = discounts.bestUnusedFor(alice);
+
+      // The cap: one inviter cannot farm this forever.
+      let capped = true;
+      for (let i = 0; i < referrals.MAX_REWARDED_PER_INVITER + 3; i += 1) {
+        const guest = mk(\`guest\${i}@x\`);
+        referrals.claim(guest, code);
+        referrals.rewardIfEarned(guest);
+      }
+      const total = db.prepare("SELECT COUNT(*) AS n FROM discount_codes WHERE user_id = ? AND kind = 'referral'").get(alice).n;
+      capped = total <= referrals.MAX_REWARDED_PER_INVITER;
+
+      console.log(JSON.stringify({
+        selfClaim, junkClaim, realClaim, paidAtSignup,
+        firstReward, afterUse, afterRepeats,
+        bestPercent: best && best.percent, bestKind: best && best.kind,
+        total, cap: referrals.MAX_REWARDED_PER_INVITER, capped,
+      }));
+    `;
+
+    const out = execFileSync(process.execPath, ['-e', script], {
+      env: { ...process.env, DB_PATH: path.join(sandbox, 'ref.db') },
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    fs.rmSync(sandbox, { recursive: true, force: true });
+    const r = JSON.parse(out.trim().split('\n').pop());
+
+    const ok =
+      r.selfClaim === false &&                        // no inviting yourself
+      r.junkClaim === false &&                        // no inventing a code
+      r.realClaim === true &&
+      r.paidAtSignup === 0 &&                         // signing up earns nothing
+      r.firstReward === true &&
+      r.afterUse.alice === 1 && r.afterUse.bob === 1 &&   // both sides, once
+      r.afterRepeats.alice === 1 && r.afterRepeats.bob === 1 &&  // and only once
+      r.bestKind === 'referral' &&                    // checkout offers the better code
+      r.capped;
+
+    report(ok, 'a referral pays both sides once, and only for a real user',
+      ok ? `self and junk codes refused, nothing at signup, capped at ${r.cap}`
+         : JSON.stringify(r));
+  } catch (err) {
+    report(false, 'a referral pays both sides once, and only for a real user', err.message);
+  }
+
   server.kill();
   fs.rmSync(dbDir, { recursive: true, force: true });
 

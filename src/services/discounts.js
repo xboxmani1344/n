@@ -7,17 +7,34 @@ const { db } = require('./../db');
 // code that leaks is worth one discount rather than unlimited ones.
 
 const DEFAULT_PERCENT = 10;
+
+// More than the sign-up discount, because bringing somebody is worth more than
+// arriving - and because both sides get it, so it has to be worth telling a
+// friend about.
+const DEFAULT_REFERRAL_PERCENT = 20;
+
 const VALID_FOR_DAYS = 30;
 
 // No 0/O or 1/I/L: these get read off a screen and typed by hand, and the pairs
 // that look alike are the ones people get wrong.
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
-function newCode() {
+// Shared with the invite codes in referrals.js, which get read off a screen
+// and typed by hand in exactly the same way.
+function randomCode(prefix) {
   const bytes = crypto.randomBytes(8);
   let out = '';
   for (const b of bytes) out += ALPHABET[b % ALPHABET.length];
-  return `SB-${out.slice(0, 4)}-${out.slice(4, 8)}`;
+  return `${prefix}-${out.slice(0, 4)}-${out.slice(4, 8)}`;
+}
+
+function newCode() {
+  return randomCode('SB');
+}
+
+function referralPercent() {
+  const raw = Number(process.env.REFERRAL_DISCOUNT_PERCENT);
+  return Number.isFinite(raw) && raw > 0 && raw < 100 ? Math.round(raw) : DEFAULT_REFERRAL_PERCENT;
 }
 
 function signupPercent() {
@@ -29,7 +46,9 @@ function signupPercent() {
 // creating an account.
 function issueForUser(userId) {
   try {
-    const existing = db.prepare('SELECT * FROM discount_codes WHERE user_id = ?').get(userId);
+    const existing = db
+      .prepare("SELECT * FROM discount_codes WHERE user_id = ? AND kind = 'signup'")
+      .get(userId);
     if (existing) return existing;
 
     const now = new Date();
@@ -40,10 +59,12 @@ function issueForUser(userId) {
     for (let attempt = 0; attempt < 5; attempt += 1) {
       try {
         db.prepare(
-          `INSERT INTO discount_codes (code, percent, user_id, created_at, expires_at)
-           VALUES (?, ?, ?, ?, ?)`
+          `INSERT INTO discount_codes (code, percent, user_id, kind, created_at, expires_at)
+           VALUES (?, ?, ?, 'signup', ?, ?)`
         ).run(newCode(), signupPercent(), userId, now.toISOString(), expires.toISOString());
-        return db.prepare('SELECT * FROM discount_codes WHERE user_id = ?').get(userId);
+        return db
+          .prepare("SELECT * FROM discount_codes WHERE user_id = ? AND kind = 'signup'")
+          .get(userId);
       } catch (err) {
         if (!String(err.message).includes('UNIQUE')) throw err;
       }
@@ -55,8 +76,55 @@ function issueForUser(userId) {
   }
 }
 
+// The sign-up code specifically - this is what the welcome email quotes, and
+// it must keep meaning that now there can be more than one code on an account.
 function forUser(userId) {
-  return db.prepare('SELECT * FROM discount_codes WHERE user_id = ?').get(userId) || null;
+  return (
+    db.prepare("SELECT * FROM discount_codes WHERE user_id = ? AND kind = 'signup'").get(userId) || null
+  );
+}
+
+// A reward, alongside whatever else the account holds. Never throws, for the
+// same reason issueForUser does not: this runs inside somebody else's request
+// and must not be able to fail it.
+function issueReward(userId, percent = referralPercent()) {
+  try {
+    const now = new Date();
+    const expires = new Date(now.getTime() + VALID_FOR_DAYS * 86400000);
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      try {
+        const code = randomCode('BUD');
+        db.prepare(
+          `INSERT INTO discount_codes (code, percent, user_id, kind, created_at, expires_at)
+           VALUES (?, ?, ?, 'referral', ?, ?)`
+        ).run(code, percent, userId, now.toISOString(), expires.toISOString());
+        return db.prepare('SELECT * FROM discount_codes WHERE code = ?').get(code);
+      } catch (err) {
+        if (!String(err.message).includes('UNIQUE')) throw err;
+      }
+    }
+    return null;
+  } catch (err) {
+    console.error('Could not issue a referral reward:', err.message);
+    return null;
+  }
+}
+
+// What to offer at checkout when an account holds several. The most valuable
+// usable one - showing the weaker code while a better one sits unused would be
+// the app quietly short-changing somebody.
+function bestUnusedFor(userId) {
+  return (
+    db
+      .prepare(
+        `SELECT * FROM discount_codes
+          WHERE user_id = ? AND used_at IS NULL
+            AND (expires_at IS NULL OR expires_at > ?)
+          ORDER BY percent DESC, id ASC
+          LIMIT 1`
+      )
+      .get(userId, new Date().toISOString()) || null
+  );
 }
 
 // Returns { ok, percent, reason }. Only the owner may use their own code, so a
@@ -92,7 +160,11 @@ function applyTo(amountToman, percent) {
 }
 
 module.exports = {
+  randomCode,
   issueForUser,
+  issueReward,
+  bestUnusedFor,
+  referralPercent,
   forUser,
   validate,
   markUsed,
