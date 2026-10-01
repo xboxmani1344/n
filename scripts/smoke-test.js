@@ -1075,6 +1075,52 @@ async function waitForListening() {
     report(false, 'a referral pays both sides once, and only for a real user', err.message);
   }
 
+  // The service worker. It is the one file here that outlives a deploy inside
+  // somebody's browser, so the two ways it goes wrong are both worth a check:
+  // shipped with its placeholder still in it, and served from a cache so that
+  // it never updates again.
+  try {
+    const res = await fetch(`http://127.0.0.1:${PORT}/sw.js`);
+    const body = await res.text();
+    const stamp = require('../src/version').STAMP;
+
+    const served = res.status === 200;
+    const substituted = body.includes(`buddy-${stamp}`) && !body.includes('__BUILD_STAMP__');
+    // Without this the browser keeps an old worker forever, and no amount of
+    // deploying replaces it.
+    const notCached = /no-cache|no-store|max-age=0/.test(res.headers.get('cache-control') || '');
+    // An API response in the cache is somebody seeing a stale streak, or in
+    // the worst case somebody else's.
+    const apiExcluded = body.includes("url.pathname.startsWith('/api/')");
+    const hasFetchHandler = body.includes("addEventListener('fetch'");
+
+    const ok = served && substituted && notCached && apiExcluded && hasFetchHandler;
+    report(ok, 'the service worker is stamped, uncached, and never caches the API',
+      ok ? `cache named buddy-${stamp}`
+         : JSON.stringify({ served, substituted, notCached, apiExcluded, hasFetchHandler }));
+  } catch (err) {
+    report(false, 'the service worker is stamped, uncached, and never caches the API', err.message);
+  }
+
+  // The manifest promised installability for weeks while the one thing that
+  // makes it true was missing. Check they agree with each other now.
+  try {
+    const manifest = await (await fetch(`http://127.0.0.1:${PORT}/site.webmanifest`)).json();
+    const icons = (manifest.icons || []).map((i) => i.src);
+    const reachable = await Promise.all(
+      icons.map(async (src) => (await fetch(`http://127.0.0.1:${PORT}${src}`)).status === 200)
+    );
+    const ok =
+      manifest.display === 'standalone' &&
+      manifest.start_url === '/app' &&
+      icons.length > 0 &&
+      reachable.every(Boolean);
+    report(ok, 'the manifest and its icons back up the install prompt',
+      ok ? `${icons.length} icons, all served` : JSON.stringify({ display: manifest.display, icons, reachable }));
+  } catch (err) {
+    report(false, 'the manifest and its icons back up the install prompt', err.message);
+  }
+
   server.kill();
   fs.rmSync(dbDir, { recursive: true, force: true });
 

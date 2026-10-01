@@ -99,6 +99,23 @@ app.use('/api/billing/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 app.use(attachUser);
+// Before express.static, which would otherwise serve the file verbatim with
+// its placeholder still in it.
+//
+// Two things this route has to get right. The stamp is substituted in, so
+// every deploy names a new cache and the worker discards the old one by
+// itself - no version constant for anyone to forget. And it is served
+// no-cache: a cached service worker is a service worker that never updates,
+// which is the one bug in this area that cannot be fixed by deploying again.
+const SERVICE_WORKER = fs
+  .readFileSync(path.join(__dirname, 'public', 'sw.js'), 'utf8')
+  .replace('__BUILD_STAMP__', require('./src/version').STAMP);
+
+app.get('/sw.js', (_req, res) => {
+  res.set('Cache-Control', 'no-cache');
+  res.type('application/javascript').send(SERVICE_WORKER);
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // KaTeX is served from the app rather than a CDN. Both this server and most of

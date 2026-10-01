@@ -2182,5 +2182,20 @@
     }
   }
 
+  // Registered after bootstrap is under way, not before: the worker is what
+  // makes the app installable and able to open offline, and neither is worth
+  // delaying the first paint for.
+  //
+  // Wrapped because this throws outright on an insecure origin, and someone
+  // running this over plain http on their own machine should not see the app
+  // fail over a progressive enhancement.
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {
+        /* No offline support and no install prompt. Everything else works. */
+      });
+    });
+  }
+
   bootstrap();
 })();
