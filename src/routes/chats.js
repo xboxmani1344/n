@@ -17,6 +17,7 @@ const ai = require('../services/ai');
 const apiKeys = require('../services/apiKeys');
 const usage = require('../services/usage');
 const progress = require('../services/progress');
+const taskProposals = require('../services/taskProposals');
 
 // What the server will accept as a photograph of a question.
 //
@@ -357,9 +358,16 @@ router.post(
       throw err;
     }
 
+    // The proposal block is an instruction to this app, not something to show
+    // anybody. Stripped before the reply is stored, not just before it is
+    // displayed: left in the row it would be read back into the next prompt as
+    // though the coach had already said it, and it would reappear verbatim
+    // when the conversation is reopened.
+    const { text: visibleReply, tasks: proposedTasks } = taskProposals.parse(reply);
+
     db.prepare(
       'INSERT INTO messages (chat_id, role, content, hidden, created_at) VALUES (?, ?, ?, 0, ?)'
-    ).run(chat.id, 'assistant', reply, new Date().toISOString());
+    ).run(chat.id, 'assistant', visibleReply, new Date().toISOString());
     // After the reply, not before: a call that failed is not a day's work, and
     // on the free tier failing is routine.
     progress.recordActivity(req.user.id);
@@ -369,7 +377,9 @@ router.post(
       usage.increment(req.user.id, 'ai_messages');
     }
 
-    res.json({ reply });
+    // Proposed, not created. Nothing reaches the planner until somebody says
+    // so - a coach that quietly fills it with twenty entries is not a coach.
+    res.json({ reply: visibleReply, proposedTasks });
   })
 );
 

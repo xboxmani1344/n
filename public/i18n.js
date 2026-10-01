@@ -202,6 +202,14 @@
     'settings.themeSystem': ['System', 'سیستم'],
     'settings.themeLight': ['Light', 'روشن'],
     'settings.themeDark': ['Dark', 'تیره'],
+    // --- the coach proposing work -----------------------------------------
+    'plan.heading': ['Put these in your planner?', 'این‌ها را در برنامه‌ریز بگذارم؟'],
+    'plan.add': ['Add them', 'اضافه کن'],
+    'plan.dismiss': ['No thanks', 'نه ممنون'],
+    'plan.added': ['Added to your planner.', 'به برنامه‌ریز اضافه شد.'],
+    'plan.addFailed': ['Could not add those. Try again.', 'اضافه نشد. دوباره امتحان کن.'],
+    'plan.noDate': ['no date', 'بدون تاریخ'],
+
     // --- the daily email ---------------------------------------------------
     'digest.title': ['Daily email', 'ایمیل روزانه'],
     'digest.hint': [

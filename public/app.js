@@ -595,6 +595,98 @@
     return div;
   }
 
+  // The coach proposing work, and the person deciding whether to take it.
+  //
+  // Drawn into the conversation rather than as a dialog: it belongs to the
+  // reply it came with, it is not urgent, and a modal that interrupts to ask
+  // about homework would be the app shouting. Ignoring it is a valid answer -
+  // scroll past and nothing happens.
+  function addTaskProposal(tasks) {
+    const card = document.createElement('div');
+    card.className = 'msg plan-card';
+
+    const heading = document.createElement('p');
+    heading.className = 'plan-heading';
+    heading.textContent = tr('plan.heading');
+    card.appendChild(heading);
+
+    const list = document.createElement('ul');
+    list.className = 'plan-list';
+    for (const task of tasks) {
+      const item = document.createElement('li');
+
+      const title = document.createElement('span');
+      title.className = 'plan-task-title';
+      title.textContent = task.title;
+      item.appendChild(title);
+
+      const when = document.createElement('span');
+      when.className = 'plan-task-date';
+      // The same Jalali-aware formatter the planner itself uses, so a date
+      // does not read one way in the card and another way in the list it is
+      // about to join.
+      when.textContent = task.dueAt ? i18n.formatShortDate(task.dueAt) : tr('plan.noDate');
+      item.appendChild(when);
+
+      list.appendChild(item);
+    }
+    card.appendChild(list);
+
+    const actions = document.createElement('div');
+    actions.className = 'plan-actions';
+
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.className = 'pill-btn primary-btn';
+    add.textContent = tr('plan.add');
+
+    const dismiss = document.createElement('button');
+    dismiss.type = 'button';
+    dismiss.className = 'pill-btn ghost-btn';
+    dismiss.textContent = tr('plan.dismiss');
+
+    const outcome = document.createElement('p');
+    outcome.className = 'plan-outcome';
+    outcome.hidden = true;
+
+    dismiss.addEventListener('click', () => card.remove());
+
+    add.addEventListener('click', async () => {
+      add.disabled = true;
+      dismiss.disabled = true;
+
+      // One request per task, because that is the endpoint that exists and a
+      // batch route for this would be a second way to create a task.
+      const results = await Promise.all(
+        tasks.map((task) =>
+          api('/api/tasks', { method: 'POST', body: { title: task.title, dueAt: task.dueAt } })
+        )
+      );
+
+      if (results.some((r) => !r.ok)) {
+        // Partially added is still added, so the buttons do not come back -
+        // pressing again would duplicate whatever did get through.
+        outcome.textContent = tr('plan.addFailed');
+        outcome.hidden = false;
+        return;
+      }
+
+      actions.remove();
+      outcome.textContent = tr('plan.added');
+      outcome.hidden = false;
+      // The planner may be the view behind this one.
+      if (typeof refreshTasks === 'function') refreshTasks();
+    });
+
+    actions.appendChild(add);
+    actions.appendChild(dismiss);
+    card.appendChild(actions);
+    card.appendChild(outcome);
+
+    chatLog.appendChild(card);
+    chatLog.scrollTop = chatLog.scrollHeight;
+  }
+
   function addSystemNote(text) {
     const div = document.createElement('div');
     div.className = 'msg system-note';
@@ -760,6 +852,9 @@
     }
 
     addBubble('bot', data.reply);
+    if (Array.isArray(data.proposedTasks) && data.proposedTasks.length) {
+      addTaskProposal(data.proposedTasks);
+    }
     setBusy(false);
     messageInput.focus();
 

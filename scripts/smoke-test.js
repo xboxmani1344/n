@@ -918,6 +918,72 @@ async function waitForListening() {
     report(false, 'an unknown unsubscribe token is told the same thing as a real one', err.message);
   }
 
+  // The coach writing into the planner. The failure that matters is not a
+  // task going missing - it is the block leaking. Left in the text it shows
+  // the reader raw markup, and because the reply is stored before it is
+  // displayed it would also be read back into the next prompt as though the
+  // coach had already said it, and reappear on every reopen.
+  try {
+    const tp = require('../src/services/taskProposals');
+
+    const reply = [
+      'Hier ist dein Plan.',
+      '',
+      '\`\`\`buddy-tasks',
+      'فصل ۳ شیمی | 2026-10-05',
+      '2. مرور فرمول‌ها',
+      'تست زدن | 2027-13-45',
+      '',
+      '\`\`\`',
+      '',
+      'Viel Erfolg!',
+    ].join('\n');
+
+    const out = tp.parse(reply);
+    const clean = !out.text.includes(tp.FENCE_TAG) && !out.text.includes('\`\`\`') && !out.text.includes('فصل ۳');
+    const kept = out.text.includes('Hier ist dein Plan.') && out.text.includes('Viel Erfolg!');
+    const numberStripped = out.tasks[1] && out.tasks[1].title === 'مرور فرمول‌ها';
+    // A string shaped like a date but impossible is dropped rather than
+    // written into tasks.due_at, where the digest would trip over it later.
+    const badDateDropped = out.tasks[2] && out.tasks[2].dueAt === null;
+    const goodDateKept = out.tasks[0] && out.tasks[0].dueAt === '2026-10-05';
+
+    // Two blocks in one reply: one left showing would be the whole bug.
+    const twice = tp.parse(['a', '\`\`\`buddy-tasks', 'x', '\`\`\`', 'b', '\`\`\`buddy-tasks', 'y', '\`\`\`', 'c'].join('\n'));
+    const bothGone = !twice.text.includes(tp.FENCE_TAG) && twice.tasks.length === 2;
+
+    // A ceiling, so one reply cannot bury a planner.
+    const flood = tp.parse(['\`\`\`buddy-tasks', ...Array.from({ length: 40 }, (_, i) => `task ${i}`), '\`\`\`'].join('\n'));
+    const capped = flood.tasks.length === tp.MAX_TASKS;
+
+    // An ordinary reply must come back untouched, not merely unharmed.
+    const plain = tp.parse('Just an answer, no plan here.');
+    const untouched = plain.text === 'Just an answer, no plan here.' && plain.tasks.length === 0;
+
+    const ok = clean && kept && numberStripped && badDateDropped && goodDateKept && bothGone && capped && untouched;
+    report(ok, 'the task block never reaches the reader, and never reaches the next prompt',
+      ok ? `stripped, numbering removed, bad date dropped, capped at ${tp.MAX_TASKS}`
+         : JSON.stringify({ clean, kept, numberStripped, badDateDropped, goodDateKept, bothGone, capped, untouched, text: out.text }));
+  } catch (err) {
+    report(false, 'the task block never reaches the reader, and never reaches the next prompt', err.message);
+  }
+
+  // Every coach is told it can do this, including the freeform tutor - a plan
+  // is as likely to be asked for there as anywhere.
+  try {
+    const { TRACK_KEYS, getSystemPrompt, getTutorSystemPrompt, getPhases } = require('../src/prompts');
+    const tp = require('../src/services/taskProposals');
+    const missing = TRACK_KEYS.filter(
+      (key) => !getSystemPrompt(getPhases(key)[0].key, null, key, 'en', [], null).includes(tp.FENCE_TAG)
+    );
+    const tutorToo = getTutorSystemPrompt(null, 'en', [], null).includes(tp.FENCE_TAG);
+    const ok = missing.length === 0 && tutorToo;
+    report(ok, 'every coach knows it can put work in the planner',
+      ok ? `${TRACK_KEYS.length} coaches and the tutor` : `missing: ${missing.join(', ') || 'tutor'}`);
+  } catch (err) {
+    report(false, 'every coach knows it can put work in the planner', err.message);
+  }
+
   server.kill();
   fs.rmSync(dbDir, { recursive: true, force: true });
 

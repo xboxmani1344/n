@@ -1450,6 +1450,89 @@ body {
 /* Sits between a section label and its form. Only the coach-memory card uses
    one: every other section here is self-evident from its label, and that one
    has to say why it is asking. */
+/* The coach proposing work. Sits in the conversation like a message, but
+   framed so it reads as something to answer rather than something to read -
+   it is the only thing in the log with buttons on it. */
+.plan-card {
+  display: block;
+  align-self: flex-start;
+  max-width: 100%;
+  margin: 4px 0 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--control-border);
+  border-radius: 16px;
+  background: var(--chip-bg);
+}
+
+.plan-heading {
+  margin: 0 0 10px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.plan-list {
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.plan-list li {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 0.84rem;
+  color: var(--text);
+}
+
+.plan-task-title {
+  /* The title wraps and the date does not, so a long task does not push the
+     date off the end of the row. */
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.plan-task-date {
+  flex: 0 0 auto;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.plan-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Scoped, like .safety-actions and .memory-invite-actions: neither class
+   carries styling of its own in this file, and an unstyled pair reads as two
+   equal choices when one is the offer and the other is declining it. */
+.plan-actions .primary-btn {
+  background: var(--fill);
+  color: var(--fill-contrast);
+  font-weight: 600;
+}
+
+.plan-actions .primary-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.plan-actions .ghost-btn {
+  background: transparent;
+  border: 1px solid var(--control-border);
+  color: var(--muted);
+}
+
+.plan-outcome {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
 /* Two numbers and a fortnight of bars. Fourteen values do not need a chart
    library, and one would be the largest dependency in the project. */
 .progress-panel {

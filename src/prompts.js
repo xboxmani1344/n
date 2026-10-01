@@ -1,5 +1,9 @@
 'use strict';
 
+// The wording of this instruction and the code that parses what it asks for
+// are the two halves of one agreement, so they live in one file together.
+const { INSTRUCTION: TASK_INSTRUCTION } = require('./services/taskProposals');
+
 // A "track" is one coached journey: its own phases, its own persona, its own
 // per-phase prompts. Study came first; workout and diet reuse the same shape so
 // the chat route, the phase tracker and the Next Phase button did not need to
@@ -575,6 +579,14 @@ function languageLine(lang) {
   return LANGUAGE_INSTRUCTION[lang] || LANGUAGE_INSTRUCTION.en;
 }
 
+// Every coach can put work into the planner. A training plan and a revision
+// plan are the same shape of thing - a list of things to do, with dates - and
+// a nutrition coach suggesting "shop for the week on Saturday" is as useful as
+// a tutor suggesting a chapter.
+function tasksLine() {
+  return TASK_INSTRUCTION;
+}
+
 // Study and code are where formulas turn up; a training or nutrition coach has
 // no use for it and the instruction would only be noise in the prompt.
 function mathsLine(trackKey) {
@@ -592,12 +604,12 @@ function getSystemPrompt(phaseKey, topic, trackKey, lang, skills, profile) {
   // that must win an argument with the persona above it.
   // Skills before safety: they say how to answer, safety says what may not be
   // answered, and the last word should belong to the one that can hurt someone.
-  return `${base}${topicLine}${profileLine(profile)}${mathsLine(track.key)}${skillsLine(skills)}${safetyLine(track.key)}${languageLine(lang)}`;
+  return `${base}${topicLine}${profileLine(profile)}${mathsLine(track.key)}${tasksLine()}${skillsLine(skills)}${safetyLine(track.key)}${languageLine(lang)}`;
 }
 
 function getTutorSystemPrompt(topic, lang, skills, profile) {
   const topicLine = topic ? `\n\nThe learner's current topic of interest is: "${topic}".` : '';
-  return `${TUTOR_PROMPT}${topicLine}${profileLine(profile)}${MATHS_INSTRUCTION}${skillsLine(skills)}${languageLine(lang)}`;
+  return `${TUTOR_PROMPT}${topicLine}${profileLine(profile)}${MATHS_INSTRUCTION}${tasksLine()}${skillsLine(skills)}${languageLine(lang)}`;
 }
 
 module.exports = {
@@ -608,6 +620,7 @@ module.exports = {
   safetyLine,
   PROFILE_FIELDS,
   profileLine,
+  tasksLine,
   TRACKS,
   TRACK_KEYS,
   PHASES,
