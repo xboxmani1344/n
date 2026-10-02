@@ -1,34 +1,20 @@
-"""تمرین: شمارش نمرات قبولی دانشجویان."""
-
-
 def check_scores(scores):
-    """تعداد نمرات قبولی (بزرگ‌تر یا مساوی ۱۰) را می‌شمارد و برمی‌گرداند."""
-    # ۱) تعریف شمارنده با مقدار اولیه ۰
     counter = 0
 
-    # ۲) بررسی نمرات با حلقه for
     for score in scores:
-        # ۳) و ۴) مشخص کردن نمرات قبولی و افزایش شمارنده
         if score >= 10:
             counter += 1
 
-    # ۵) بررسی نتیجه بعد از پایان حلقه (خارج از حلقه)
     if counter >= 3:
-        print("کلاس موفق بود")
+        print("Class was successful")
     else:
-        print("کلاس نیاز به تمرین دارد")
+        print("Class needs practice")
 
-    # ۶) برگرداندن تعداد قبولی‌ها
     return counter
 
 
-# ۷) فراخوانی تابع
 student_scores = [12, 8, 15, 9, 18, 7]
 passed = check_scores(student_scores)
-
-# ۸) ذخیره مقدار برگشتی در یک متغیر و ضرب آن در ۲
 result = passed * 2
-
-# ۹) چاپ نتیجه نهایی
-print("تعداد قبولی‌ها:", passed)
-print("نتیجه نهایی:", result)
+print("Passed:", passed)
+print("Final result:", result)
