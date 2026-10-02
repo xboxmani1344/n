@@ -45,3 +45,7 @@ npm-debug.log*
 # debug information files
 *.dwo
 data/
+
+# Python
+__pycache__/
+*.pyc
